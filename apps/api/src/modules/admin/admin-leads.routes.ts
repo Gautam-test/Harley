@@ -5,16 +5,16 @@ import { prisma } from '../../config/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
-import { decryptPii, maskEmail, maskPhone } from '../../utils/crypto.js';
+import { decryptPii } from '../../utils/crypto.js';
 
 // Admin lead-oversight routes — cross-dealer view of every enquiry/lead in
 // the system. Mirrors the dealer-side queue but without the dealer-id filter,
 // and adds a "stuck" flag (NEW for >7 days) so admins can spot leads that
 // dealers have left lingering.
 //
-// PII is *masked* on list and detail views — admins are governance, not
-// the assigned operator. Decrypting full phone/email here would hand any
-// admin a one-click contact list of every buyer.
+// Phone and email are returned in the clear here so admins can step in when
+// dealers neglect leads ("stuck" entries) without bouncing back to the
+// dealer portal. Access is gated by the ADMIN role above.
 
 export const adminLeadsRouter = Router();
 adminLeadsRouter.use(requireAuth(['ADMIN']));
@@ -22,7 +22,7 @@ adminLeadsRouter.use(requireAuth(['ADMIN']));
 const STUCK_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 
 const listQuery = z.object({
-  kind: z.enum(['general', 'buyer', 'trade-in', 'all']).default('all'),
+  kind: z.enum(['buyer', 'trade-in', 'all']).default('all'),
   status: leadStatus.optional(),
   dealerId: z.string().optional(),
   /** Filter to leads stuck in NEW for > 7 days. Useful for the "needs attention" queue. */
@@ -33,13 +33,15 @@ const listQuery = z.object({
 
 interface ListRow {
   id: string;
-  kind: 'general' | 'buyer' | 'trade-in';
+  kind: 'buyer' | 'trade-in';
   name: string;
-  phoneMasked: string;
-  emailMasked: string;
+  phone: string;
+  email: string;
   status: LeadStatus;
   dealerId: string;
   dealerName: string;
+  /** Bike model + year (buyer) or trade-in bike line. Empty if listing was deleted. */
+  bikeModel: string;
   context: string;
   /** Surfaced when the lead has sat in NEW longer than the stuck threshold. */
   stuck: boolean;
@@ -56,18 +58,6 @@ interface BuyerEnquiryRow {
   dealerId: string;
   dealer: { name: string };
   listing: { year: number; modelName: string } | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-interface GeneralLeadRow {
-  id: string;
-  name: string;
-  phoneEnc: string;
-  emailEnc: string;
-  status: LeadStatus;
-  dealerId: string;
-  dealer: { name: string };
-  modelInterest: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,7 +83,7 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
   try {
     const q = req.query as unknown as z.infer<typeof listQuery>;
     const kindsToFetch =
-      q.kind === 'all' ? (['buyer', 'general', 'trade-in'] as const) : ([q.kind] as const);
+      q.kind === 'all' ? (['buyer', 'trade-in'] as const) : ([q.kind] as const);
 
     const where = {
       ...(q.status ? { status: q.status } : {}),
@@ -123,53 +113,20 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
         take: 200,
       })) as unknown as BuyerEnquiryRow[];
       for (const r of data) {
+        const bikeModel = r.listing
+          ? `${r.listing.year} ${r.listing.modelName}`
+          : 'Listing removed';
         rows.push({
           id: r.id,
           kind: 'buyer',
           name: r.name,
-          phoneMasked: maskPhone(decryptPii(r.phoneEnc)),
-          emailMasked: maskEmail(decryptPii(r.emailEnc)),
+          phone: decryptPii(r.phoneEnc),
+          email: decryptPii(r.emailEnc),
           status: r.status,
           dealerId: r.dealerId,
           dealerName: r.dealer.name,
-          context: r.listing
-            ? `${r.listing.year} ${r.listing.modelName}`
-            : 'Listing enquiry',
-          stuck: isStuck(r.status, r.createdAt),
-          createdAt: r.createdAt.toISOString(),
-          updatedAt: r.updatedAt.toISOString(),
-        });
-      }
-    }
-
-    if (kindsToFetch.includes('general')) {
-      const data = (await prisma.generalLead.findMany({
-        where: {
-          ...where,
-          ...(q.q
-            ? {
-                OR: [
-                  { name: { contains: q.q, mode: 'insensitive' as const } },
-                  { modelInterest: { contains: q.q, mode: 'insensitive' as const } },
-                ],
-              }
-            : {}),
-        },
-        include: { dealer: { select: { name: true } } },
-        orderBy: { createdAt: 'desc' },
-        take: 200,
-      })) as unknown as GeneralLeadRow[];
-      for (const r of data) {
-        rows.push({
-          id: r.id,
-          kind: 'general',
-          name: r.name,
-          phoneMasked: maskPhone(decryptPii(r.phoneEnc)),
-          emailMasked: maskEmail(decryptPii(r.emailEnc)),
-          status: r.status,
-          dealerId: r.dealerId,
-          dealerName: r.dealer.name,
-          context: r.modelInterest ?? 'General enquiry',
+          bikeModel,
+          context: bikeModel,
           stuck: isStuck(r.status, r.createdAt),
           createdAt: r.createdAt.toISOString(),
           updatedAt: r.updatedAt.toISOString(),
@@ -200,11 +157,12 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
           id: r.id,
           kind: 'trade-in',
           name: r.username,
-          phoneMasked: maskPhone(decryptPii(r.phoneEnc)),
-          emailMasked: maskEmail(decryptPii(r.emailEnc)),
+          phone: decryptPii(r.phoneEnc),
+          email: decryptPii(r.emailEnc),
           status: r.status,
           dealerId: r.dealerId,
           dealerName: r.dealer.name,
+          bikeModel: r.bikeModel,
           context: `Trade-in · ${r.bikeModel}`,
           stuck: isStuck(r.status, r.createdAt),
           createdAt: r.createdAt.toISOString(),
@@ -228,9 +186,9 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
   }
 });
 
-// Per-lead detail (admin view — masked PII).
+// Per-lead detail (admin view — phone/email returned in clear).
 const detailParams = z.object({
-  kind: z.enum(['general', 'buyer', 'trade-in']),
+  kind: z.enum(['buyer', 'trade-in']),
   id: z.string().min(1),
 });
 
@@ -265,8 +223,8 @@ adminLeadsRouter.get(
           id: row.id,
           kind: 'buyer' as const,
           name: row.name,
-          phoneMasked: maskPhone(decryptPii(row.phoneEnc)),
-          emailMasked: maskEmail(decryptPii(row.emailEnc)),
+          phone: decryptPii(row.phoneEnc),
+          email: decryptPii(row.emailEnc),
           city: row.city,
           pincode: row.pincode,
           message: row.message,
@@ -281,30 +239,6 @@ adminLeadsRouter.get(
         });
         return;
       }
-      if (kind === 'general') {
-        const row = await prisma.generalLead.findUnique({
-          where: { id },
-          include: { dealer: { select: { id: true, name: true, city: true } } },
-        });
-        if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
-        res.json({
-          id: row.id,
-          kind: 'general' as const,
-          name: row.name,
-          phoneMasked: maskPhone(decryptPii(row.phoneEnc)),
-          emailMasked: maskEmail(decryptPii(row.emailEnc)),
-          city: row.city,
-          pincode: row.pincode,
-          modelInterest: row.modelInterest,
-          priceRange: row.priceRange,
-          status: row.status,
-          stuck: isStuck(row.status, row.createdAt),
-          createdAt: row.createdAt.toISOString(),
-          updatedAt: row.updatedAt.toISOString(),
-          dealer: row.dealer,
-        });
-        return;
-      }
       const row = await prisma.tradeInLead.findUnique({
         where: { id },
         include: { dealer: { select: { id: true, name: true, city: true } } },
@@ -314,8 +248,8 @@ adminLeadsRouter.get(
         id: row.id,
         kind: 'trade-in' as const,
         name: row.username,
-        phoneMasked: maskPhone(decryptPii(row.phoneEnc)),
-        emailMasked: maskEmail(decryptPii(row.emailEnc)),
+        phone: decryptPii(row.phoneEnc),
+        email: decryptPii(row.emailEnc),
         city: row.city,
         bikeModel: row.bikeModel,
         vin: row.vin,

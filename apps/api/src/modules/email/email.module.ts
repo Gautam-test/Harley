@@ -37,13 +37,12 @@ export function emailProvider(): EmailProvider {
 // a templating engine (handlebars / mjml) in a later sprint if volume grows.
 export function dealerLeadEmail(opts: {
   dealerName: string;
-  leadType: 'GENERAL' | 'BUYER' | 'TRADE_IN';
+  leadType: 'BUYER' | 'TRADE_IN';
   buyerName: string;
   buyerCity?: string;
   contextLine?: string;
 }): EmailMessage {
   const subjectMap = {
-    GENERAL: 'New buyer lead — H-D Certified',
     BUYER: 'New listing enquiry — H-D Certified',
     TRADE_IN: 'New trade-in enquiry — H-D Certified',
   } as const;

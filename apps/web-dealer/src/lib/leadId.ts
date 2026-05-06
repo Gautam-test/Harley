@@ -5,13 +5,11 @@
 //
 // Buyer-listing enquiry → B-{YYYY}-{XXXX}
 // Seller / trade-in lead → S-{YYYY}-{XXXX}
-// General info-gate lead → G-{YYYY}-{XXXX}
-export type LeadKind = 'buyer' | 'trade-in' | 'general';
+export type LeadKind = 'buyer' | 'trade-in';
 
 const PREFIX: Record<LeadKind, string> = {
   buyer: 'B',
   'trade-in': 'S',
-  general: 'G',
 };
 
 export function formatLeadId(kind: LeadKind, id: string, createdAt?: string): string {

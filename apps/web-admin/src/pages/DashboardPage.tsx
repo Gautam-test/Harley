@@ -8,7 +8,6 @@ interface Metrics {
   dealers: { byStatus: Record<string, number> };
   listings: { active: number; total: number };
   leads: {
-    general: number;
     tradeIn: number;
     buyerEnquiries: number;
     total: number;
@@ -70,7 +69,6 @@ export function DashboardPage() {
                 Lead Mix
               </h2>
               <dl className="mt-4 space-y-2 text-sm">
-                <Row label="General leads" value={data.leads.general} />
                 <Row label="Listing enquiries" value={data.leads.buyerEnquiries} />
                 <Row label="Trade-in enquiries" value={data.leads.tradeIn} />
                 <Row label="Conversions" value={data.leads.conversions} />

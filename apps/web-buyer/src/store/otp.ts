@@ -5,7 +5,7 @@ import { persist } from 'zustand/middleware';
 // We store the verified token + the phone it was issued for. Token has a 15-min TTL
 // on the server, so it auto-expires; we also clear it on logout-equivalent actions.
 
-export type OtpPurpose = 'ENQUIRY' | 'GENERAL_LEAD' | 'TRADE_IN';
+export type OtpPurpose = 'ENQUIRY' | 'TRADE_IN';
 
 interface OtpState {
   verifiedToken: string | null;

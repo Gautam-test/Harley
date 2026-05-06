@@ -22,10 +22,6 @@ export function DashboardPage() {
     queryKey: ['dealer-listings'],
     queryFn: () => api<DealerListingRow[]>('/dealer/listings'),
   });
-  const { data: general } = useQuery({
-    queryKey: ['dealer-leads-general'],
-    queryFn: () => api<LeadRow[]>('/dealer/leads/general'),
-  });
   const { data: buyer } = useQuery({
     queryKey: ['dealer-leads-buyer'],
     queryFn: () => api<LeadRow[]>('/dealer/leads/buyer'),
@@ -60,7 +56,7 @@ export function DashboardPage() {
 
   const tiles = [
     { label: 'Active Listings', value: stats.active },
-    { label: 'New Leads (7d)', value: newCount(general) + newCount(buyer) + newCount(tradeIn) },
+    { label: 'New Leads (7d)', value: newCount(buyer) + newCount(tradeIn) },
     { label: 'Trade-In (7d)', value: newCount(tradeIn) },
     { label: 'Listing Enquiries (7d)', value: newCount(buyer) },
   ];

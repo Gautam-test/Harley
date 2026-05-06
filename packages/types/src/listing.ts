@@ -82,7 +82,7 @@ export const createListingInput = z.object({
   /** Number of previous owners — required by Figma Add-Listing form. */
   owners: z.number().int().min(1).max(20),
   description: z.string().min(20).max(5000),
-  images: z.array(z.string()).min(1).max(20),
+  images: z.array(z.string()).min(5).max(20),
   inspectionReportUrl: z.string().nullable(),
   certificationStatus: certStatus,
   cpoDocs: z.record(z.string()).optional(),

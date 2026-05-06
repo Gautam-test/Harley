@@ -2,7 +2,7 @@ import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
 
 interface TrackResult {
-  type: 'BUYER' | 'GENERAL' | 'TRADE_IN';
+  type: 'BUYER' | 'TRADE_IN';
   status: 'NEW' | 'CONTACTED' | 'IN_PROGRESS' | 'CONVERTED' | 'LOST' | 'CLOSED';
   createdAt: string;
   updatedAt: string;
@@ -21,14 +21,6 @@ interface BuyerEnquiryRow {
   createdAt: Date;
   updatedAt: Date;
   listing: { year: number; modelName: string } | null;
-  dealer: { name: string } | null;
-}
-interface GeneralLeadRow {
-  id: string;
-  status: TrackResult['status'];
-  createdAt: Date;
-  updatedAt: Date;
-  modelInterest: string | null;
   dealer: { name: string } | null;
 }
 interface TradeInLeadRow {
@@ -69,30 +61,6 @@ export async function trackLead({ id }: TrackQuery): Promise<TrackResult> {
         ? `Listing enquiry for ${enquiry.listing.year} ${enquiry.listing.modelName}`
         : 'Listing enquiry',
       dealerName: enquiry.dealer?.name ?? null,
-    };
-  }
-
-  const general = (await prisma.generalLead.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      status: true,
-      createdAt: true,
-      updatedAt: true,
-      modelInterest: true,
-      dealer: { select: { name: true } },
-    },
-  })) as unknown as GeneralLeadRow | null;
-  if (general) {
-    return {
-      type: 'GENERAL',
-      status: general.status,
-      createdAt: general.createdAt.toISOString(),
-      updatedAt: general.updatedAt.toISOString(),
-      context: general.modelInterest
-        ? `General enquiry — interested in ${general.modelInterest}`
-        : 'General enquiry',
-      dealerName: general.dealer?.name ?? null,
     };
   }
 

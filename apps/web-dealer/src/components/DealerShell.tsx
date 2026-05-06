@@ -15,17 +15,17 @@ interface NavItem {
   to: string;
   label: string;
   end?: boolean;
-  badgeKey?: 'pendingListings' | 'newBuyerLeads' | 'newGeneralLeads';
+  badgeKey?: 'pendingListings' | 'newBuyerLeads';
 }
 
-// Sidebar order matches Figma /Dealer/Halrey dealer_page-0007.jpg.
+// Sidebar order matches Figma /Dealer/Halrey dealer_page-0007.jpg, minus the
+// General Leads tab which was retired May 2026 (info-gate flow removed).
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', end: true },
   { to: '/listings/new', label: 'Add Listing' },
   { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings' },
-  { to: '/leads/general', label: 'General Leads', badgeKey: 'newGeneralLeads' },
-  { to: '/leads/trade-in', label: 'Seller Enquiries' },
   { to: '/leads/buyer', label: 'Buyer Enquiries', badgeKey: 'newBuyerLeads' },
+  { to: '/leads/trade-in', label: 'Seller Enquiries' },
   { to: '/settings', label: 'Settings' },
 ];
 
@@ -57,17 +57,10 @@ export function DealerShell() {
     enabled,
     staleTime: 60_000,
   });
-  const generalLeadsQuery = useQuery({
-    queryKey: ['dealer-leads', 'general', 'sidebar'],
-    queryFn: () => api<DealerLeadRow[]>('/dealer/leads/general'),
-    enabled,
-    staleTime: 60_000,
-  });
 
   const badges = {
     pendingListings: (listingsQuery.data ?? []).filter((l) => l.status === 'DRAFT').length,
     newBuyerLeads: (buyerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
-    newGeneralLeads: (generalLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
   } as const;
 
   const onSignOut = () => {

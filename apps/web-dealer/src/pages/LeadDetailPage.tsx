@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/auth';
 import { api } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
 
-type Kind = 'general' | 'buyer' | 'trade-in';
+type Kind = 'buyer' | 'trade-in';
 
 interface LeadDetail {
   id: string;
@@ -18,8 +18,6 @@ interface LeadDetail {
   city: string | null;
   pincode?: string | null;
   message?: string | null;
-  modelInterest?: string | null;
-  priceRange?: string | null;
   bikeModel?: string;
   vin?: string;
   status: LeadStatus;
@@ -46,7 +44,6 @@ interface Comment {
 }
 
 const KIND_LABEL: Record<Kind, string> = {
-  general: 'General Lead',
   buyer: 'Buyer Lead',
   'trade-in': 'Seller Lead',
 };
@@ -54,9 +51,7 @@ const KIND_LABEL: Record<Kind, string> = {
 export function LeadDetailPage() {
   const navigate = useNavigate();
   const { kind: rawKind, id } = useParams<{ kind: string; id: string }>();
-  const kind = (['general', 'buyer', 'trade-in'].includes(rawKind ?? '')
-    ? rawKind
-    : 'general') as Kind;
+  const kind = (['buyer', 'trade-in'].includes(rawKind ?? '') ? rawKind : 'buyer') as Kind;
   const dealer = useAuthStore((s) => s.user);
   const qc = useQueryClient();
 
@@ -350,10 +345,8 @@ export function LeadDetailPage() {
             </Panel>
           )}
 
-          {(lead.message || lead.modelInterest || lead.priceRange || lead.bikeModel) && (
+          {(lead.message || lead.bikeModel) && (
             <Panel title={kind === 'trade-in' ? 'Seller Profile' : 'Buyer Profile'}>
-              {lead.priceRange && <Field label="Budget">{lead.priceRange}</Field>}
-              {lead.modelInterest && <Field label="Model interest">{lead.modelInterest}</Field>}
               {lead.bikeModel && <Field label="Bike">{lead.bikeModel}</Field>}
               {lead.vin && (
                 <Field label="VIN">

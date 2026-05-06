@@ -19,7 +19,10 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/listings" element={<MyListingsPage />} />
           <Route path="/listings/new" element={<AddListingPage />} />
-          <Route path="/leads" element={<Navigate to="/leads/general" replace />} />
+          <Route path="/leads" element={<Navigate to="/leads/buyer" replace />} />
+          {/* Old /leads/general bookmarks — redirect to buyer (closest equivalent). */}
+          <Route path="/leads/general" element={<Navigate to="/leads/buyer" replace />} />
+          <Route path="/leads/general/:id" element={<Navigate to="/leads/buyer" replace />} />
           <Route path="/leads/:kind" element={<LeadsPage />} />
           <Route path="/leads/:kind/:id" element={<LeadDetailPage />} />
           <Route path="/settings" element={<SettingsPage />} />

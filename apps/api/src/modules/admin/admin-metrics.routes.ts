@@ -43,7 +43,6 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
       dealersByStatus,
       activeListings,
       totalListings,
-      generalLeads,
       tradeInLeads,
       buyerEnquiries,
       conversions,
@@ -53,7 +52,6 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
       prisma.dealer.groupBy({ by: ['status'], _count: { _all: true } }),
       prisma.listing.count({ where: { status: 'ACTIVE' } }),
       prisma.listing.count(),
-      prisma.generalLead.count({ where: { createdAt: { gte: from, lte: to } } }),
       prisma.tradeInLead.count({ where: { createdAt: { gte: from, lte: to } } }),
       prisma.enquiry.count({ where: { createdAt: { gte: from, lte: to } } }),
       prisma.enquiry.count({ where: { status: 'CONVERTED', createdAt: { gte: from, lte: to } } }),
@@ -63,7 +61,9 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
         orderBy: { _count: { id: 'desc' } },
         take: 5,
       }) as unknown as Promise<TopDealer[]>,
-      prisma.generalLead.groupBy({
+      // Top dealers by buyer-enquiry volume — replaces the legacy generalLead
+      // top-leads metric (general leads were retired May 2026).
+      prisma.enquiry.groupBy({
         by: ['dealerId'],
         _count: { _all: true },
         where: { createdAt: { gte: from, lte: to } },
@@ -81,7 +81,7 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
     })) as unknown as DealerNameRow[];
     const nameById = Object.fromEntries(dealerNames.map((d) => [d.id, d.name]));
 
-    const totalLeads = generalLeads + tradeInLeads + buyerEnquiries;
+    const totalLeads = tradeInLeads + buyerEnquiries;
 
     res.json({
       range: { from: from.toISOString(), to: to.toISOString() },
@@ -95,7 +95,6 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
       },
       listings: { active: activeListings, total: totalListings },
       leads: {
-        general: generalLeads,
         tradeIn: tradeInLeads,
         buyerEnquiries,
         total: totalLeads,

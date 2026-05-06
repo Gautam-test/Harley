@@ -1,13 +1,12 @@
 import type {
   EnquiryInput,
-  GeneralLeadInput,
   TradeInLeadInput,
   LeadStatus,
 } from '@hd-cpo/types';
 import { canTransitionLead } from '@hd-cpo/types';
 import { prisma } from '../../config/prisma.js';
 import { logger } from '../../config/logger.js';
-import { encryptPii, decryptPii, maskEmail, maskPhone } from '../../utils/crypto.js';
+import { encryptPii, decryptPii } from '../../utils/crypto.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { dealerLeadEmail, emailProvider } from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
@@ -20,7 +19,7 @@ interface DealerForEmail {
 
 async function notifyDealer(
   dealerId: string,
-  leadType: 'GENERAL' | 'BUYER' | 'TRADE_IN',
+  leadType: 'BUYER' | 'TRADE_IN',
   buyerName: string,
   buyerCity?: string,
   contextLine?: string,
@@ -71,31 +70,6 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
   return { id: enquiry.id };
 }
 
-// ─── General lead via info-gate popup (PRD §6.1.4) ────────────────────────
-// Routed to nearest active dealer using great-circle distance.
-
-export async function createGeneralLead(
-  input: GeneralLeadInput,
-  buyerLat?: number,
-  buyerLng?: number,
-) {
-  const dealerId = await nearestActiveDealer(buyerLat, buyerLng);
-  const lead = await prisma.generalLead.create({
-    data: {
-      dealerId,
-      name: input.name,
-      phoneEnc: encryptPii(input.phone),
-      emailEnc: encryptPii(input.email),
-      city: input.city,
-      pincode: input.pincode,
-      modelInterest: input.modelInterest,
-      priceRange: input.priceRange,
-    },
-  });
-  await notifyDealer(dealerId, 'GENERAL', input.name, input.city, input.modelInterest ?? undefined);
-  return { id: lead.id, dealerId };
-}
-
 // ─── Trade-in lead from /sell-bike form (PRD §6.1.6) ──────────────────────
 
 export async function createTradeInLead(input: TradeInLeadInput) {
@@ -137,27 +111,36 @@ interface LeadDbRow {
   city: string | null;
   pincode?: string | null;
   message?: string | null;
-  modelInterest?: string | null;
-  priceRange?: string | null;
   bikeModel?: string;
   vin?: string;
   status: LeadStatus;
   createdAt: Date;
   listingId?: string;
+  /** Populated for buyer enquiries via the joined listing — `${year} ${modelName}`. */
+  listing?: { year: number; modelName: string } | null;
 }
 
+// Lead-list rows used to mask phone/email behind asterisks. The dealer-portal
+// product owner asked for full visibility on the queue list (not just on the
+// detail drawer) so reps can call/email straight from the table — so we now
+// return the decrypted values directly. Access is still gated by the DEALER
+// role + per-row dealerId ownership check on the underlying queries.
 function toLeadView(row: LeadDbRow) {
+  // For buyer enquiries the queue should display the bike the buyer
+  // enquired about — surface it as `bikeModel` from the joined listing
+  // (server-derived; client never has to fetch the listing separately).
+  const bikeModel =
+    row.bikeModel ??
+    (row.listing ? `${row.listing.year} ${row.listing.modelName}` : undefined);
   return {
     id: row.id,
     name: row.name ?? row.username ?? '',
-    phone: maskPhone(decryptPii(row.phoneEnc)),
-    email: maskEmail(decryptPii(row.emailEnc)),
+    phone: decryptPii(row.phoneEnc),
+    email: decryptPii(row.emailEnc),
     city: row.city,
     pincode: row.pincode,
     message: row.message,
-    modelInterest: row.modelInterest,
-    priceRange: row.priceRange,
-    bikeModel: row.bikeModel,
+    bikeModel,
     vin: row.vin,
     status: row.status,
     listingId: row.listingId,
@@ -165,18 +148,10 @@ function toLeadView(row: LeadDbRow) {
   };
 }
 
-export async function listGeneralLeads(dealerId: string, status?: LeadStatus) {
-  const rows = (await prisma.generalLead.findMany({
-    where: { dealerId, ...(status ? { status } : {}) },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  })) as unknown as LeadDbRow[];
-  return rows.map(toLeadView);
-}
-
 export async function listBuyerEnquiries(dealerId: string, status?: LeadStatus) {
   const rows = (await prisma.enquiry.findMany({
     where: { dealerId, ...(status ? { status } : {}) },
+    include: { listing: { select: { year: true, modelName: true } } },
     orderBy: { createdAt: 'desc' },
     take: 200,
   })) as unknown as LeadDbRow[];
@@ -194,7 +169,7 @@ export async function listTradeInLeads(dealerId: string, status?: LeadStatus) {
 
 export async function updateLeadStatus(
   dealerId: string,
-  kind: 'general' | 'buyer' | 'trade-in',
+  kind: 'buyer' | 'trade-in',
   id: string,
   status: LeadStatus,
 ) {
@@ -203,9 +178,7 @@ export async function updateLeadStatus(
   // pipeline is forward-only within its kind's stages; DEAD/LOST is allowed
   // from anywhere as the alt-terminal escape hatch.
   const existing =
-    kind === 'general'
-      ? await prisma.generalLead.findFirst({ where, select: { status: true } })
-      : kind === 'buyer'
+    kind === 'buyer'
       ? await prisma.enquiry.findFirst({ where, select: { status: true } })
       : await prisma.tradeInLead.findFirst({ where, select: { status: true } });
   if (!existing) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
@@ -217,14 +190,13 @@ export async function updateLeadStatus(
     );
   }
 
-  if (kind === 'general') return prisma.generalLead.update({ where, data: { status } });
   if (kind === 'buyer') return prisma.enquiry.update({ where, data: { status } });
   return prisma.tradeInLead.update({ where, data: { status } });
 }
 
 export async function getLeadDetail(
   dealerId: string,
-  kind: 'general' | 'buyer' | 'trade-in',
+  kind: 'buyer' | 'trade-in',
   id: string,
 ) {
   if (kind === 'buyer') {
@@ -271,40 +243,85 @@ export async function getLeadDetail(
     };
   }
 
-  if (kind === 'general') {
-    const row = await prisma.generalLead.findFirst({ where: { id, dealerId } });
-    if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
-    return {
-      id: row.id,
-      kind: 'general' as const,
-      name: row.name,
-      // Lead detail is gated by `dealerId` ownership above — the assigned
-      // dealer needs the full phone/email to actually contact the buyer
-      // (click-to-call, click-to-email). PII stays masked on the queue list
-      // view; only opening the detail unmasks it.
-      phone: decryptPii(row.phoneEnc),
-      email: decryptPii(row.emailEnc),
-      city: row.city,
-      pincode: row.pincode,
-      modelInterest: row.modelInterest,
-      priceRange: row.priceRange,
-      status: row.status,
-      createdAt: row.createdAt.toISOString(),
-    };
-  }
-
   const row = await prisma.tradeInLead.findFirst({ where: { id, dealerId } });
   if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
   return {
     id: row.id,
     kind: 'trade-in' as const,
     name: row.username,
-    phone: maskPhone(decryptPii(row.phoneEnc)),
-    email: maskEmail(decryptPii(row.emailEnc)),
+    phone: decryptPii(row.phoneEnc),
+    email: decryptPii(row.emailEnc),
     city: row.city,
     bikeModel: row.bikeModel,
     vin: row.vin,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+// ─── Dealer-side manual lead creation (PRD Change Request) ────────────────
+// A dealer rep takes a phone call / walk-in and needs to log the lead by hand.
+// Skips the buyer-facing OTP gate because the dealer is already authenticated
+// against their own listing/dealer scope.
+
+export async function dealerCreateBuyerEnquiry(
+  dealerId: string,
+  input: EnquiryInput & { listingId: string },
+) {
+  // Verify the listing belongs to this dealer — prevents a malicious dealer
+  // from logging fake enquiries against another dealer's bikes.
+  const listing = (await prisma.listing.findFirst({
+    where: { id: input.listingId, dealerId },
+    select: { id: true, modelName: true, year: true },
+  })) as { id: string; modelName: string; year: number } | null;
+  if (!listing) {
+    throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found for this dealer');
+  }
+  const enquiry = await prisma.enquiry.create({
+    data: {
+      listingId: listing.id,
+      dealerId,
+      name: input.name,
+      phoneEnc: encryptPii(input.phone),
+      emailEnc: encryptPii(input.email),
+      city: input.city,
+      pincode: input.pincode,
+      message: input.message,
+    },
+  });
+  // Email confirmation — dealer rep already has the lead in front of them,
+  // but the email mirrors the buyer-side flow and provides an audit trail.
+  await notifyDealer(
+    dealerId,
+    'BUYER',
+    input.name,
+    input.city,
+    `Interested in: ${listing.year} ${listing.modelName}`,
+  );
+  return { id: enquiry.id };
+}
+
+export async function dealerCreateTradeInLead(
+  dealerId: string,
+  input: TradeInLeadInput,
+) {
+  const lead = (await prisma.tradeInLead.create({
+    data: {
+      dealerId,
+      username: input.username,
+      bikeModel: input.bikeModel,
+      vin: input.vin,
+      phoneEnc: encryptPii(input.phone),
+      emailEnc: encryptPii(input.email),
+      city: input.city,
+    },
+  })) as unknown as { id: string };
+  await notifyDealer(
+    dealerId,
+    'TRADE_IN',
+    input.username,
+    input.city,
+    `Bike: ${input.bikeModel}, VIN ${input.vin}`,
+  );
+  return { id: lead.id };
 }

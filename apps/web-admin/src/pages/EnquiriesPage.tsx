@@ -4,14 +4,16 @@ import { Badge, Input, Select } from '@hd-cpo/ui';
 import { api } from '../lib/api';
 
 // Cross-dealer enquiry oversight for admins. Shows every lead in the system
-// (buyer / general / trade-in), masked PII, dealer assignment, and a "stuck"
-// flag for leads that have sat in NEW > 7 days. Filters by kind, status,
-// dealer, and a free-text query (name / model / VIN).
+// (buyer / trade-in), unmasked PII (admins need to step in on stuck leads),
+// dealer assignment, bike model, and a "stuck" flag for leads in NEW > 7 days.
 //
 // Counterpart of the dealer-side LeadsPage but with the dealer-id filter
 // dropped and a stuck-only toggle that flags neglected leads.
+//
+// The legacy "general" lead kind (info-gate popup) was retired May 2026; the
+// filter dropdown only offers buyer + trade-in now.
 
-type Kind = 'general' | 'buyer' | 'trade-in';
+type Kind = 'buyer' | 'trade-in';
 type LeadStatus =
   | 'NEW'
   | 'CONTACTED'
@@ -28,11 +30,12 @@ interface AdminLeadRow {
   id: string;
   kind: Kind;
   name: string;
-  phoneMasked: string;
-  emailMasked: string;
+  phone: string;
+  email: string;
   status: LeadStatus;
   dealerId: string;
   dealerName: string;
+  bikeModel: string;
   context: string;
   stuck: boolean;
   createdAt: string;
@@ -53,7 +56,6 @@ interface DealerOption {
 const KIND_OPTIONS: { value: 'all' | Kind; label: string }[] = [
   { value: 'all', label: 'All Kinds' },
   { value: 'buyer', label: 'Buyer Enquiries' },
-  { value: 'general', label: 'General Leads' },
   { value: 'trade-in', label: 'Seller Enquiries' },
 ];
 
@@ -109,8 +111,8 @@ export function EnquiriesPage() {
             Enquiries
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Cross-dealer view of every lead. PII is masked — open the dealer
-            portal to take action on a specific lead.
+            Cross-dealer view of every lead. Phone &amp; email are visible so
+            you can step in on stuck leads without bouncing back to the dealer.
           </p>
         </div>
         {stuckCount > 0 && (
@@ -171,8 +173,9 @@ export function EnquiriesPage() {
             <tr>
               <Th>Kind</Th>
               <Th>Name</Th>
-              <Th>Contact</Th>
-              <Th>Context</Th>
+              <Th>Phone</Th>
+              <Th>Email</Th>
+              <Th>Bike</Th>
               <Th>Dealer</Th>
               <Th>Status</Th>
               <Th>Created</Th>
@@ -181,14 +184,14 @@ export function EnquiriesPage() {
           <tbody className="divide-y divide-gray-200">
             {leads.isLoading && (
               <tr>
-                <td colSpan={7} className="text-center text-gray-500 py-6">
+                <td colSpan={8} className="text-center text-gray-500 py-6">
                   Loading…
                 </td>
               </tr>
             )}
             {!leads.isLoading && total === 0 && (
               <tr>
-                <td colSpan={7} className="text-center text-gray-500 py-10">
+                <td colSpan={8} className="text-center text-gray-500 py-10">
                   No enquiries match this filter.
                 </td>
               </tr>
@@ -201,13 +204,7 @@ export function EnquiriesPage() {
                 <Td>
                   <Badge
                     variant="status"
-                    tone={
-                      l.kind === 'buyer'
-                        ? 'info'
-                        : l.kind === 'trade-in'
-                        ? 'warning'
-                        : 'success'
-                    }
+                    tone={l.kind === 'buyer' ? 'info' : 'warning'}
                   >
                     {l.kind === 'trade-in' ? 'Seller' : l.kind}
                   </Badge>
@@ -216,15 +213,15 @@ export function EnquiriesPage() {
                   <span className="font-subhead text-text-on-light">{l.name}</span>
                 </Td>
                 <Td>
-                  <span className="block font-mono text-[11px] text-gray-700">
-                    {l.phoneMasked}
-                  </span>
-                  <span className="block font-mono text-[11px] text-gray-500">
-                    {l.emailMasked}
+                  <span className="font-mono text-[11px] text-gray-700 whitespace-nowrap">
+                    {l.phone}
                   </span>
                 </Td>
-                <Td className="text-xs text-gray-700 max-w-[260px] truncate">
-                  {l.context}
+                <Td>
+                  <span className="text-[11px] text-gray-700">{l.email}</span>
+                </Td>
+                <Td className="text-xs text-gray-700 max-w-[200px] truncate" title={l.bikeModel}>
+                  {l.bikeModel || '—'}
                 </Td>
                 <Td className="text-xs">{l.dealerName}</Td>
                 <Td>

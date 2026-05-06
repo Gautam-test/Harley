@@ -36,22 +36,16 @@ export const SELLER_LEAD_PIPELINE = [
   'DEAD',
 ] as const satisfies readonly LeadStatus[];
 
-// Generic 4-stage pipeline for general info-gate enquiries.
-export const GENERAL_LEAD_PIPELINE = [
-  'NEW',
-  'CONTACTED',
-  'IN_PROGRESS',
-  'CLOSED',
-  'DEAD',
-] as const satisfies readonly LeadStatus[];
-
 // Allowed transitions: a lead can move forward to any later stage in its
 // pipeline OR jump to the alt-terminal DEAD/LOST at any time. Backwards
 // movement is rejected — mistakes get a comment + a fresh lead, not edits.
-export type LeadKind = 'buyer' | 'general' | 'trade-in';
+//
+// The legacy `general` (info-gate popup) lead kind was removed in May 2026;
+// the buyer journey now goes straight to listing-level enquiries, so only
+// buyer + trade-in remain.
+export type LeadKind = 'buyer' | 'trade-in';
 export const PIPELINE_BY_KIND: Record<LeadKind, readonly LeadStatus[]> = {
   buyer: BUYER_LEAD_PIPELINE,
-  general: GENERAL_LEAD_PIPELINE,
   'trade-in': SELLER_LEAD_PIPELINE,
 };
 
@@ -83,11 +77,13 @@ export const enquiryInput = z.object({
 });
 export type EnquiryInput = z.infer<typeof enquiryInput>;
 
-export const generalLeadInput = enquiryInput.extend({
-  modelInterest: z.string().optional(),
-  priceRange: z.string().optional(),
+// Dealer logging a buyer enquiry by hand — same shape as the public form,
+// plus the listing the buyer asked about (required, since the dealer always
+// knows which bike they're talking about).
+export const dealerBuyerEnquiryInput = enquiryInput.extend({
+  listingId: z.string().min(1),
 });
-export type GeneralLeadInput = z.infer<typeof generalLeadInput>;
+export type DealerBuyerEnquiryInput = z.infer<typeof dealerBuyerEnquiryInput>;
 
 export const tradeInLeadInput = z.object({
   username: z.string().min(2).max(100),

@@ -9,7 +9,7 @@ export const dealerLeadCommentsRouter = Router();
 
 dealerLeadCommentsRouter.use(requireAuth(['DEALER']));
 
-const kindParam = z.enum(['general', 'buyer', 'trade-in']);
+const kindParam = z.enum(['buyer', 'trade-in']);
 const paramsSchema = z.object({
   kind: kindParam,
   id: z.string().min(1),
@@ -18,16 +18,13 @@ const bodySchema = z.object({ body: z.string().min(1).max(2000) });
 
 // Verify that the lead identified by (kind, id) belongs to this dealer.
 async function ensureLeadOwnedByDealer(
-  kind: 'general' | 'buyer' | 'trade-in',
+  kind: 'buyer' | 'trade-in',
   id: string,
   dealerId: string,
 ) {
   let dealerOnLead: string | null = null;
   if (kind === 'buyer') {
     const row = await prisma.enquiry.findUnique({ where: { id }, select: { dealerId: true } });
-    dealerOnLead = row?.dealerId ?? null;
-  } else if (kind === 'general') {
-    const row = await prisma.generalLead.findUnique({ where: { id }, select: { dealerId: true } });
     dealerOnLead = row?.dealerId ?? null;
   } else {
     const row = await prisma.tradeInLead.findUnique({ where: { id }, select: { dealerId: true } });
@@ -42,7 +39,7 @@ dealerLeadCommentsRouter.get(
   validate(paramsSchema, 'params'),
   async (req, res, next) => {
     try {
-      const { kind, id } = req.params as { kind: 'general' | 'buyer' | 'trade-in'; id: string };
+      const { kind, id } = req.params as { kind: 'buyer' | 'trade-in'; id: string };
       await ensureLeadOwnedByDealer(kind, id, req.auth!.sub);
       const rows = await prisma.leadComment.findMany({
         where: { leadKind: kind, leadId: id },
@@ -68,7 +65,7 @@ dealerLeadCommentsRouter.post(
   validate(bodySchema),
   async (req, res, next) => {
     try {
-      const { kind, id } = req.params as { kind: 'general' | 'buyer' | 'trade-in'; id: string };
+      const { kind, id } = req.params as { kind: 'buyer' | 'trade-in'; id: string };
       const { body } = req.body as { body: string };
       await ensureLeadOwnedByDealer(kind, id, req.auth!.sub);
       const dealer = await prisma.dealer.findUnique({

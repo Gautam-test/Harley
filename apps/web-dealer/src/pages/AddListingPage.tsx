@@ -124,8 +124,8 @@ export function AddListingPage() {
   if (!s.owners || Number(s.owners) < 1) missing.push('Pick the number of Owners (Step 2)');
   if (s.description.length < 20)
     missing.push(`Description needs ${20 - s.description.length} more characters (Step 2)`);
-  if (s.images.length < 4)
-    missing.push(`Add ${4 - s.images.length} more photo${4 - s.images.length === 1 ? '' : 's'} (Step 2 — minimum 4)`);
+  if (s.images.length < 5)
+    missing.push(`Add ${5 - s.images.length} more photo${5 - s.images.length === 1 ? '' : 's'} (Step 2 — minimum 5)`);
   if (s.certificationStatus === 'CPO' && !s.inspectionUrl)
     missing.push('Upload the 110-point inspection PDF (Step 3)');
   const formValid = missing.length === 0;
@@ -264,7 +264,7 @@ export function AddListingPage() {
           </Field>
 
           <Field
-            label={`Photos (min. 4)${
+            label={`Photos (min. 5)${
               s.images.length > 0 ? ` — ${s.images.length} added` : ''
             }`}
           >
@@ -797,13 +797,13 @@ function formatInvoiceDate(iso: string): string {
 }
 
 const MAX_IMAGES = 8;
-const MIN_IMAGES = 4;
+const MIN_IMAGES = 5;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 
 // Slot hints from Figma — first photo is the cover; the next three suggest
 // the standard angles a listing should include. Anything beyond is generic.
-const SLOT_HINTS = ['Drop or click to upload', 'Main', 'Side', 'Engine'];
+const SLOT_HINTS = ['Drop or click to upload', 'Main', 'Side', 'Engine', 'Rear'];
 
 function isManagedUploadUrl(url: string) {
   return url.startsWith('/api/v1/uploads/listing-images/');

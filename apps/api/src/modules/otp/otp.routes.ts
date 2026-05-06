@@ -24,7 +24,7 @@ const otpVerifyLimiter = rateLimit({
 
 otpRouter.post('/send', otpSendLimiter, validate(otpSendInput), async (req, res, next) => {
   try {
-    const { phone, purpose } = req.body as { phone: string; purpose: 'ENQUIRY' | 'GENERAL_LEAD' | 'TRADE_IN' };
+    const { phone, purpose } = req.body as { phone: string; purpose: 'ENQUIRY' | 'TRADE_IN' };
     res.json(await sendOtp(phone, purpose));
   } catch (e) {
     next(e);

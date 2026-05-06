@@ -56,23 +56,19 @@ export const openApiDocument = {
     '/otp/verify': {
       post: { summary: 'Verify OTP and get a verifiedToken', responses: { '200': { description: 'OK' }, '401': { description: 'Invalid OTP' } } },
     },
-    '/leads/general': {
-      post: { summary: 'Submit a general lead (info-gate). Requires verifiedToken (Bearer).', responses: { '201': { description: 'Created' }, '401': { description: 'OTP required' } } },
-    },
     '/leads/trade-in': {
       post: { summary: 'Submit trade-in lead. Requires verifiedToken (Bearer).', responses: { '201': { description: 'Created' } } },
     },
     '/leads/listings/{slug}/enquiry': {
       post: { summary: 'Submit listing-specific enquiry. Requires verifiedToken (Bearer).', responses: { '201': { description: 'Created' } } },
     },
-    '/dealer/leads/general': {
-      get: { summary: 'Dealer — list general leads', responses: { '200': { description: 'OK' } } },
-    },
     '/dealer/leads/buyer': {
       get: { summary: 'Dealer — list listing enquiries', responses: { '200': { description: 'OK' } } },
+      post: { summary: 'Dealer — manually log a buyer enquiry (phone / walk-in)', responses: { '201': { description: 'Created' } } },
     },
     '/dealer/leads/trade-in': {
       get: { summary: 'Dealer — list trade-in enquiries', responses: { '200': { description: 'OK' } } },
+      post: { summary: 'Dealer — manually log a seller / trade-in enquiry', responses: { '201': { description: 'Created' } } },
     },
     '/dealer/leads/{kind}/{id}/status': {
       patch: { summary: 'Dealer — update lead status', responses: { '200': { description: 'OK' } } },
