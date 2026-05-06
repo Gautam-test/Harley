@@ -56,9 +56,6 @@ export function LeadsPage() {
   const kind = (['buyer', 'trade-in'].includes(rawKind ?? '') ? rawKind : 'buyer') as Kind;
   const meta = KIND_META[kind];
   const [showForm, setShowForm] = useState(false);
-  // Header row shows VIN only for trade-in leads. Buyer = 8 cols (with bike),
-  // trade-in = 9 cols (bike + VIN).
-  const colCount = kind === 'trade-in' ? 9 : 8;
 
   const { data, isLoading } = useQuery({
     queryKey: ['leads', kind],
@@ -80,60 +77,98 @@ export function LeadsPage() {
         </Button>
       </div>
 
+      {/* Layout collapses 9 cols → 5 by stacking related fields:
+            Lead    = ID (caption) + name (heading)
+            Contact = phone (mono) + email (muted)
+            Bike    = model (+ VIN below for trade-in)
+            Status  = status badge + received date below
+          Wider cells beat narrow ones for scan-ability — easier than reading
+          across 9 thin columns. */}
       <div className="bg-hd-white border border-gray-200 mt-6 overflow-x-auto rounded-card">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50/80">
             <tr>
-              <Th>ID</Th>
-              <Th>{kind === 'buyer' ? 'Buyer' : 'Seller'}</Th>
-              <Th>Phone</Th>
-              <Th>Email</Th>
-              <Th>{kind === 'buyer' ? 'Bike (Listed)' : 'Bike'}</Th>
-              {kind === 'trade-in' && <Th>VIN</Th>}
-              <Th>Received</Th>
+              <Th>Lead</Th>
+              <Th>Contact</Th>
+              <Th>{kind === 'buyer' ? 'Bike Enquired' : 'Bike Offered'}</Th>
               <Th>Status</Th>
-              <Th>
+              <Th className="text-right pr-4">
                 <span className="sr-only">Open</span>
               </Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={colCount} className="text-center py-6 text-gray-500">
+                <td colSpan={5} className="text-center py-8 text-gray-500">
                   Loading…
                 </td>
               </tr>
             )}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={colCount} className="text-center py-10 text-gray-500">
-                  No {kind} leads yet — click {meta.addLabel} to log one.
+                <td colSpan={5} className="text-center py-12 text-gray-500">
+                  No {kind} leads yet — click <span className="font-subhead uppercase tracking-subhead text-hd-orange">{meta.addLabel}</span> to log one.
                 </td>
               </tr>
             )}
-            {data?.map((l) => (
-              <tr key={l.id} className="hover:bg-gray-50">
-                <Td className="font-mono text-xs text-text-on-light">
-                  {formatLeadId(kind as LeadKind, l.id, l.createdAt)}
+            {data?.map((l, idx) => (
+              <tr
+                key={l.id}
+                className={`hover:bg-hd-orange/5 transition-colors ${
+                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                }`}
+              >
+                <Td>
+                  <div className="font-mono text-[10px] text-gray-500 leading-none mb-1">
+                    {formatLeadId(kind as LeadKind, l.id, l.createdAt)}
+                  </div>
+                  <div className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight">
+                    {l.name}
+                  </div>
                 </Td>
-                <Td className="font-subhead">{l.name}</Td>
-                <Td className="font-mono text-xs whitespace-nowrap">{l.phone}</Td>
-                <Td className="text-xs">{l.email}</Td>
-                <Td className="text-xs text-gray-700">{l.bikeModel ?? '—'}</Td>
-                {kind === 'trade-in' && (
-                  <Td className="font-mono text-xs">{l.vin ?? '—'}</Td>
-                )}
-                <Td className="text-xs text-gray-600 whitespace-nowrap">
-                  {new Date(l.createdAt).toLocaleString('en-IN', { dateStyle: 'medium' })}
+                <Td>
+                  <a
+                    href={`tel:${l.phone.replace(/\s+/g, '')}`}
+                    className="block font-mono text-xs text-text-on-light hover:text-hd-orange leading-tight whitespace-nowrap"
+                  >
+                    {l.phone}
+                  </a>
+                  <a
+                    href={`mailto:${l.email}`}
+                    className="block text-[11px] text-gray-500 hover:text-hd-orange leading-tight mt-0.5 truncate max-w-[200px]"
+                    title={l.email}
+                  >
+                    {l.email}
+                  </a>
+                </Td>
+                <Td className="text-xs">
+                  <div className="text-text-on-light leading-tight">
+                    {l.bikeModel ?? '—'}
+                  </div>
+                  {kind === 'trade-in' && l.vin && (
+                    <div
+                      className="font-mono text-[10px] text-gray-500 mt-1"
+                      title={l.vin}
+                    >
+                      VIN · {l.vin.slice(-6)}
+                    </div>
+                  )}
                 </Td>
                 <Td>
                   <StatusBadge status={l.status} />
+                  <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
+                    {new Date(l.createdAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: '2-digit',
+                    })}
+                  </div>
                 </Td>
-                <Td>
+                <Td className="text-right pr-4">
                   <Link
                     to={`/leads/${kind}/${l.id}`}
-                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[11px] text-text-on-light hover:bg-hd-orange hover:text-hd-white hover:border-hd-orange transition rounded-card"
+                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-white hover:border-hd-orange transition rounded-card"
                   >
                     Open
                   </Link>
@@ -449,15 +484,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className="px-4 py-3 text-left text-xs font-subhead uppercase tracking-subhead text-gray-500">
+    <th
+      className={`px-4 py-3 text-left text-[10px] font-subhead uppercase tracking-subhead text-gray-500 ${className}`}
+    >
       {children}
     </th>
   );
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3.5 align-top ${className}`}>{children}</td>;
 }
 function StatusBadge({ status }: { status: LeadRow['status'] }) {
   const tone =
