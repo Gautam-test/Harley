@@ -203,25 +203,43 @@ export function ListingsPage() {
                   </div>
                 </Td>
                 <Td className="text-right pr-4" onClick={(e) => e.stopPropagation()}>
-                  <div className="inline-flex flex-col items-stretch gap-1.5 min-w-[140px]">
+                  {/* Icon-only actions — labels surface on hover via the
+                      tooltip span. Clicking the row (anywhere outside this
+                      cell) opens the preview drawer. */}
+                  <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'DRAFT' && (
                       <>
-                        <Button size="sm" onClick={() => publish.mutate(l.id)} disabled={publish.isPending}>
-                          Publish
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={() => setReturning(l)}>
-                          Return to Dealer
-                        </Button>
+                        <IconAction
+                          label="Publish"
+                          tone="primary"
+                          onClick={() => publish.mutate(l.id)}
+                          disabled={publish.isPending}
+                        >
+                          <PublishIcon />
+                        </IconAction>
+                        <IconAction
+                          label="Return to Dealer"
+                          onClick={() => setReturning(l)}
+                        >
+                          <ReturnIcon />
+                        </IconAction>
                       </>
                     )}
                     {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
                       <>
-                        <Button size="sm" variant="secondary" onClick={() => deactivate.mutate(l.id)}>
-                          Deactivate
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setRemoving(l)}>
-                          Remove
-                        </Button>
+                        <IconAction
+                          label="Deactivate"
+                          onClick={() => deactivate.mutate(l.id)}
+                        >
+                          <PowerIcon />
+                        </IconAction>
+                        <IconAction
+                          label="Remove"
+                          tone="danger"
+                          onClick={() => setRemoving(l)}
+                        >
+                          <TrashIcon />
+                        </IconAction>
                       </>
                     )}
                     {/* No actions for SOLD / REMOVED / DEACTIVATED — clicking the row still opens the preview drawer. */}
@@ -376,6 +394,91 @@ function Td({
     </td>
   );
 }
+// Square icon button with a hover tooltip — same pattern as MyListingsPage.
+// Duplicated rather than lifted into @hd-cpo/ui for now since the admin and
+// dealer apps use slightly different tone palettes; promote to shared when
+// a third surface needs it.
+type IconActionProps = {
+  label: string;
+  children: React.ReactNode;
+  tone?: 'default' | 'danger' | 'primary';
+  disabled?: boolean;
+  onClick?: () => void;
+};
+
+function IconAction({ label, children, tone = 'default', disabled, onClick }: IconActionProps) {
+  const toneClasses =
+    tone === 'danger'
+      ? 'text-gray-500 hover:text-danger hover:border-danger/40 hover:bg-danger/5'
+      : tone === 'primary'
+      ? 'text-gray-500 hover:text-hd-orange hover:border-hd-orange hover:bg-hd-orange/5'
+      : 'text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={`group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition disabled:opacity-40 disabled:cursor-not-allowed ${toneClasses}`}
+    >
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+const ICON_PROPS = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  className: 'w-4 h-4',
+  'aria-hidden': true,
+};
+function PublishIcon() {
+  // Paper-plane / send glyph — "publish to the world".
+  return (
+    <svg {...ICON_PROPS}>
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+function ReturnIcon() {
+  // Curved arrow back to sender.
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="9 14 4 9 9 4" />
+      <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+    </svg>
+  );
+}
+function PowerIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
 function StatusBadge({ status }: { status: AdminListingRow['status'] }) {
   const tone =
     status === 'ACTIVE'

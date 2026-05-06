@@ -252,10 +252,13 @@ export function MyListingsPage() {
                   </div>
                 </Td>
                 <Td className="text-right pr-4">
-                  <div className="inline-flex flex-col items-stretch gap-1.5 min-w-[120px]">
+                  {/* Icon-only actions — labels surface on hover via the
+                      tooltip span. Reduces visual weight when several
+                      actions are valid for the row at once. */}
+                  <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
                       <span
-                        className="inline-flex items-center justify-end gap-1 text-[11px] font-subhead uppercase tracking-subhead text-warning"
+                        className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
                         title="An H-D admin will review and publish this listing."
                       >
                         <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
@@ -265,54 +268,52 @@ export function MyListingsPage() {
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <Link
                         to="/listings/new"
-                        className="text-right text-[11px] font-subhead uppercase tracking-subhead text-danger hover:underline"
+                        className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-danger hover:underline"
                       >
                         Re-submit
                       </Link>
                     )}
                     {(l.status === 'ACTIVE' || l.status === 'DEACTIVATED') && (
-                      <a
+                      <IconAction
+                        as="a"
+                        label="Preview"
                         href={`http://localhost:5180/listings/${l.slug}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block text-center text-[11px] font-subhead uppercase tracking-subhead text-gray-700 hover:text-hd-orange border border-gray-300 hover:border-hd-orange px-2 py-1.5 rounded transition"
                       >
-                        Preview
-                      </a>
+                        <EyeIcon />
+                      </IconAction>
                     )}
                     {l.status === 'ACTIVE' && (
                       <>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => markSold.mutate(l.id)}
-                        >
-                          Mark Sold
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <IconAction label="Mark Sold" onClick={() => markSold.mutate(l.id)}>
+                          <SoldIcon />
+                        </IconAction>
+                        <IconAction
+                          label="Turn Off"
                           onClick={() => turnOff.mutate(l.id)}
                           disabled={turnOff.isPending}
                         >
-                          Turn Off
-                        </Button>
+                          <PowerIcon />
+                        </IconAction>
                       </>
                     )}
                     {l.status === 'DEACTIVATED' && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
+                      <IconAction
+                        label="Turn On"
                         onClick={() => turnOn.mutate(l.id)}
                         disabled={turnOn.isPending}
+                        tone="primary"
                       >
-                        Turn On
-                      </Button>
+                        <PowerIcon />
+                      </IconAction>
                     )}
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
-                      <Button size="sm" variant="ghost" onClick={() => remove.mutate(l.id)}>
-                        Remove
-                      </Button>
+                      <IconAction
+                        label="Remove"
+                        onClick={() => remove.mutate(l.id)}
+                        tone="danger"
+                      >
+                        <TrashIcon />
+                      </IconAction>
                     )}
                   </div>
                 </Td>
@@ -336,6 +337,114 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-4 py-3.5 align-top ${className}`}>{children}</td>;
+}
+
+// Square icon button with a hover tooltip. Used in the Actions column to
+// keep the table light when several actions stack up on a single row. The
+// label is announced to screen readers via aria-label and shown to sighted
+// users via a CSS-driven tooltip on hover/focus — no JS state required.
+type IconActionProps = {
+  label: string;
+  children: React.ReactNode;
+  tone?: 'default' | 'danger' | 'primary';
+  disabled?: boolean;
+} & (
+  | { as?: 'button'; onClick?: () => void; href?: undefined }
+  | { as: 'a'; href: string; onClick?: undefined }
+);
+
+function IconAction(props: IconActionProps) {
+  const { label, children, tone = 'default', disabled } = props;
+  const toneClasses =
+    tone === 'danger'
+      ? 'text-gray-500 hover:text-danger hover:border-danger/40 hover:bg-danger/5'
+      : tone === 'primary'
+      ? 'text-gray-500 hover:text-hd-orange hover:border-hd-orange hover:bg-hd-orange/5'
+      : 'text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50';
+  const base = `group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition disabled:opacity-40 disabled:cursor-not-allowed ${toneClasses}`;
+  const tooltip = (
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
+    >
+      {label}
+    </span>
+  );
+  if (props.as === 'a') {
+    return (
+      <a
+        href={props.href}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={label}
+        className={base}
+      >
+        {children}
+        {tooltip}
+      </a>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={props.onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={base}
+    >
+      {children}
+      {tooltip}
+    </button>
+  );
+}
+
+// Inline 16×16 stroke icons. Heroicons-flavoured but kept inline so we don't
+// add a dependency for five glyphs. Path data — never edit directly without
+// re-running an icon set against the same viewBox.
+const ICON_PROPS = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  className: 'w-4 h-4',
+  'aria-hidden': true,
+};
+function EyeIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function SoldIcon() {
+  // Tag with a check inside — "marked sold".
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M20.59 13.41 13.41 20.59a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+function PowerIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  );
+}
+function TrashIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
 }
 
 function StatusBadge({ status }: { status: DealerListingRow['status'] }) {
