@@ -146,6 +146,14 @@ export function ListingSidebarCard({
           <p className="font-headline tracking-headline text-3xl text-text-on-light leading-none">
             ₹ {price.toLocaleString('en-IN')}
           </p>
+          {/* Indicative-pricing disclosure — mandatory once we go live in
+              India because the marketplace doesn't transact (RTO, on-road,
+              GST and any insurance bundle quote come from the dealer
+              direct). Buyer-protection regulators flag fixed-price displays
+              without this caption as misleading. */}
+          <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+            Indicative ex-showroom · RTO, insurance &amp; on-road quoted by the dealer
+          </p>
           <p className="text-xs text-gray-500 mt-2">
             EMI From{' '}
             <span className="text-hd-orange font-subhead">

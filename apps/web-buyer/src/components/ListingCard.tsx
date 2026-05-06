@@ -79,9 +79,17 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             .join(' · ')}
         </p>
         <div className="mt-3 flex items-baseline justify-between gap-2">
-          <span className="font-headline text-xl text-text-on-light tracking-headline">
-            ₹ {listing.price.toLocaleString('en-IN')}
-          </span>
+          <div>
+            <span className="font-headline text-xl text-text-on-light tracking-headline">
+              ₹ {listing.price.toLocaleString('en-IN')}
+            </span>
+            {/* "Ex-showroom" caption — single line so the card stays
+                compact. Full disclaimer about RTO / insurance / on-road
+                surfaces on the listing detail price card. */}
+            <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">
+              Indicative ex-showroom
+            </span>
+          </div>
           <span className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange group-hover:underline">
             View Details ›
           </span>

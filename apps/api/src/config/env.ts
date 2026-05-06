@@ -74,6 +74,28 @@ export function getEnv(): Env {
     process.exit(1);
   }
   cached = parsed.data;
+
+  // Soft-warn when a production NODE_ENV is paired with mock providers.
+  // We deliberately do NOT exit(1) here — the demo / staging environment
+  // still depends on `mock` SMS so any 6-digit code passes verification.
+  // The boot log makes the misconfiguration visible to anyone watching.
+  // To upgrade this to a hard guard, swap the console.error block for
+  // process.exit(1) — see HANDOVER.md "Production deployment checklist".
+  if (cached.NODE_ENV === 'production') {
+    const mockedProviders: string[] = [];
+    if (cached.SMS_PROVIDER === 'mock') mockedProviders.push('SMS_PROVIDER');
+    if (cached.EMAIL_PROVIDER === 'mock') mockedProviders.push('EMAIL_PROVIDER');
+    if (cached.TORQUE_MODE === 'mock') mockedProviders.push('TORQUE_MODE');
+    if (mockedProviders.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error(
+        `\n⚠️  PRODUCTION + MOCK PROVIDERS — ${mockedProviders.join(', ')} are still set to "mock". ` +
+          'OTPs accept any 6-digit code and dealer notifications never leave the host. ' +
+          'Switch to msg91/sendgrid/live before serving real users.\n',
+      );
+    }
+  }
+
   return cached;
 }
 
