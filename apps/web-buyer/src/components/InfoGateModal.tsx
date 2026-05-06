@@ -134,12 +134,17 @@ export function InfoGateModal({
   // network blip a permanent dead-end. The Resend Code button on the
   // verify step now clears `error` + `otpId` and lets this effect re-fire.
   useEffect(() => {
-    if (!open || !prefilled || otpId || busy) return;
+    // Either path: prefilled (caller passed phone in props) OR collect
+    // step finished + we have a profile in state. Previously gated on
+    // !prefilled which made Resend Code a no-op for the buyer-enquiry
+    // collect→verify flow.
+    const phone = prefilled?.phone ?? profile?.phone;
+    if (!open || !phone || otpId || busy) return;
     let cancelled = false;
     setBusy(true);
     api<{ otpId: string }>('/otp/send', {
       method: 'POST',
-      body: JSON.stringify({ phone: prefilled.phone, purpose }),
+      body: JSON.stringify({ phone, purpose }),
     })
       .then((res) => {
         if (!cancelled) {
@@ -159,7 +164,7 @@ export function InfoGateModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, prefilled?.phone, purpose, otpId]);
+  }, [open, prefilled?.phone, profile?.phone, purpose, otpId]);
 
   // 30-second resend cooldown so a buyer who didn't get the SMS within ~30s
   // has a clear "send it again" path instead of refreshing the page (and
@@ -255,7 +260,14 @@ export function InfoGateModal({
         method: 'POST',
         body: JSON.stringify({ otpId, code }),
       });
-      setOtp(res.verifiedToken, profile.phone, purpose);
+      // Persist the buyer's full identity (not just phone) so the
+      // "alreadyVerified" shortcut on subsequent listings can submit
+      // a real lead with the actual name/email, not placeholders.
+      setOtp(
+        res.verifiedToken,
+        { phone: profile.phone, name: profile.name, email: profile.email },
+        purpose,
+      );
       onVerified({
         phone: profile.phone,
         name: profile.name,
@@ -281,7 +293,7 @@ export function InfoGateModal({
       <div
         className={`bg-hd-white border-t-4 border-hd-orange ${
           isBuyerEnquiry && step === 'collect' ? 'max-w-xl' : 'max-w-md'
-        } w-full p-6 rounded-card shadow-xl my-auto`}
+        } w-full p-4 sm:p-6 rounded-card shadow-xl my-auto`}
       >
         <div className="flex items-baseline justify-between">
           <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
@@ -320,7 +332,7 @@ export function InfoGateModal({
             className={`mt-6 ${isBuyerEnquiry ? 'space-y-4' : 'space-y-3'}`}
             noValidate
           >
-            <Labelled label="Full Name" error={errors.name?.message} show={isBuyerEnquiry}>
+            <Labelled label="Full Name" required error={errors.name?.message} show={isBuyerEnquiry}>
               <Input
                 placeholder={isBuyerEnquiry ? 'Mohit Tai' : 'Full name'}
                 aria-invalid={Boolean(errors.name)}
@@ -332,7 +344,7 @@ export function InfoGateModal({
             </Labelled>
 
             <div className={isBuyerEnquiry ? 'grid grid-cols-2 gap-3' : ''}>
-              <Labelled label="Phone Number" error={errors.phone?.message} show={isBuyerEnquiry}>
+              <Labelled label="Phone Number" required error={errors.phone?.message} show={isBuyerEnquiry}>
                 <Controller
                   control={control}
                   name="phone"
@@ -355,7 +367,7 @@ export function InfoGateModal({
               </Labelled>
 
               {isBuyerEnquiry && (
-                <Labelled label="Email ID" error={errors.email?.message} show>
+                <Labelled label="Email ID" required error={errors.email?.message} show>
                   <Input
                     type="email"
                     placeholder="Enter email id"
@@ -370,7 +382,7 @@ export function InfoGateModal({
             </div>
 
             {!isBuyerEnquiry && (
-              <Labelled label="Email ID" error={errors.email?.message} show={false}>
+              <Labelled label="Email ID" required error={errors.email?.message} show={false}>
                 <Input
                   type="email"
                   placeholder="Email"
@@ -466,7 +478,7 @@ export function InfoGateModal({
                   </Labelled>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Labelled label="City" error={errors.city?.message} show>
+                  <Labelled label="City" required error={errors.city?.message} show>
                     <Select
                       aria-invalid={Boolean(errors.city)}
                       disabled={!selectedState}
@@ -532,7 +544,7 @@ export function InfoGateModal({
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled label="Choose Dealer *" error={errors.dealerId?.message} show>
+                <Labelled label="Choose Dealer" required error={errors.dealerId?.message} show>
                   {/* Auto-selected from the listing context, but the user can
                       override — useful when the listing's dealer is far and
                       the buyer would prefer a closer one. The lead is still
@@ -755,11 +767,18 @@ function Labelled({
   label,
   error,
   show = true,
+  required = false,
+  hint,
   children,
 }: {
   label: string;
   error?: string;
   show?: boolean;
+  /** Render a small red asterisk after the label for required fields so
+      users learn the requirement up-front instead of via a submit error. */
+  required?: boolean;
+  /** Optional grey caption rendered under the field (e.g. format hints). */
+  hint?: string;
   children: React.ReactNode;
 }) {
   if (!show) return <Field error={error}>{children}</Field>;
@@ -767,8 +786,10 @@ function Labelled({
     <div>
       <label className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1.5">
         {label}
+        {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
+      {hint && !error && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>}
       {error && <p className="text-xs text-danger mt-1">{error}</p>}
     </div>
   );

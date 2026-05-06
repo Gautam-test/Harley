@@ -100,7 +100,18 @@ export function ListingPreviewDrawer({
                 )}
                 {(data.status === 'ACTIVE' || data.status === 'DRAFT') && (
                   <>
-                    <Button variant="secondary" onClick={() => onDeactivate(data.id)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Take "${data.year} ${data.modelName}" offline? Buyers will no longer see it on search.`,
+                          )
+                        ) {
+                          onDeactivate(data.id);
+                        }
+                      }}
+                    >
                       Deactivate
                     </Button>
                     <Button variant="ghost" onClick={() => onRemove(data.id)}>

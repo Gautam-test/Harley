@@ -28,8 +28,24 @@ export function ListingSidebarCard({
   dealerName,
   dealerCity,
 }: ListingSidebarCardProps) {
-  const { verifiedToken, verifiedFor, phone: storedPhone } = useOtpStore();
-  const alreadyVerified = Boolean(verifiedToken) && verifiedFor === 'ENQUIRY';
+  const {
+    verifiedToken,
+    verifiedFor,
+    phone: storedPhone,
+    name: storedName,
+    email: storedEmail,
+  } = useOtpStore();
+  // Shortcut only works when we have the FULL profile from the previous
+  // enquiry — otherwise we'd post placeholders and the dealer would get
+  // a "Returning buyer / unknown@buyer.local" lead. Falling back to the
+  // modal in that case is a one-time cost; the second listing in the
+  // same session has all three fields cached.
+  const alreadyVerified =
+    Boolean(verifiedToken) &&
+    verifiedFor === 'ENQUIRY' &&
+    Boolean(storedPhone) &&
+    Boolean(storedName) &&
+    Boolean(storedEmail);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -41,7 +57,10 @@ export function ListingSidebarCard({
   // without re-prompting. A 401 from the API means the token expired
   // server-side; fall back to the modal to re-verify.
   const submitDirectly = async () => {
-    if (!storedPhone) {
+    if (!storedPhone || !storedName || !storedEmail) {
+      // Profile incomplete — open the modal so we re-collect the missing
+      // bits before posting. Shouldn't happen given alreadyVerified gate
+      // above, but defends against an older persisted store shape.
       setModalOpen(true);
       return;
     }
@@ -52,9 +71,9 @@ export function ListingSidebarCard({
         method: 'POST',
         withOtpToken: true,
         body: JSON.stringify({
-          name: 'Returning buyer',
+          name: storedName,
           phone: storedPhone,
-          email: 'unknown@buyer.local',
+          email: storedEmail,
           message: `I'm interested in this ${modelInterest}. Please contact me.`,
         }),
       });

@@ -954,7 +954,7 @@ const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 
 // Slot hints from Figma — first photo is the cover; the next three suggest
 // the standard angles a listing should include. Anything beyond is generic.
-const SLOT_HINTS = ['Drop or click to upload', 'Main', 'Side', 'Engine', 'Rear'];
+const SLOT_HINTS = ['Front', 'Side', 'Rear', 'Engine', 'Cockpit'];
 
 function isManagedUploadUrl(url: string) {
   return url.startsWith('/api/v1/uploads/listing-images/');
@@ -1055,7 +1055,7 @@ function ListingImagePicker({
           e.target.value = '';
         }}
       />
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {slots.map((slot) => (
           <PhotoSlot
             key={slot.index}
@@ -1068,7 +1068,7 @@ function ListingImagePicker({
       </div>
 
       {extras.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {extras.map((src, i) => (
             <div
               key={src}

@@ -142,18 +142,20 @@ export function ListingDetailPage() {
               <SpecRow
                 items={[
                   { label: 'Year', value: String(data.year) },
-                  { label: 'Model No', value: stockCode },
+                  { label: 'Stock Code', value: stockCode },
                   {
                     label: 'Owners',
                     value: data.owners
                       ? data.owners === 1
                         ? '1 (Single owner)'
                         : `${data.owners}`
-                      : 'Not Specified',
+                      : '—',
                   },
-                  { label: 'Mileage', value: 'Not Specified' },
+                  // Mileage isn't on the API contract yet — show — instead
+                  // of the misleading 'Not Specified' that read like data.
+                  { label: 'Mileage (km/L)', value: '—' },
                   { label: 'Chassis No', value: data.vin.slice(0, 8) + '…' },
-                  { label: 'KM', value: data.kmsDriven.toLocaleString('en-IN') },
+                  { label: 'KM Driven', value: data.kmsDriven.toLocaleString('en-IN') },
                 ]}
               />
               <SpecRow
@@ -162,15 +164,21 @@ export function ListingDetailPage() {
                     label: 'Inspection',
                     value: data.certificationStatus === 'CPO' ? 'Passed' : 'As-Is',
                   },
-                  { label: 'Is Listed', value: listedOn },
-                  { label: 'Engine No', value: stockCode },
+                  { label: 'Listed On', value: listedOn },
+                  // Engine number is dealer-private (RTO records) — not
+                  // exposed on public listings to avoid VIN-cloning leak
+                  // vectors. Was previously showing a duplicate of the
+                  // stock code, which read as fake data.
                   { label: 'Colour', value: data.colour },
+                  { label: 'Listing Status', value: 'Active' },
                 ]}
               />
               <SpecRow
                 items={[
                   { label: 'Location', value: data.city },
-                  { label: 'Vehicle Registration', value: stockCode },
+                  // Vehicle Registration is the same — withheld until the
+                  // buyer enquires. The dealer surfaces it in the call-back.
+                  { label: 'Available For', value: 'Test Ride · Showroom Visit' },
                 ]}
                 full
               />

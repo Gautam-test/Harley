@@ -838,21 +838,21 @@ function ModalShell({
   // window.confirm prompt is annoying enough to be a real safeguard but
   // not so heavyweight that you can't dismiss an empty modal in one click.
   const closeWithConfirm = () => {
-    const hasInput =
-      document
-        .querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-          '[data-modal-form] input, [data-modal-form] textarea, [data-modal-form] select',
-        )
-        .values()
-        .filter((el) => {
-          if (el.type === 'checkbox' || el.type === 'radio') {
-            return (el as HTMLInputElement).checked;
-          }
-          // Skip the always-prefilled +91 country code on phone fields.
-          const raw = el.value?.trim() ?? '';
-          return raw && raw !== '+91' && raw !== '1';
-        })
-        .toArray().length > 0;
+    // Use Array.from(...).filter — iterator-helper `.values().filter().toArray()`
+    // is ES2025 and crashes at runtime on TS targeting ES2022.
+    const fields = Array.from(
+      document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+        '[data-modal-form] input, [data-modal-form] textarea, [data-modal-form] select',
+      ),
+    );
+    const hasInput = fields.some((el) => {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        return (el as HTMLInputElement).checked;
+      }
+      // Skip the always-prefilled +91 country code on phone fields.
+      const raw = el.value?.trim() ?? '';
+      return Boolean(raw) && raw !== '+91' && raw !== '1';
+    });
     if (hasInput && !window.confirm('Discard this enquiry? Your unsaved changes will be lost.')) {
       return;
     }

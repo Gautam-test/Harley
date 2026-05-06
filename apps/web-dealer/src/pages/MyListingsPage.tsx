@@ -311,12 +311,37 @@ export function MyListingsPage() {
                     )}
                     {l.status === 'ACTIVE' && (
                       <>
-                        <IconAction label="Mark Sold" onClick={() => markSold.mutate(l.id)}>
+                        {/* Mark Sold + Turn Off both move stock out of the
+                            active state — a clumsy thumb on a 32px icon
+                            shouldn't be able to delist a live bike. The
+                            confirms include the model + last-5 of VIN so
+                            the dealer knows *exactly* which row they're
+                            about to mutate. Same pattern as admin Publish. */}
+                        <IconAction
+                          label="Mark Sold"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Mark "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) as SOLD? This removes it from buyer search.`,
+                              )
+                            ) {
+                              markSold.mutate(l.id);
+                            }
+                          }}
+                        >
                           <SoldIcon />
                         </IconAction>
                         <IconAction
                           label="Turn Off"
-                          onClick={() => turnOff.mutate(l.id)}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Turn off "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? Buyers will stop seeing it until you turn it back on.`,
+                              )
+                            ) {
+                              turnOff.mutate(l.id);
+                            }
+                          }}
                           disabled={turnOff.isPending}
                         >
                           <PowerIcon />
@@ -336,7 +361,15 @@ export function MyListingsPage() {
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
                       <IconAction
                         label="Remove"
-                        onClick={() => remove.mutate(l.id)}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Permanently remove "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? This cannot be undone.`,
+                            )
+                          ) {
+                            remove.mutate(l.id);
+                          }
+                        }}
                         tone="danger"
                       >
                         <TrashIcon />

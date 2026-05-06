@@ -230,36 +230,35 @@ export function LeadDetailPage() {
                 onChange={(e) => {
                   const next = e.target.value as LeadStatus;
                   // Terminal moves are one-way — confirm so a misclick
-                  // doesn't bury an active lead. Asking for a reason at
-                  // the same time gives managers an audit trail without
-                  // a separate flow.
+                  // doesn't bury an active lead. We require a non-empty
+                  // reason so managers always have an audit trail; an
+                  // empty / cancelled prompt aborts the whole transition
+                  // (previously the status flipped anyway).
                   if (next === 'LOST' || next === 'DEAD' || next === 'CLOSED') {
                     const why = window.prompt(
                       `Mark this lead as ${next}? This is a terminal status — write a short reason for the audit log.`,
                       '',
                     );
-                    if (why === null) {
-                      // User cancelled; revert select to current value.
+                    // null = user clicked Cancel; empty = clicked OK with
+                    // no text. Both abort, and we revert the select so the
+                    // UI stays consistent with the un-mutated status.
+                    if (!why || !why.trim()) {
                       e.target.value = lead.status;
                       return;
                     }
-                    if (why.trim()) {
-                      addComment.mutate(undefined, {
-                        // Force the comment text without going through the
-                        // "draft" textarea since the user typed it inline.
-                        // Calling the API directly here is cleaner.
+                    // Post the reason as a comment first, then move the
+                    // status. Comment failure is non-fatal — log and
+                    // continue. We bypass the addComment mutation (which
+                    // reads from the textarea draft state) and call the
+                    // API directly with the typed-inline reason.
+                    api(`/dealer/leads/${kind}/${id}/comments`, {
+                      method: 'POST',
+                      body: JSON.stringify({ body: `[${next}] ${why.trim()}` }),
+                    })
+                      .then(() => qc.invalidateQueries({ queryKey: ['lead-comments', kind, id] }))
+                      .catch(() => {
+                        /* swallow — status move is the source of truth */
                       });
-                      // Mirror the entered reason into the comments thread
-                      // so the audit shows up on the lead detail page.
-                      api(`/dealer/leads/${kind}/${id}/comments`, {
-                        method: 'POST',
-                        body: JSON.stringify({ body: `[${next}] ${why.trim()}` }),
-                      }).then(() =>
-                        qc.invalidateQueries({ queryKey: ['lead-comments', kind, id] }),
-                      ).catch(() => {
-                        /* swallow — comment is best-effort, status move is the source of truth */
-                      });
-                    }
                   }
                   moveStatus.mutate(next);
                 }}

@@ -242,7 +242,15 @@ export function ListingsPage() {
                       <>
                         <IconAction
                           label="Deactivate"
-                          onClick={() => deactivate.mutate(l.id)}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Take "${l.year} ${l.modelName}" (${l.dealerName}) offline? Buyers will no longer see it on search.`,
+                              )
+                            ) {
+                              deactivate.mutate(l.id);
+                            }
+                          }}
                         >
                           <PowerIcon />
                         </IconAction>

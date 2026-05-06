@@ -190,7 +190,7 @@ export function SellBikeModal() {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
-              <Labelled label="Your Name">
+              <Labelled label="Your Name" required>
                 <Input
                   placeholder="Mohd Tai"
                   {...register('username', { required: true, minLength: 2 })}
@@ -198,7 +198,7 @@ export function SellBikeModal() {
               </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Bike Model">
+                <Labelled label="Bike Model" required>
                   <Select {...register('bikeModel', { required: true })}>
                     <option value="">Choose bike model</option>
                     {HD_MODEL_CATALOG.map((g) => (
@@ -214,6 +214,7 @@ export function SellBikeModal() {
                 </Labelled>
                 <Labelled
                   label="VIN Number"
+                  required
                   hint="17 characters · letters + numbers · no I, O, Q"
                 >
                   <Input
@@ -229,7 +230,7 @@ export function SellBikeModal() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Phone Number">
+                <Labelled label="Phone Number" required>
                   <Input
                     inputMode="tel"
                     maxLength={13}
@@ -334,7 +335,7 @@ export function SellBikeModal() {
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled label="City">
+                <Labelled label="City" required>
                   <Select
                     disabled={!selectedState}
                     {...register('city', { required: true })}
@@ -362,7 +363,7 @@ export function SellBikeModal() {
                     })}
                   />
                 </Labelled>
-                <Labelled label="Choose Dealer *">
+                <Labelled label="Choose Dealer" required>
                   <Select
                     {...register('dealerId', { required: true })}
                     disabled={dealersQuery.isLoading}
@@ -379,7 +380,7 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <Labelled label="Email">
+              <Labelled label="Email" required>
                 <Input
                   type="email"
                   placeholder="you@example.com"
@@ -453,18 +454,23 @@ export function SellBikeModal() {
 function Labelled({
   label,
   hint,
+  required = false,
   children,
 }: {
   label: string;
   /** Small grey caption rendered under the field — used for format hints
       like "17 characters, no I/O/Q" on the VIN input. */
   hint?: string;
+  /** Renders a small red asterisk after the label so users learn the
+      field is required up-front instead of via a submit error. */
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div>
       <label className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1.5">
         {label}
+        {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
       {hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>}
