@@ -1,0 +1,315 @@
+// Prisma schema — derived from PRD §5.2.
+// All entities required for v1 of the H-D CPO marketplace.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth & Identity
+// ─────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  auditLogs AuditLog[]
+}
+
+model Dealer {
+  id             String       @id @default(cuid())
+  username       String       @unique
+  passwordHash   String
+  name           String
+  legalName      String?
+  email          String
+  phone          String
+  address        String?
+  city           String
+  state          String?
+  pincode        String
+  latitude       Float?
+  longitude      Float?
+  torqueDealerId String?      @unique
+  status         DealerStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  listings     Listing[]
+  enquiries    Enquiry[]
+  generalLeads GeneralLead[]
+  tradeInLeads TradeInLead[]
+  orders       Order[]
+}
+
+enum DealerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Listings
+// ─────────────────────────────────────────────────────────────
+
+model Listing {
+  id                  String        @id @default(cuid())
+  vin                 String        @unique
+  slug                String        @unique
+  dealerId            String
+  dealer              Dealer        @relation(fields: [dealerId], references: [id])
+  modelFamily         String
+  modelName           String
+  year                Int
+  colour              String
+  price               Decimal       @db.Decimal(12, 2)
+  kmsDriven           Int
+  description         String        @db.Text
+  images              String[]
+  /// Number of previous owners. Surfaced on the dealer Add-Listing form
+  /// (Figma /Dealer/Halrey dealer_page-0002.jpg "OWNERS" field) and on the
+  /// buyer listing detail spec grid. Optional so legacy rows pre-migration
+  /// stay valid.
+  owners              Int?
+  certificationStatus CertStatus
+  inspectionReportUrl String?
+  cpoDocs             Json?
+  status              ListingStatus @default(DRAFT)
+  // Set when an admin returns a DRAFT to the dealer for revision (PRD §6.3.4
+  // gives admin Publish/Remove only — this is the third path so dealers know
+  // *what* to fix instead of seeing a hard REMOVED with no signal).
+  adminFeedback       String?       @db.Text
+  publishedAt         DateTime?
+  soldAt              DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  enquiries Enquiry[]
+  orders    Order[]
+
+  @@index([status])
+  @@index([modelFamily, modelName])
+  @@index([year])
+  @@index([price])
+}
+
+enum CertStatus {
+  CPO
+  AS_IS
+}
+
+enum ListingStatus {
+  DRAFT
+  ACTIVE
+  SOLD
+  REMOVED
+  DEACTIVATED
+}
+
+// ─────────────────────────────────────────────────────────────
+// Leads & Enquiries
+// ─────────────────────────────────────────────────────────────
+
+model Enquiry {
+  id        String     @id @default(cuid())
+  listingId String
+  listing   Listing    @relation(fields: [listingId], references: [id])
+  dealerId  String
+  dealer    Dealer     @relation(fields: [dealerId], references: [id])
+  name      String
+  phoneEnc  String     // PII — encrypted at rest (PRD §9.3)
+  emailEnc  String     // PII — encrypted at rest
+  city      String?
+  pincode   String?
+  message   String?    @db.Text
+  status    LeadStatus @default(NEW)
+  notes     Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([dealerId, status])
+  @@index([createdAt])
+}
+
+model GeneralLead {
+  id            String     @id @default(cuid())
+  dealerId      String
+  dealer        Dealer     @relation(fields: [dealerId], references: [id])
+  name          String
+  phoneEnc      String
+  emailEnc      String
+  city          String?
+  pincode       String?
+  modelInterest String?
+  priceRange    String?
+  status        LeadStatus @default(NEW)
+  notes         Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([dealerId, status])
+  @@index([createdAt])
+}
+
+model TradeInLead {
+  id        String     @id @default(cuid())
+  dealerId  String
+  dealer    Dealer     @relation(fields: [dealerId], references: [id])
+  username  String
+  bikeModel String
+  vin       String
+  phoneEnc  String
+  emailEnc  String
+  city      String
+  status    LeadStatus @default(NEW)
+  notes     Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([dealerId, status])
+  @@index([createdAt])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  ON_SITE_VISIT     // freeze design — buyer visiting dealership
+  LOAN_APPROVAL     // freeze design — finance in flight
+  IN_PROGRESS
+  CONVERTED
+  SUCCESS           // freeze design — terminal-positive (replaces CONVERTED in new pipeline)
+  LOST
+  DEAD              // freeze design — terminal-negative (replaces LOST in new pipeline)
+  CLOSED
+}
+
+// Free-form thread on any lead (Enquiry / GeneralLead / TradeInLead).
+// Identified by composite (leadKind, leadId) — kept un-relational so adding a new
+// lead kind doesn't require a schema change.
+model LeadComment {
+  id         String   @id @default(cuid())
+  leadKind   String   // 'buyer' | 'general' | 'trade-in'
+  leadId     String
+  authorId   String
+  authorRole String   // 'DEALER' | 'ADMIN'
+  authorName String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([leadKind, leadId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Orders & Tracking ("Track Your Harley" — freeze design)
+// ─────────────────────────────────────────────────────────────
+
+model Order {
+  id                String       @id @default(cuid())
+  // Public order/tracking ID — buyer pastes this into the tracking page.
+  orderId           String       @unique
+  buyerName         String
+  buyerPhoneEnc     String       // PII — encrypted at rest
+  buyerEmailEnc     String       // PII — encrypted at rest
+  listingId         String?
+  listing           Listing?     @relation(fields: [listingId], references: [id])
+  // Denormalised label so old orders survive listing deletion / re-slug.
+  bikeLabel         String
+  dealerId          String
+  dealer            Dealer       @relation(fields: [dealerId], references: [id])
+  status            OrderStatus  @default(ORDER_CONFIRMED)
+  estimatedDelivery DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  events OrderEvent[]
+
+  @@index([dealerId])
+  @@index([status])
+}
+
+enum OrderStatus {
+  ORDER_CONFIRMED
+  QUALITY_INSPECTION
+  DOCUMENTATION
+  IN_TRANSIT
+  READY_FOR_DELIVERY
+  DELIVERED
+}
+
+model OrderEvent {
+  id         String      @id @default(cuid())
+  orderId    String
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status     OrderStatus
+  occurredAt DateTime    @default(now())
+  note       String?
+
+  @@index([orderId, occurredAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// OTP (DB shadow — Redis is primary; this is for audit / fallback)
+// ─────────────────────────────────────────────────────────────
+
+model OtpVerification {
+  id        String     @id @default(cuid())
+  phone     String
+  purpose   OtpPurpose
+  codeHash  String
+  attempts  Int        @default(0)
+  verified  Boolean    @default(false)
+  expiresAt DateTime
+  createdAt DateTime   @default(now())
+
+  @@index([phone, createdAt])
+}
+
+enum OtpPurpose {
+  ENQUIRY
+  GENERAL_LEAD
+  TRADE_IN
+}
+
+// ─────────────────────────────────────────────────────────────
+// Static Content (admin-editable)
+// ─────────────────────────────────────────────────────────────
+
+model StaticContent {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g. "about", "privacy", "terms", "faq", "contact"
+  title     String
+  bodyHtml  String   @db.Text
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+// Audit Log (append-only)
+// ─────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       AdminUser? @relation(fields: [actorId], references: [id])
+  actorRole   String   // ADMIN | DEALER | SYSTEM
+  action      String   // e.g. "DEALER_CREATED", "LISTING_REMOVED"
+  entityType  String?
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}

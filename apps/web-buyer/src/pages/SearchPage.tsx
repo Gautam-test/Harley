@@ -1,0 +1,232 @@
+import { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { useSearchParams } from 'react-router-dom';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { api } from '../lib/api';
+import { SearchFilters } from '../components/SearchFilters';
+import { HERO, PageHero } from '../components/PageHero';
+import {
+  ListingCardItem,
+  ListingCardSkeleton,
+  type ListingCardData,
+} from '../components/ListingCard';
+
+interface SearchResponse {
+  results: ListingCardData[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+const PAGE_SIZE = 12;
+
+const TABS: { id: '' | 'CPO' | 'AS_IS'; label: string }[] = [
+  { id: '', label: 'All Pre-Owned Motorcycles' },
+  { id: 'CPO', label: 'Certified Pre-Owned' },
+  { id: 'AS_IS', label: 'As-Is Pre-Owned Motorcycles' },
+];
+
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'priceAsc', label: 'Price: low → high' },
+  { value: 'priceDesc', label: 'Price: high → low' },
+  { value: 'kmsAsc', label: 'Lowest KMs' },
+];
+
+export function SearchPage() {
+  const [params, setParams] = useSearchParams();
+  const queryString = params.toString();
+  const currentPage = Number(params.get('page') ?? '1');
+  const activeTab = (params.get('cert') as '' | 'CPO' | 'AS_IS') || '';
+  const sort = params.get('sort') ?? 'newest';
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['listings', queryString],
+    queryFn: () => api<SearchResponse>(`/listings?${queryString}`),
+    placeholderData: keepPreviousData,
+  });
+
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+
+  const setParam = (key: string, value: string) => {
+    const np = new URLSearchParams(params);
+    if (value) np.set(key, value);
+    else np.delete(key);
+    np.delete('page');
+    setParams(np);
+  };
+
+  const goToPage = (next: number) => {
+    const np = new URLSearchParams(params);
+    if (next <= 1) np.delete('page');
+    else np.set('page', String(next));
+    setParams(np);
+  };
+
+  return (
+    <>
+      <Helmet>
+        <title>Search Stock — H-D Certified</title>
+        <meta name="description" content="Search Certified Pre-Owned Harley-Davidson motorcycles from authorised Indian dealers." />
+      </Helmet>
+
+      <PageHero
+        title="Search"
+        emphasis="Stock"
+        subtitle="Every H-D Certified™ motorcycle is inspected, verified, and backed by an authorized Harley-Davidson dealer."
+        image={HERO.searchStock}
+        size="lg"
+      />
+
+      <div className="bg-surface-light text-text-on-light min-h-screen">
+        <div className="max-w-container mx-auto px-6 py-10 grid lg:grid-cols-[300px_1fr] gap-6">
+          <aside className="lg:sticky lg:top-20 h-fit">
+            <p className="font-subhead uppercase tracking-subhead text-xs text-text-on-light mb-3 lg:hidden">
+              Search By:
+            </p>
+            <SearchFilters />
+          </aside>
+
+          <section>
+            <div className="flex items-baseline justify-between mb-2 flex-wrap gap-3">
+              <h2 className="font-headline text-2xl md:text-3xl tracking-headline uppercase text-text-on-light">
+                H-D Certified&trade; Used Bike <span className="text-hd-orange">Stocklist</span>
+              </h2>
+              <div className="flex items-center gap-3">
+                <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
+                  Sort By
+                </span>
+                <select
+                  value={sort}
+                  onChange={(e) => setParam('sort', e.target.value === 'newest' ? '' : e.target.value)}
+                  className="bg-hd-white border border-gray-300 rounded px-3 py-1.5 font-subhead uppercase tracking-subhead text-[11px] text-text-on-light"
+                >
+                  {SORT_OPTIONS.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5">
+              Please use the filters on the left to refine the H-D Certified&trade; stock and find your
+              next Harley-Davidson.
+            </p>
+
+            {/* Tabs — All / CPO / As-Is */}
+            <nav className="flex flex-wrap gap-2 mb-6">
+              {TABS.map((t) => (
+                <button
+                  key={t.id || 'all'}
+                  type="button"
+                  onClick={() => setParam('cert', t.id)}
+                  className={`px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
+                    activeTab === t.id
+                      ? 'bg-hd-orange text-hd-white'
+                      : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+
+            {isError && (
+              <div className="text-danger bg-danger/10 border border-danger px-4 py-3 rounded-card">
+                Could not load listings. Please try again.
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <ListingCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : data?.results.length === 0 ? (
+              <div className="bg-hd-white border border-gray-200 p-10 text-center rounded-card">
+                <p className="font-subhead text-lg text-text-on-light">
+                  No bikes match your search.
+                </p>
+                <p className="text-sm text-gray-600 mt-2">Try widening the radius or clearing filters.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {data?.results.map((l) => (
+                  <ListingCardItem key={l.id} listing={l} />
+                ))}
+              </div>
+            )}
+
+            {data && totalPages > 1 && (
+              <Pagination
+                page={currentPage}
+                total={totalPages}
+                goTo={goToPage}
+              />
+            )}
+          </section>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Pagination({
+  page,
+  total,
+  goTo,
+}: {
+  page: number;
+  total: number;
+  goTo: (n: number) => void;
+}) {
+  const [jump, setJump] = useState('');
+  const cls = (active: boolean) =>
+    `min-w-[2.25rem] h-9 px-3 inline-flex items-center justify-center font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
+      active
+        ? 'bg-hd-orange text-hd-white'
+        : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
+    }`;
+  // Render at most 3 numeric pages around the current.
+  const start = Math.max(1, Math.min(page, total - 2));
+  const numbers: number[] = [];
+  for (let i = 0; i < 3 && start + i <= total; i++) numbers.push(start + i);
+
+  const onJump = (e: React.FormEvent) => {
+    e.preventDefault();
+    const n = Number(jump);
+    if (Number.isFinite(n) && n >= 1 && n <= total) goTo(n);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-2 mt-10">
+      <button type="button" className={cls(false)} onClick={() => goTo(1)} disabled={page === 1}>
+        First
+      </button>
+      {numbers.map((n) => (
+        <button key={n} type="button" className={cls(n === page)} onClick={() => goTo(n)}>
+          {n}
+        </button>
+      ))}
+      <button type="button" className={cls(false)} onClick={() => goTo(total)} disabled={page === total}>
+        Last
+      </button>
+      <form onSubmit={onJump} className="flex items-center gap-2 ml-2">
+        <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
+          Jump to Page:
+        </span>
+        <input
+          type="number"
+          min={1}
+          max={total}
+          value={jump}
+          onChange={(e) => setJump(e.target.value)}
+          placeholder={String(page)}
+          className="w-16 h-9 border border-gray-300 rounded-card px-2 text-sm text-center"
+        />
+      </form>
+    </div>
+  );
+}

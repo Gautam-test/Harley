@@ -1,0 +1,4 @@
+{
+  "extends": "@hd-cpo/config/tsconfig.react.json",
+  "include": ["src/**/*"]
+}

@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-hd-white text-text-on-light font-body;
+  }
+
+  /* Brand rule (H-D 2026 guidelines, p. 71): headlines use 1903 Bold Condensed,
+     ALL CAPS, tight leading, no tracking. line-height set as plain CSS so it
+     applies even before the preset's leading-headline utility is generated. */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline tracking-headline uppercase;
+    line-height: 0.95;
+  }
+}
+
+/* 1903 brand family (H-D 2026 guidelines, p. 70-71). OTF files served from each
+   app's /public/fonts. font-display: swap so any FOUT is on the fallback. */
+@font-face {
+  font-family: '1903 Sans Condensed';
+  src: local('1903 Sans Condensed Regular'), local('1903SansCondensed-Regular'),
+       url('/fonts/1903SansCondensed-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans Condensed';
+  src: local('1903 Sans Condensed Italic'), local('1903SansCondensed-Italic'),
+       url('/fonts/1903SansCondensed-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans Condensed';
+  src: local('1903 Sans Condensed Bold'), local('1903SansCondensed-Bold'),
+       url('/fonts/1903SansCondensed-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans Condensed';
+  src: local('1903 Sans Condensed Bold Italic'), local('1903SansCondensed-BoldItalic'),
+       url('/fonts/1903SansCondensed-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '1903 Sans';
+  src: local('1903 Sans Regular'), local('1903Sans-Regular'),
+       url('/fonts/1903Sans-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans';
+  src: local('1903 Sans Italic'), local('1903Sans-Italic'),
+       url('/fonts/1903Sans-Italic.otf') format('opentype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans';
+  src: local('1903 Sans Bold'), local('1903Sans-Bold'),
+       url('/fonts/1903Sans-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Sans';
+  src: local('1903 Sans Bold Italic'), local('1903Sans-BoldItalic'),
+       url('/fonts/1903Sans-BoldItalic.otf') format('opentype');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: '1903 Serif';
+  src: local('1903 Serif Regular'), local('1903Serif-Regular'),
+       url('/fonts/1903Serif-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: '1903 Serif';
+  src: local('1903 Serif Bold'), local('1903Serif-Bold'),
+       url('/fonts/1903Serif-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer components {
+  .btn-hd-primary {
+    @apply bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-6 py-3 hover:brightness-110 transition;
+  }
+
+  .btn-hd-secondary {
+    @apply border border-hd-black text-hd-black font-subhead uppercase tracking-subhead px-6 py-3 hover:bg-hd-black hover:text-hd-white transition;
+  }
+
+  .badge-cpo {
+    @apply inline-flex items-center bg-hd-orange text-hd-black text-xs font-subhead uppercase tracking-subhead px-2 py-1;
+  }
+
+  .badge-as-is {
+    @apply inline-flex items-center bg-surface-light text-gray-700 border border-gray-300 text-xs font-subhead uppercase tracking-subhead px-2 py-1;
+  }
+}

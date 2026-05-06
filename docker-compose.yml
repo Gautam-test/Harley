@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hd-cpo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hdcpo
+      POSTGRES_PASSWORD: hdcpo_dev_password
+      POSTGRES_DB: hd_cpo_marketplace
+    ports:
+      - "5432:5432"
+    volumes:
+      - hd_cpo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hdcpo -d hd_cpo_marketplace"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: hd-cpo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - hd_cpo_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: hd-cpo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin_dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - hd_cpo_miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  hd_cpo_pgdata:
+  hd_cpo_redisdata:
+  hd_cpo_miniodata:
