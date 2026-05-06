@@ -57,7 +57,7 @@ services:
           property: connectionString
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: harley-redis
           property: connectionString
       # Cryptographic secrets — Render generates strong random values once and
@@ -98,7 +98,16 @@ services:
       - key: SENTRY_ENVIRONMENT
         value: production
 
-# ─── Managed datastores ─────────────────────────────────────────
+  # ─── Redis / Key-Value cache ────────────────────────────────────
+  # Render renamed Redis → "Key Value" in 2024 (RSALv2 license shift). The
+  # service still speaks the Redis wire protocol, so REDIS_URL works as-is.
+  - type: keyvalue
+    name: harley-redis
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+# ─── Managed Postgres ───────────────────────────────────────────
 databases:
   - name: harley-db
     plan: free  # bump to `basic-256mb` ($7/mo) for production
@@ -106,9 +115,3 @@ databases:
     user: hdcpo
     postgresMajorVersion: '16'
     ipAllowList: []  # default = open inside Render's network only
-
-  - name: harley-redis
-    type: redis
-    plan: free
-    ipAllowList: []
-    maxmemoryPolicy: allkeys-lru
