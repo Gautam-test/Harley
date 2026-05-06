@@ -13,6 +13,12 @@ interface ApiOptions extends RequestInit {
   _retried?: boolean;
 }
 
+// API base URL — production deploys set VITE_API_URL to the Render service URL.
+// Local dev leaves it empty so paths stay relative and Vite's proxy handles it.
+const API_BASE =
+  ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') +
+  '/api/v1';
+
 // One in-flight refresh promise across concurrent 401s — see web-dealer/api.ts
 // for the rationale.
 let refreshInFlight: Promise<string | null> | null = null;
@@ -23,7 +29,7 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
   if (!refreshToken) return null;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch('/api/v1/auth/refresh', {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -52,12 +58,12 @@ function buildHeaders(init: ApiOptions | undefined, token: string | null): Recor
 
 export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
   const token = useAuthStore.getState().accessToken;
-  const res = await fetch(`/api/v1${path}`, { ...init, headers: buildHeaders(init, token) });
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: buildHeaders(init, token) });
 
   if (res.status === 401 && !init?._retried) {
     const newToken = await refreshAccessTokenOnce();
     if (newToken) {
-      const retry = await fetch(`/api/v1${path}`, {
+      const retry = await fetch(`${API_BASE}${path}`, {
         ...init,
         headers: buildHeaders(init, newToken),
       });

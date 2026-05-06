@@ -20,7 +20,8 @@ export function LoginPage() {
 
   const onSubmit = async (values: FormValues) => {
     setError(null);
-    const res = await fetch('/api/v1/auth/dealer/login', {
+    const apiBase = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1';
+    const res = await fetch(`${apiBase}/auth/dealer/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: values.username, password: values.password }),

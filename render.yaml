@@ -1,0 +1,110 @@
+# Render Blueprint — full backend stack for the H-D CPO marketplace.
+#
+# Deploys with one command:
+#   1. Push this file to a git remote Render can read (we already push to
+#      git.orangemantra.org/.../harley-node).
+#   2. In Render dashboard → New → Blueprint → connect this repo.
+#   3. Render reads this file and provisions the API + Postgres + Redis.
+#
+# Free-tier notes:
+#   - Free Postgres expires after 90 days; pin to `starter` ($7/mo) for prod.
+#   - Free web services sleep after 15 min idle (~30 s cold start). Pin to
+#     `starter` for always-on once you have buyer traffic.
+#
+# After first deploy you must:
+#   - Generate fresh secrets (the placeholder lines marked `value: REPLACE_…`).
+#     Render's `generateValue: true` does this for you on the JWT/OTP/PII keys.
+#   - Set CORS_ORIGINS to your three Vercel deploy URLs.
+#   - Run the seed once: open the Render shell and `pnpm prisma:seed`.
+
+services:
+  # ─── API web service ────────────────────────────────────────────
+  - type: web
+    name: harley-api
+    runtime: node
+    plan: free  # bump to `starter` ($7/mo) for production
+    branch: main
+    rootDir: .
+    buildCommand: |
+      corepack enable
+      pnpm install --frozen-lockfile
+      pnpm --filter @hd-cpo/types build || true
+      pnpm --filter @hd-cpo/torque-client build || true
+      pnpm --filter @hd-cpo/api prisma:generate
+      pnpm --filter @hd-cpo/api build
+    # On every deploy: apply pending migrations, then start the compiled API.
+    startCommand: |
+      pnpm --filter @hd-cpo/api prisma:deploy
+      pnpm --filter @hd-cpo/api start
+    healthCheckPath: /api/v1/health/ready
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000  # Render injects PORT but we read this same env var
+      - key: LOG_LEVEL
+        value: info
+      - key: EMBEDDED_DB
+        value: '0'  # Use the managed Postgres below — never embedded in prod
+      - key: DATABASE_URL
+        fromDatabase:
+          name: harley-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: harley-redis
+          property: connectionString
+      # Cryptographic secrets — Render generates strong random values once and
+      # keeps them stable across deploys.
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: OTP_VERIFIED_TOKEN_SECRET
+        generateValue: true
+      - key: PII_ENCRYPTION_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TTL_SECONDS
+        value: '900'
+      - key: JWT_REFRESH_TTL_SECONDS
+        value: '604800'
+      - key: OTP_VERIFIED_TOKEN_TTL_SECONDS
+        value: '900'
+      # CORS — the three Vercel deploy URLs, comma-separated. Update after
+      # the Vercel projects exist (see docs/deploy/VERCEL.md).
+      - key: CORS_ORIGINS
+        value: 'https://harley-buyer.vercel.app,https://harley-dealer.vercel.app,https://harley-admin.vercel.app'
+      # External providers — start in mock mode; flip to real keys later.
+      - key: SMS_PROVIDER
+        value: mock
+      - key: EMAIL_PROVIDER
+        value: mock
+      - key: EMAIL_FROM
+        value: noreply@hd-cpo.local
+      - key: TORQUE_MODE
+        value: mock
+      - key: LISTINGS_AUTO_PUBLISH
+        value: '0'
+      # Sentry — leave blank to disable; set on the Render dashboard once
+      # the team has a DSN.
+      - key: SENTRY_DSN
+        value: ''
+      - key: SENTRY_ENVIRONMENT
+        value: production
+
+# ─── Managed datastores ─────────────────────────────────────────
+databases:
+  - name: harley-db
+    plan: free  # bump to `basic-256mb` ($7/mo) for production
+    databaseName: hd_cpo_marketplace
+    user: hdcpo
+    postgresMajorVersion: '16'
+    ipAllowList: []  # default = open inside Render's network only
+
+  - name: harley-redis
+    type: redis
+    plan: free
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru

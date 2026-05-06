@@ -40,7 +40,8 @@ export function AuditPage() {
     sp.set('format', 'csv');
     sp.set('limit', '1000');
     // Direct browser fetch + download.
-    fetch(`/api/v1/admin/audit?${sp.toString()}`, {
+    const apiBase = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1';
+    fetch(`${apiBase}/admin/audit?${sp.toString()}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => r.blob())
