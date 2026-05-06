@@ -125,8 +125,11 @@ export function TrackPage() {
     e.preventDefault();
     const v = orderId.trim();
     if (!v) return;
+    // Update the URL only — the `useEffect([initialId])` above owns
+    // the lookup. Calling `lookup.mutate(v)` here too used to fire a
+    // duplicate request and could surface the wrong result if the
+    // two responses arrived out of order.
     setParams({ id: v });
-    lookup.mutate(v);
   };
 
   const result = lookup.data;

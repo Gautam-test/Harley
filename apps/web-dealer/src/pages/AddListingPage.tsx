@@ -218,18 +218,25 @@ export function AddListingPage() {
   const create = useMutation({
     mutationFn: () => {
       if (isEditMode && editId) {
-        // PATCH the existing draft. updateListingInput on the API side
-        // accepts price / kmsDriven / description / images — VIN, owners,
-        // certificationStatus and CPO docs aren't editable post-creation.
-        // Resubmitting after admin returned the draft re-queues admin
-        // review (status stays DRAFT until admin publishes).
+        // PATCH the existing draft with everything the wizard touches.
+        // updateListingInput on the API side now accepts price /
+        // kmsDriven / owners / description / images / certificationStatus
+        // / inspectionReportUrl / cpoDocs. VIN + Torque-derived fields
+        // (model name/family/year/colour) stay read-only post-creation.
         return api<{ id: string }>(`/dealer/listings/${editId}`, {
           method: 'PATCH',
           body: JSON.stringify({
             price: Number(s.price),
             kmsDriven: Number(s.kmsDriven),
+            owners: Number(s.owners),
             description: s.description,
             images: s.images,
+            certificationStatus: s.certificationStatus,
+            // Null when AS_IS so the server clears any stale PDF reference.
+            inspectionReportUrl:
+              s.certificationStatus === 'CPO' ? s.inspectionUrl || null : null,
+            cpoDocs:
+              s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
           }),
         });
       }

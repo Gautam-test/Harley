@@ -36,10 +36,22 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
     >
       <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
         <img
-          src={listing.primaryImage || 'https://placehold.co/600x450/000000/FF6600?text=H-D'}
+          src={listing.primaryImage || '/brand/listing-placeholder.svg'}
           alt={`${listing.year} ${listing.modelName}`}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+          onError={(e) => {
+            // Dealer-uploaded URL 404'd (deleted, wrong path, transient
+            // network) — swap to the local placeholder so the card
+            // doesn't show the browser's broken-image glyph. Guard with
+            // a data flag so an error on the placeholder itself doesn't
+            // loop forever.
+            const img = e.currentTarget;
+            if (!img.dataset.fellBack) {
+              img.dataset.fellBack = '1';
+              img.src = '/brand/listing-placeholder.svg';
+            }
+          }}
         />
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (

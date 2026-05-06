@@ -16,6 +16,13 @@ const env = getEnv();
 const TTL_SECONDS = 5 * 60;
 const RESEND_WINDOW_SECONDS = 30;
 const RESEND_MAX_PER_HOUR = 3;
+// Hard daily ceiling per phone — defends against carrier-cost abuse where
+// a botnet spreads requests across IPs (defeating the per-IP limiter) but
+// hammers the same target number. 10/day is generous for any legit user
+// flow (a buyer enquiring on multiple bikes uses 1 OTP, not 10) but caps
+// the worst-case spend per number per day.
+const DAILY_MAX_PER_PHONE = 10;
+const DAILY_WINDOW_SECONDS = 24 * 60 * 60;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30 * 60;
 
@@ -31,13 +38,15 @@ const otpKey = (id: string) => `otp:${id}`;
 const lockoutKey = (phone: string) => `otp:lockout:${phone}`;
 const resendKey = (phone: string) => `otp:resend:${phone}`;
 const resendCounterKey = (phone: string) => `otp:resend-count:${phone}`;
+const dailyCounterKey = (phone: string) => `otp:daily-count:${phone}`;
 
 export async function sendOtp(phone: string, purpose: OtpPurpose): Promise<{ otpId: string; expiresInSeconds: number }> {
   // Lockout check.
   const locked = await redis.get(lockoutKey(phone));
   if (locked) throw new HttpError(429, 'OTP_LOCKED', 'Too many failed attempts. Try again later.');
 
-  // Resend throttling.
+  // Resend throttling — short-window (30s) and per-hour (3) windows keep
+  // legitimate flows snappy without letting a runaway script cycle SMS.
   const recent = await redis.get(resendKey(phone));
   if (recent) {
     throw new HttpError(429, 'OTP_RESEND_TOO_SOON', `Wait ${RESEND_WINDOW_SECONDS}s before resending`);
@@ -46,6 +55,20 @@ export async function sendOtp(phone: string, purpose: OtpPurpose): Promise<{ otp
   if (counter === 1) await redis.expire(resendCounterKey(phone), 3600);
   if (counter > RESEND_MAX_PER_HOUR) {
     throw new HttpError(429, 'OTP_RESEND_LIMIT', 'Too many OTPs requested for this number this hour');
+  }
+
+  // Daily ceiling — orthogonal to the hour bucket above. Stops a
+  // distributed attack from spreading 30 OTP-sends across 30 hours and
+  // running ₹30/day per number against MSG91. 10/day is well above any
+  // legit user pattern.
+  const dailyCount = await redis.incr(dailyCounterKey(phone));
+  if (dailyCount === 1) await redis.expire(dailyCounterKey(phone), DAILY_WINDOW_SECONDS);
+  if (dailyCount > DAILY_MAX_PER_PHONE) {
+    throw new HttpError(
+      429,
+      'OTP_DAILY_LIMIT',
+      'Daily OTP limit reached for this number — try again tomorrow or contact support',
+    );
   }
   await redis.set(resendKey(phone), '1', 'EX', RESEND_WINDOW_SECONDS);
 

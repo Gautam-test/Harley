@@ -102,13 +102,31 @@ export async function refreshAccessToken(refreshToken: string) {
   //   (b) the token was already used — i.e. someone (possibly the legitimate
   //       user, possibly an attacker) refreshed with this exact jti before.
   // We can't tell which from signature alone, so the safe move is to revoke
-  // every active refresh token for this subject and force re-auth.
+  // every active refresh token for this subject AND every sibling jti
+  // already issued (e.g. the rotated token from the legitimate first
+  // refresh) so the attacker's freshly-issued token is also invalidated.
   const removed = await redis.del(rtKey(claims.sub, claims.jti));
   if (removed === 0) {
+    // Set the global revocation marker first, then proactively delete
+    // every per-jti key for this subject. SCAN is used (not KEYS) so we
+    // don't block redis on accounts with many active sessions.
     await redis.set(rtRevokeAllKey(claims.sub), '1', 'EX', env.JWT_REFRESH_TTL_SECONDS);
+    try {
+      const pattern = `auth:rt:${claims.sub}:*`;
+      let cursor = '0';
+      do {
+        const [next, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+        cursor = next;
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      } while (cursor !== '0');
+    } catch (e) {
+      logger.warn({ err: e, sub: claims.sub }, 'Sibling-jti cleanup failed during reuse-detect');
+    }
     logger.warn(
       { sub: claims.sub, jti: claims.jti },
-      'Refresh-token reuse detected — revoking all active sessions for this subject',
+      'Refresh-token reuse detected — revoked all active sessions + sibling jtis',
     );
     throw new HttpError(401, 'TOKEN_REUSED', 'Refresh token already used; please sign in again');
   }

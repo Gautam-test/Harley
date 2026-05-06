@@ -92,11 +92,22 @@ export type CreateListingInput = z.infer<typeof createListingInput>;
 // Edit must respect the same minimum-image rule as create — without this
 // floor a dealer could publish a 5-image listing and then PATCH it down to
 // one photo, fully bypassing the 5-photo product rule.
+//
+// VIN, modelFamily, modelName, year and colour are read-only after creation
+// (they come from Torque DMS — the dealer can't dispute the source of truth)
+// so they're absent from this schema. Everything else the wizard renders
+// post-creation is editable here. `inspectionReportUrl` accepts null so a
+// dealer flipping CPO → AS_IS can clear the inspection PDF in the same call.
 export const updateListingInput = z.object({
   price: z.number().positive().optional(),
   kmsDriven: z.number().int().min(0).optional(),
+  /** Number of previous owners — same range as create (1..20). */
+  owners: z.number().int().min(1).max(20).optional(),
   description: z.string().min(20).max(5000).optional(),
   images: z.array(z.string()).min(5).max(20).optional(),
+  certificationStatus: certStatus.optional(),
+  inspectionReportUrl: z.string().nullable().optional(),
+  cpoDocs: z.record(z.string()).nullable().optional(),
 });
 export type UpdateListingInput = z.infer<typeof updateListingInput>;
 

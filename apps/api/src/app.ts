@@ -2,9 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import rateLimit from 'express-rate-limit';
 import { pinoHttp } from 'pino-http';
 import { randomUUID } from 'node:crypto';
 import swaggerUi from 'swagger-ui-express';
+import { getEnv } from './config/env.js';
 import { corsOrigins } from './config/env.js';
 import { logger } from './config/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
@@ -61,15 +63,30 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false }));
 
+  // Public-route rate limiter — protects /listings (search), /leads/track,
+  // /orders/track, /dealers, /static from a single IP hammering with no
+  // session or cost.  /auth and /otp have their own (tighter) limiters
+  // applied within their routers, so they're not gated again here.
+  // Production caps tight; dev raises ceiling so e2e suites + local
+  // testing don't trip the limit.
+  const isProd = getEnv().NODE_ENV === 'production';
+  const publicLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: isProd ? 60 : 1000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: { code: 'RATE_LIMITED', message: 'Too many requests, slow down' } },
+  });
+
   // API surface — every public route lives under /api/v1
   app.use('/api/v1/health', healthRouter);
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/otp', otpRouter);
-  app.use('/api/v1/listings', listingsRouter);
-  app.use('/api/v1/leads', publicLeadsRouter);
-  app.use('/api/v1/orders', publicOrdersRouter);
-  app.use('/api/v1/dealers', dealersRouter);
-  app.use('/api/v1/static', publicContentRouter);
+  app.use('/api/v1/listings', publicLimiter, listingsRouter);
+  app.use('/api/v1/leads', publicLimiter, publicLeadsRouter);
+  app.use('/api/v1/orders', publicLimiter, publicOrdersRouter);
+  app.use('/api/v1/dealers', publicLimiter, dealersRouter);
+  app.use('/api/v1/static', publicLimiter, publicContentRouter);
   app.use('/api/v1/dealer/listings', dealerListingsRouter);
   app.use('/api/v1/dealer/leads', dealerLeadsRouter);
   app.use('/api/v1/dealer/leads', dealerLeadCommentsRouter);

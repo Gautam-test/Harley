@@ -32,15 +32,40 @@ const TABS: { id: TabId; label: string; statusFilter: DealerListingRow['status']
   { id: 'REMOVED', label: 'Removed', statusFilter: 'REMOVED' },
 ];
 
-// "Preview" opens the buyer-facing listing detail page. The buyer SPA lives
-// at the apex domain in production (relative URL works) and at port 5180 in
-// local dev. VITE_BUYER_URL overrides if a team member runs the buyer on a
-// non-default port.
+// "Preview" opens the buyer-facing listing detail page. URL resolution:
+//
+//   1. If VITE_BUYER_URL is set at build time (env var), use it. This is
+//      the recommended path for staging / preview deploys where the
+//      dealer SPA isn't co-hosted with the buyer at root.
+//   2. On localhost, default to http://localhost:5180 (the buyer dev
+//      port). This keeps `pnpm dev` working out of the box.
+//   3. On the production domain (harleydavidson.ciadmin.in) the buyer is
+//      at root, so a relative `/listings/<slug>` is correct and opens
+//      the buyer SPA via Apache's catch-all proxy rule.
+//   4. Anywhere else (preview deploys with no env override) we still
+//      fall back to a relative URL but log a warning — at least the
+//      missing `VITE_BUYER_URL` is visible in the dev console.
 function buyerListingHref(slug: string): string {
   const override = import.meta.env.VITE_BUYER_URL as string | undefined;
   if (override) return `${override.replace(/\/$/, '')}/listings/${slug}`;
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return `http://localhost:5180/listings/${slug}`;
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return `http://localhost:5180/listings/${slug}`;
+    }
+    if (host === 'harleydavidson.ciadmin.in') {
+      // Production domain — buyer SPA at root, relative URL works.
+      return `/listings/${slug}`;
+    }
+    // Unknown host → likely a preview / staging deploy without env
+    // override. Surface to dev console so the missing config is at least
+    // visible; preview links may 404 until VITE_BUYER_URL is set.
+    if (typeof console !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[buyerListingHref] No VITE_BUYER_URL set on non-prod host "${host}" — Preview links may 404. Set VITE_BUYER_URL=https://buyer.example.com on this deploy.`,
+      );
+    }
   }
   return `/listings/${slug}`;
 }

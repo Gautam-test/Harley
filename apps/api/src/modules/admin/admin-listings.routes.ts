@@ -177,8 +177,12 @@ adminListingsRouter.post(
         data: { status: 'REMOVED', adminFeedback: reason },
       });
 
-      // Best-effort dealer-email notification.
-      void (async () => {
+      // Dealer-email notification + orphan-file cleanup are awaited in
+      // parallel BEFORE the response so a pm2/nodemon restart between
+      // res.json and the cleanup can't leak files. Failures inside each
+      // task only log — the listing is still REMOVED in the DB, that's
+      // the source of truth.
+      const emailNotify = async () => {
         try {
           const dealer = (await prisma.dealer.findUnique({
             where: { id: before.dealerId },
@@ -194,29 +198,41 @@ adminListingsRouter.post(
         } catch (e) {
           logger.warn({ err: e, dealerId: before.dealerId }, 'Listing-removed email failed');
         }
-      })();
+      };
 
-      // Best-effort orphan-file cleanup. Storage layout matches the upload
-      // routes in apps/api/src/modules/{uploads,inspection}/*.routes.ts.
-      void (async () => {
+      // Storage layout matches the upload routes in
+      // apps/api/src/modules/{uploads,inspection}/*.routes.ts.
+      const fileCleanup = async () => {
         const UPLOAD_ROOT = path.resolve(process.cwd(), '.uploads');
         const fileTargets: string[] = [];
         for (const url of before.images) {
           const m = url.match(/\/listing-images\/([a-zA-Z0-9-]+\.[a-zA-Z0-9]+)$/);
-          if (!m) continue;
-          const base = m[1].replace(/-thumb\.webp$/, '.webp').replace(/\.webp$/, '');
+          if (!m || !m[1]) continue;
+          // The DB stores the full image URL (e.g. `<uuid>.webp`); the
+          // matching `<uuid>-thumb.webp` is implied. Strip an extension
+          // whether or not it's `.webp` so legacy uploads still get
+          // unlinked, then derive both variants.
+          const filename = m[1];
+          const base = filename.includes('.')
+            ? filename.slice(0, filename.lastIndexOf('.'))
+            : filename;
           fileTargets.push(
             path.join(UPLOAD_ROOT, 'listing-images', `${base}.webp`),
             path.join(UPLOAD_ROOT, 'listing-images', `${base}-thumb.webp`),
+            // Original filename if it wasn't .webp — covers older uploads.
+            path.join(UPLOAD_ROOT, 'listing-images', filename),
           );
         }
         if (before.inspectionReportUrl) {
           const m = before.inspectionReportUrl.match(
             /\/inspection\/files\/([a-zA-Z0-9-]+\.[a-zA-Z0-9]+)$/,
           );
-          if (m) fileTargets.push(path.join(UPLOAD_ROOT, 'inspections', m[1]));
+          if (m && m[1]) fileTargets.push(path.join(UPLOAD_ROOT, 'inspections', m[1]));
         }
-        for (const target of fileTargets) {
+        // De-dupe (the original-filename addition above can repeat the
+        // .webp targets when filename === `<uuid>.webp`).
+        const unique = Array.from(new Set(fileTargets));
+        for (const target of unique) {
           try {
             await fs.unlink(target);
           } catch (err) {
@@ -226,7 +242,9 @@ adminListingsRouter.post(
             }
           }
         }
-      })();
+      };
+
+      await Promise.all([emailNotify(), fileCleanup()]);
 
       await audit({
         actorId: req.auth!.sub,
