@@ -43,7 +43,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
         />
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (
-            <span className="inline-block bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+            <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
               H-D Certified
             </span>
           ) : (

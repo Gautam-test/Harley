@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
+import { approxEmi } from '../lib/emi';
 import { ImageGallery } from '../components/ImageGallery';
 import { EmiCalculator } from '../components/EmiCalculator';
 import { ListingSidebarCard } from '../components/ListingSidebarCard';
@@ -31,14 +32,8 @@ interface ListingDetail {
   city: string;
 }
 
-// Approximate EMI for the "EMI from" line — matches the EmiCalculator default
-// assumptions (20% down, 48 months, 9.5% APR) so the two figures stay in sync.
-function approxEmi(price: number, downPct = 0.2, months = 48, rateAnnual = 0.095) {
-  const principal = price * (1 - downPct);
-  const monthlyRate = rateAnnual / 12;
-  const factor = Math.pow(1 + monthlyRate, months);
-  return Math.round((principal * monthlyRate * factor) / (factor - 1));
-}
+// "EMI from" hint reuses the shared helper — same defaults as the
+// calculator + search-filter slider so all three figures stay in sync.
 
 export function ListingDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -124,7 +119,7 @@ export function ListingDetailPage() {
           <div className="mt-10">
             <div className="flex flex-wrap items-center gap-3">
               {data.certificationStatus === 'CPO' ? (
-                <span className="inline-block bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+                <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
                   H-D Certified
                 </span>
               ) : (
@@ -220,7 +215,7 @@ export function ListingDetailPage() {
           {/* Inspection Passed banner */}
           {data.certificationStatus === 'CPO' && (
             <div className="mt-12 bg-hd-orange/10 border border-hd-orange/40 rounded-card p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
-              <span className="inline-flex items-center bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-3 py-1.5 rounded-card whitespace-nowrap">
+              <span className="inline-flex items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-3 py-1.5 rounded-card whitespace-nowrap">
                 H-D Certified&trade; — Inspection Passed
               </span>
               <p className="text-sm text-gray-700">

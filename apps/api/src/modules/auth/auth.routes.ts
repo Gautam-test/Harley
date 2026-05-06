@@ -17,6 +17,19 @@ const loginLimiter = rateLimit({
   message: { error: { code: 'RATE_LIMITED', message: 'Too many attempts, try again later' } },
 });
 
+// Refresh has its own (looser) limiter — a real client only refreshes once
+// every ~14 minutes (access TTL is 15 min) but we allow a generous burst so
+// a tab that's been backgrounded / a sleeping laptop can flush several
+// refreshes back-to-back without locking out. Tightens an attacker who
+// scripts replay attempts against a leaked refresh token.
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: isProd ? 30 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: 'RATE_LIMITED', message: 'Too many refresh attempts' } },
+});
+
 const refreshInput = z.object({ refreshToken: z.string().min(10) });
 
 export const authRouter = Router();
@@ -44,10 +57,10 @@ authRouter.post('/admin/login', loginLimiter, validate(adminLoginInput), async (
   }
 });
 
-authRouter.post('/refresh', validate(refreshInput), (req, res, next) => {
+authRouter.post('/refresh', refreshLimiter, validate(refreshInput), async (req, res, next) => {
   try {
     const { refreshToken } = req.body as { refreshToken: string };
-    res.json(refreshAccessToken(refreshToken));
+    res.json(await refreshAccessToken(refreshToken));
   } catch (e) {
     next(e);
   }

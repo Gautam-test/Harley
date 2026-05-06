@@ -170,6 +170,44 @@ interface DealerListingDbRow {
   createdAt: Date;
 }
 
+// Fetch a single full listing for the edit wizard to hydrate from. Returns
+// every field the AddListingPage needs to repopulate its FormState — VIN,
+// price, KMs, owners, description, image URLs, inspection URL, cert status.
+// Scoped to the calling dealer to prevent cross-dealer reads.
+export async function getDealerListing(dealerId: string, listingId: string) {
+  const row = await prisma.listing.findFirst({
+    where: { id: listingId, dealerId },
+    select: {
+      id: true,
+      vin: true,
+      slug: true,
+      modelName: true,
+      modelFamily: true,
+      year: true,
+      colour: true,
+      price: true,
+      kmsDriven: true,
+      owners: true,
+      description: true,
+      images: true,
+      inspectionReportUrl: true,
+      certificationStatus: true,
+      status: true,
+      adminFeedback: true,
+      cpoDocs: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  if (!row) return null;
+  return {
+    ...row,
+    price: Number(row.price),
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
 export async function listForDealer(dealerId: string, status?: string) {
   const rows = (await prisma.listing.findMany({
     where: { dealerId, ...(status ? { status: status as never } : {}) },

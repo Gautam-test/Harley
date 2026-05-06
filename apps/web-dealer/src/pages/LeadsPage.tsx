@@ -26,6 +26,9 @@ interface LeadRow {
     | 'LOST'
     | 'DEAD'
     | 'CLOSED';
+  /** True when the dealer-notification email couldn't be sent; rep needs
+      to follow up manually since they won't get the usual inbox heads-up. */
+  notificationFailed?: boolean;
   createdAt: string;
 }
 
@@ -63,7 +66,7 @@ export function LeadsPage() {
   });
 
   return (
-    <div className="px-8 py-8 lg:py-10">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline text-3xl tracking-headline uppercase text-text-on-light">
@@ -157,6 +160,14 @@ export function LeadsPage() {
                 </Td>
                 <Td>
                   <StatusBadge status={l.status} />
+                  {l.notificationFailed && (
+                    <div
+                      className="text-[10px] text-warning font-subhead uppercase tracking-subhead mt-1 flex items-center gap-1"
+                      title="Our system couldn't email you about this lead. Please reach out to the buyer directly."
+                    >
+                      <span aria-hidden>⚠</span> Email not sent
+                    </div>
+                  )}
                   <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
                     {new Date(l.createdAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
@@ -168,7 +179,7 @@ export function LeadsPage() {
                 <Td className="text-right pr-4">
                   <Link
                     to={`/leads/${kind}/${l.id}`}
-                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-white hover:border-hd-orange transition rounded-card"
+                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-black hover:border-hd-orange transition rounded-card"
                   >
                     Open
                   </Link>
@@ -343,7 +354,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="2" label="Buyer Details">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Full Name">
               <Input
                 value={form.name}
@@ -370,7 +381,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               required
             />
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="State">
               <Select
                 value={form.state}
@@ -403,7 +414,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="3" label="Lead Qualification">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="How did the lead come in?">
               <Select
                 value={form.source}
@@ -429,7 +440,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Visit preference">
               <Select
                 value={form.visitPreference}
@@ -455,7 +466,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               </Select>
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <CheckboxField
               checked={form.financingNeeded}
               onChange={(v) => setForm((f) => ({ ...f, financingNeeded: v }))}
@@ -576,7 +587,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         className="space-y-5"
       >
         <FormSection kicker="1" label="Seller Details">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Full Name">
               <Input
                 value={form.username}
@@ -603,7 +614,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               required
             />
           </Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="State">
               <Select
                 value={form.state}
@@ -638,7 +649,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="2" label="Bike Details">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Model / Year line">
               <Input
                 value={form.bikeModel}
@@ -658,7 +669,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <Field label="Year">
               <Input
                 type="number"
@@ -698,7 +709,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <CheckboxField
               checked={form.rcAvailable}
               onChange={(v) => setForm((f) => ({ ...f, rcAvailable: v }))}
@@ -713,7 +724,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="3" label="Lead Qualification">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="How did the lead come in?">
               <Select
                 value={form.source}
@@ -754,7 +765,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="4" label="Bike Condition & Notes">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Insurance valid until (optional)">
               <Input
                 type="date"
@@ -821,13 +832,40 @@ function ModalShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  // Backdrop click previously called `onClose` directly which silently
+  // wiped a fully-filled 20-field form on a misclick. Now we confirm
+  // before closing if the modal contains any user-typed input — the
+  // window.confirm prompt is annoying enough to be a real safeguard but
+  // not so heavyweight that you can't dismiss an empty modal in one click.
+  const closeWithConfirm = () => {
+    const hasInput =
+      document
+        .querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+          '[data-modal-form] input, [data-modal-form] textarea, [data-modal-form] select',
+        )
+        .values()
+        .filter((el) => {
+          if (el.type === 'checkbox' || el.type === 'radio') {
+            return (el as HTMLInputElement).checked;
+          }
+          // Skip the always-prefilled +91 country code on phone fields.
+          const raw = el.value?.trim() ?? '';
+          return raw && raw !== '+91' && raw !== '1';
+        })
+        .toArray().length > 0;
+    if (hasInput && !window.confirm('Discard this enquiry? Your unsaved changes will be lost.')) {
+      return;
+    }
+    onClose();
+  };
   return (
     <div
       className="fixed inset-0 z-50 bg-hd-black/50 flex items-start justify-center pt-10 p-4 overflow-y-auto"
-      onClick={onClose}
+      onClick={closeWithConfirm}
     >
       <div
-        className="bg-hd-white border border-gray-200 rounded-card max-w-3xl w-full p-6 shadow-2xl"
+        data-modal-form
+        className="bg-hd-white border border-gray-200 rounded-card max-w-3xl w-full p-4 sm:p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -836,7 +874,7 @@ function ModalShell({
           </h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={closeWithConfirm}
             className="text-gray-400 hover:text-text-on-light text-2xl leading-none"
             aria-label="Close"
           >

@@ -42,3 +42,20 @@ export function requireAuth(roles: Role[] = []): RequestHandler {
     }
   };
 }
+
+// "Try to authenticate but don't require it" — useful for routes that serve
+// public content for ACTIVE listings (no token needed) but should still let
+// the dealer/admin through for non-public states (DRAFT, SOLD, REMOVED).
+// Populates req.auth when the bearer is valid; otherwise leaves it undefined
+// and lets the route apply its own status-based gate.
+export const optionalAuth: RequestHandler = (req, _res, next) => {
+  const env = getEnv();
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return next();
+  try {
+    req.auth = jwt.verify(header.slice(7), env.JWT_ACCESS_SECRET) as AuthClaims;
+  } catch {
+    // Silently ignore — route handler decides whether public access is OK.
+  }
+  next();
+};

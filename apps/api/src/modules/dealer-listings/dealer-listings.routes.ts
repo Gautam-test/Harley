@@ -4,8 +4,10 @@ import { createListingInput, updateListingInput, listingStatus } from '@hd-cpo/t
 import { requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { audit } from '../audit/audit.service.js';
+import { HttpError } from '../../middleware/error-handler.js';
 import {
   createListing,
+  getDealerListing,
   listForDealer,
   markSold,
   setActiveToggle,
@@ -45,6 +47,21 @@ function logDealer(
 dealerListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) => {
   try {
     res.json(await listForDealer(req.auth!.sub, (req.query as { status?: string }).status));
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Fetch a single listing for the edit-wizard hydrate flow. The wizard at
+// /listings/:id/edit calls this once on mount to repopulate FormState
+// from the existing draft so dealers don't have to re-enter VIN, photos,
+// and description from scratch after admin returns a draft.
+dealerListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, next) => {
+  try {
+    const { id } = req.params as { id: string };
+    const listing = await getDealerListing(req.auth!.sub, id);
+    if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+    res.json(listing);
   } catch (e) {
     next(e);
   }

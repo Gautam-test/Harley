@@ -19,6 +19,10 @@ export function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/listings" element={<MyListingsPage />} />
           <Route path="/listings/new" element={<AddListingPage />} />
+          {/* Edit-existing route — used when a dealer needs to revise a
+              DRAFT that admin returned with feedback. Same wizard, just
+              hydrates from GET /dealer/listings/:id and PATCHes on submit. */}
+          <Route path="/listings/:id/edit" element={<AddListingPage />} />
           <Route path="/leads" element={<Navigate to="/leads/buyer" replace />} />
           {/* Old /leads/general bookmarks — redirect to buyer (closest equivalent). */}
           <Route path="/leads/general" element={<Navigate to="/leads/buyer" replace />} />

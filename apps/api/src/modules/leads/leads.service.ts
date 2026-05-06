@@ -19,24 +19,70 @@ interface DealerForEmail {
   email: string;
 }
 
+// Returns true if the dealer email was sent successfully. Callers should
+// flag the underlying lead row when this returns false so the dealer
+// dashboard can surface "we couldn't reach you about this lead".
 async function notifyDealer(
   dealerId: string,
   leadType: 'BUYER' | 'TRADE_IN',
   buyerName: string,
   buyerCity?: string,
   contextLine?: string,
-) {
+): Promise<boolean> {
   const dealer = (await prisma.dealer.findUnique({
     where: { id: dealerId },
     select: { id: true, name: true, email: true },
   })) as DealerForEmail | null;
-  if (!dealer) return;
+  if (!dealer) {
+    logger.error({ dealerId }, 'Dealer email notification skipped — dealer not found');
+    return false;
+  }
   const msg = dealerLeadEmail({ dealerName: dealer.name, leadType, buyerName, buyerCity, contextLine });
   msg.to = dealer.email;
   try {
     await emailProvider().send(msg);
+    return true;
   } catch (e) {
     logger.error({ err: e, dealerId }, 'Dealer email notification failed');
+    return false;
+  }
+}
+
+// Stamp `notificationFailed: true` on a lead row when the dealer-email
+// notification couldn't be sent. The dealer queue read code can then surface
+// a small "rep wasn't emailed" badge so reps know which leads slipped past
+// their inbox. Best-effort; a follow-up failure here only logs.
+async function flagNotificationFailed(
+  table: 'enquiry' | 'tradeInLead',
+  id: string,
+  reason: 'send_failed' | 'dealer_missing',
+): Promise<void> {
+  try {
+    if (table === 'enquiry') {
+      await prisma.enquiry.update({
+        where: { id },
+        data: {
+          notes: {
+            notificationFailed: true,
+            notificationFailReason: reason,
+            notificationFailedAt: new Date().toISOString(),
+          },
+        },
+      });
+    } else {
+      await prisma.tradeInLead.update({
+        where: { id },
+        data: {
+          notes: {
+            notificationFailed: true,
+            notificationFailReason: reason,
+            notificationFailedAt: new Date().toISOString(),
+          },
+        },
+      });
+    }
+  } catch (e) {
+    logger.error({ err: e, table, id }, 'Could not stamp notification-failure flag on lead');
   }
 }
 
@@ -62,13 +108,14 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
       message: input.message,
     },
   });
-  await notifyDealer(
+  const ok = await notifyDealer(
     listing.dealerId,
     'BUYER',
     input.name,
     input.city,
     `Interested in: ${listing.year} ${listing.modelName}`,
   );
+  if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
   return { id: enquiry.id };
 }
 
@@ -98,7 +145,8 @@ export async function createTradeInLead(input: TradeInLeadInput) {
       city: input.city,
     },
   });
-  await notifyDealer(dealerId, 'TRADE_IN', input.username, input.city, `Bike: ${input.bikeModel}, VIN ${input.vin}`);
+  const ok = await notifyDealer(dealerId, 'TRADE_IN', input.username, input.city, `Bike: ${input.bikeModel}, VIN ${input.vin}`);
+  if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
   return { id: lead.id, dealerId };
 }
 
@@ -120,6 +168,9 @@ interface LeadDbRow {
   listingId?: string;
   /** Populated for buyer enquiries via the joined listing — `${year} ${modelName}`. */
   listing?: { year: number; modelName: string } | null;
+  /** JSON column on Enquiry / TradeInLead — currently used for dealer-side
+      qualification answers + the notificationFailed flag. */
+  notes?: { notificationFailed?: boolean } | null;
 }
 
 // Lead-list rows used to mask phone/email behind asterisks. The dealer-portal
@@ -142,6 +193,10 @@ function toLeadView(row: LeadDbRow) {
     city: row.city,
     pincode: row.pincode,
     message: row.message,
+    /** True when the dealer-notification email couldn't be sent. The
+        dealer/admin queue surfaces a small badge so reps know to follow up
+        manually instead of expecting an email. */
+    notificationFailed: row.notes?.notificationFailed === true,
     bikeModel,
     vin: row.vin,
     status: row.status,
@@ -314,14 +369,23 @@ export async function dealerCreateBuyerEnquiry(
   dealerId: string,
   input: DealerBuyerEnquiryInput,
 ) {
-  // Verify the listing belongs to this dealer — prevents a malicious dealer
-  // from logging fake enquiries against another dealer's bikes.
+  // Verify the listing belongs to this dealer AND is in a state where logging
+  // a buyer enquiry makes sense — prevents fake leads against SOLD/REMOVED
+  // bikes (which would pollute funnel metrics) and another dealer's stock.
   const listing = (await prisma.listing.findFirst({
-    where: { id: input.listingId, dealerId },
-    select: { id: true, modelName: true, year: true },
-  })) as { id: string; modelName: string; year: number } | null;
+    where: {
+      id: input.listingId,
+      dealerId,
+      status: { in: ['ACTIVE', 'DRAFT', 'DEACTIVATED'] },
+    },
+    select: { id: true, modelName: true, year: true, status: true },
+  })) as { id: string; modelName: string; year: number; status: string } | null;
   if (!listing) {
-    throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found for this dealer');
+    throw new HttpError(
+      404,
+      'LISTING_NOT_FOUND',
+      'Listing not found for this dealer, or already sold / removed',
+    );
   }
   const enquiry = await prisma.enquiry.create({
     data: {
@@ -338,13 +402,14 @@ export async function dealerCreateBuyerEnquiry(
   });
   // Email confirmation — dealer rep already has the lead in front of them,
   // but the email mirrors the buyer-side flow and provides an audit trail.
-  await notifyDealer(
+  const ok = await notifyDealer(
     dealerId,
     'BUYER',
     input.name,
     input.city,
     `Interested in: ${listing.year} ${listing.modelName}`,
   );
+  if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
   return { id: enquiry.id };
 }
 
@@ -364,12 +429,13 @@ export async function dealerCreateTradeInLead(
       notes: tradeInNotes(input),
     },
   })) as unknown as { id: string };
-  await notifyDealer(
+  const ok = await notifyDealer(
     dealerId,
     'TRADE_IN',
     input.username,
     input.city,
     `Bike: ${input.bikeModel}, VIN ${input.vin}`,
   );
+  if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
   return { id: lead.id };
 }

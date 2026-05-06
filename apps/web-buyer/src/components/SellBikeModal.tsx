@@ -131,7 +131,7 @@ export function SellBikeModal() {
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
-        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-6 md:p-7 rounded-card shadow-xl my-auto">
+        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 rounded-card shadow-xl my-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
               Tell Us About Your Bike
@@ -150,7 +150,7 @@ export function SellBikeModal() {
               <div className="bg-hd-orange/10 border border-hd-orange/40 rounded-card p-4 flex items-start gap-3">
                 <span
                   aria-hidden
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-hd-orange text-hd-white font-bold shrink-0"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-hd-orange text-hd-black font-bold shrink-0"
                 >
                   ✓
                 </span>
@@ -182,7 +182,7 @@ export function SellBikeModal() {
                 <Link
                   to={`/track?id=${submitted.id}`}
                   onClick={handleClose}
-                  className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 rounded-card hover:brightness-110 transition"
+                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 rounded-card hover:brightness-110 transition"
                 >
                   Track Enquiry →
                 </Link>
@@ -197,7 +197,7 @@ export function SellBikeModal() {
                 />
               </Labelled>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Bike Model">
                   <Select {...register('bikeModel', { required: true })}>
                     <option value="">Choose bike model</option>
@@ -212,10 +212,13 @@ export function SellBikeModal() {
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled label="VIN Number">
+                <Labelled
+                  label="VIN Number"
+                  hint="17 characters · letters + numbers · no I, O, Q"
+                >
                   <Input
                     maxLength={17}
-                    placeholder="Enter bike vin number"
+                    placeholder="e.g. 1HD1KB4197Y624381"
                     className="font-mono uppercase"
                     {...register('vin', {
                       required: true,
@@ -225,7 +228,7 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Phone Number">
                   <Input
                     inputMode="tel"
@@ -315,7 +318,7 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="State">
                   <Select
                     {...register('state', {
@@ -348,7 +351,7 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Pin Code">
                   <Input
                     inputMode="numeric"
@@ -447,13 +450,24 @@ export function SellBikeModal() {
   );
 }
 
-function Labelled({ label, children }: { label: string; children: React.ReactNode }) {
+function Labelled({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  /** Small grey caption rendered under the field — used for format hints
+      like "17 characters, no I/O/Q" on the VIN input. */
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1.5">
         {label}
       </label>
       {children}
+      {hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>}
     </div>
   );
 }

@@ -16,9 +16,13 @@ export const leadStatus = z.enum([
 ]);
 export type LeadStatus = z.infer<typeof leadStatus>;
 
-// Dealer-facing 6-stage pipeline that the freeze design uses for buyer leads.
+// Dealer-facing 7-stage pipeline that the freeze design uses for buyer leads.
+// CONTACTED was missing in the initial cut so any dealer attempt to mark a
+// lead "Contacted" came back with 409 INVALID_TRANSITION even though the
+// status is in the leadStatus enum and the UI offered it.
 export const BUYER_LEAD_PIPELINE = [
   'NEW',
+  'CONTACTED',
   'ON_SITE_VISIT',
   'LOAN_APPROVAL',
   'CLOSED',

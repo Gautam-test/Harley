@@ -112,7 +112,7 @@ export function LeadDetailPage() {
   const pipelineStatuses = leadStatus.options;
 
   return (
-    <div className="px-8 py-8 lg:py-10">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       <Link
         to={`/leads/${kind}`}
         className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5 rounded-card"
@@ -161,7 +161,7 @@ export function LeadDetailPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href={`tel:${lead.phone.replace(/\s+/g, '')}`}
-                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-110 transition"
+                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-110 transition"
               >
                 <Icon path="M3 5a2 2 0 012-2h2.5a1 1 0 011 .76l1 4a1 1 0 01-.27.95l-1.5 1.5a11 11 0 005 5l1.5-1.5a1 1 0 01.95-.27l4 1a1 1 0 01.76 1V19a2 2 0 01-2 2A18 18 0 013 5z" />
                 Call
@@ -201,7 +201,7 @@ export function LeadDetailPage() {
                     <span
                       className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-2 font-subhead text-xs ${
                         isCurrent
-                          ? 'bg-hd-orange border-hd-orange text-hd-white'
+                          ? 'bg-hd-orange border-hd-orange text-hd-black'
                           : reached
                           ? 'bg-hd-orange/20 border-hd-orange text-hd-orange'
                           : 'bg-hd-white border-gray-300 text-gray-400'
@@ -227,7 +227,42 @@ export function LeadDetailPage() {
               </span>
               <select
                 value={lead.status}
-                onChange={(e) => moveStatus.mutate(e.target.value as LeadStatus)}
+                onChange={(e) => {
+                  const next = e.target.value as LeadStatus;
+                  // Terminal moves are one-way — confirm so a misclick
+                  // doesn't bury an active lead. Asking for a reason at
+                  // the same time gives managers an audit trail without
+                  // a separate flow.
+                  if (next === 'LOST' || next === 'DEAD' || next === 'CLOSED') {
+                    const why = window.prompt(
+                      `Mark this lead as ${next}? This is a terminal status — write a short reason for the audit log.`,
+                      '',
+                    );
+                    if (why === null) {
+                      // User cancelled; revert select to current value.
+                      e.target.value = lead.status;
+                      return;
+                    }
+                    if (why.trim()) {
+                      addComment.mutate(undefined, {
+                        // Force the comment text without going through the
+                        // "draft" textarea since the user typed it inline.
+                        // Calling the API directly here is cleaner.
+                      });
+                      // Mirror the entered reason into the comments thread
+                      // so the audit shows up on the lead detail page.
+                      api(`/dealer/leads/${kind}/${id}/comments`, {
+                        method: 'POST',
+                        body: JSON.stringify({ body: `[${next}] ${why.trim()}` }),
+                      }).then(() =>
+                        qc.invalidateQueries({ queryKey: ['lead-comments', kind, id] }),
+                      ).catch(() => {
+                        /* swallow — comment is best-effort, status move is the source of truth */
+                      });
+                    }
+                  }
+                  moveStatus.mutate(next);
+                }}
                 disabled={moveStatus.isPending}
                 className="border border-gray-300 rounded px-2 py-1.5 font-subhead uppercase tracking-subhead text-xs"
               >

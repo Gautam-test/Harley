@@ -92,7 +92,7 @@ export function ListingsPage() {
   const draftCount = draftsForBadge?.length ?? 0;
 
   return (
-    <div className="max-w-container mx-auto px-6 py-10">
+    <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-baseline justify-between flex-wrap gap-4 mb-6">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">Listings</h1>
         <Input
@@ -209,10 +209,23 @@ export function ListingsPage() {
                   <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'DRAFT' && (
                       <>
+                        {/* Publish flips the listing to ACTIVE and pushes
+                            it to Torque + buyer search. The icon-only UI
+                            previously fired this on a single mis-click; we
+                            now confirm so the admin acknowledges the bike
+                            is going live. */}
                         <IconAction
                           label="Publish"
                           tone="primary"
-                          onClick={() => publish.mutate(l.id)}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Publish "${l.year} ${l.modelName}" (${l.dealerName})? It will appear on the buyer site and sync to Torque.`,
+                              )
+                            ) {
+                              publish.mutate(l.id);
+                            }
+                          }}
                           disabled={publish.isPending}
                         >
                           <PublishIcon />

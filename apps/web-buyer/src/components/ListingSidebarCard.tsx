@@ -28,13 +28,49 @@ export function ListingSidebarCard({
   dealerName,
   dealerCity,
 }: ListingSidebarCardProps) {
-  const { verifiedToken, verifiedFor } = useOtpStore();
+  const { verifiedToken, verifiedFor, phone: storedPhone } = useOtpStore();
   const alreadyVerified = Boolean(verifiedToken) && verifiedFor === 'ENQUIRY';
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // When the buyer has a fresh verifiedToken and remembered identity from a
+  // previous enquiry this session, the second click goes straight through
+  // without re-prompting. A 401 from the API means the token expired
+  // server-side; fall back to the modal to re-verify.
+  const submitDirectly = async () => {
+    if (!storedPhone) {
+      setModalOpen(true);
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await api<{ id: string }>(`/leads/listings/${slug}/enquiry`, {
+        method: 'POST',
+        withOtpToken: true,
+        body: JSON.stringify({
+          name: 'Returning buyer',
+          phone: storedPhone,
+          email: 'unknown@buyer.local',
+          message: `I'm interested in this ${modelInterest}. Please contact me.`,
+        }),
+      });
+      setSubmitted({ id: res.id });
+    } catch (e) {
+      // Token expired or otherwise invalid — fall back to the modal to
+      // collect a fresh OTP. The modal also handles other API errors.
+      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+        setModalOpen(true);
+      } else {
+        setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
@@ -130,9 +166,9 @@ export function ListingSidebarCard({
                   buyer-enquiry InfoGateModal. */}
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={() => (alreadyVerified ? submitDirectly() : setModalOpen(true))}
                 disabled={submitting}
-                className="w-full bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:brightness-110 transition disabled:opacity-60"
+                className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:brightness-110 transition disabled:opacity-60"
               >
                 {submitting ? 'Sending…' : 'Visit Dealer'}
               </button>
@@ -183,7 +219,7 @@ export function ListingSidebarCard({
 
                 <Link
                   to={`/track?id=${submitted.id}`}
-                  className="block text-center mt-4 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] py-2.5 rounded-card hover:brightness-110 transition"
+                  className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 rounded-card hover:brightness-110 transition"
                 >
                   Track Your Enquiry →
                 </Link>

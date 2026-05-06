@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 import { z } from 'zod';
 import { listingStatus, type ListingStatus } from '@hd-cpo/types';
 import { prisma } from '../../config/prisma.js';
@@ -8,6 +10,7 @@ import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { audit } from '../audit/audit.service.js';
 import { torque } from '../torque/torque.module.js';
+import { emailProvider } from '../email/email.module.js';
 
 interface AdminListingRow {
   id: string;
@@ -131,8 +134,17 @@ adminListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, ne
   }
 });
 
-// PRD §6.3.4 — Remove listing (hard hide). Notifies dealer with reason.
-// (Notification firing wires up via the email module; payload is the reason string.)
+// PRD §6.3.4 — Remove listing (hard hide).
+//
+// Three things have to happen besides flipping the status:
+//   1. Persist `reason` to listing.adminFeedback so the dealer's "Removed"
+//      banner shows the admin's explanation (the modal copy promises this).
+//   2. Email the dealer so they don't have to discover the removal by
+//      reloading their list. Best-effort — a send failure logs and moves on.
+//   3. Unlink the orphaned image + inspection-PDF files from local disk
+//      so /api/v1/uploads/listing-images/<filename> + /inspection/files/...
+//      stop resolving and the disk doesn't grow unbounded across removes.
+//      Errors per file are tolerated (ENOENT means already gone).
 adminListingsRouter.post(
   '/:id/remove',
   validate(idParam, 'params'),
@@ -141,10 +153,81 @@ adminListingsRouter.post(
     try {
       const { id } = req.params as { id: string };
       const { reason } = req.body as { reason: string };
+
+      const before = (await prisma.listing.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          dealerId: true,
+          images: true,
+          inspectionReportUrl: true,
+        },
+      })) as
+        | {
+            id: string;
+            dealerId: string;
+            images: string[];
+            inspectionReportUrl: string | null;
+          }
+        | null;
+      if (!before) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+
       const listing = await prisma.listing.update({
         where: { id },
-        data: { status: 'REMOVED' },
+        data: { status: 'REMOVED', adminFeedback: reason },
       });
+
+      // Best-effort dealer-email notification.
+      void (async () => {
+        try {
+          const dealer = (await prisma.dealer.findUnique({
+            where: { id: before.dealerId },
+            select: { email: true, name: true },
+          })) as { email: string; name: string } | null;
+          if (!dealer) return;
+          await emailProvider().send({
+            to: dealer.email,
+            subject: 'A listing has been removed by H-D Certified',
+            html: `<p>Hi ${dealer.name},</p><p>One of your listings was removed by an H-D Certified admin with the following reason:</p><blockquote>${reason}</blockquote><p>Sign in to your dealer portal for details.</p>`,
+            text: `Listing removed by admin. Reason: ${reason}. Sign in for details.`,
+          });
+        } catch (e) {
+          logger.warn({ err: e, dealerId: before.dealerId }, 'Listing-removed email failed');
+        }
+      })();
+
+      // Best-effort orphan-file cleanup. Storage layout matches the upload
+      // routes in apps/api/src/modules/{uploads,inspection}/*.routes.ts.
+      void (async () => {
+        const UPLOAD_ROOT = path.resolve(process.cwd(), '.uploads');
+        const fileTargets: string[] = [];
+        for (const url of before.images) {
+          const m = url.match(/\/listing-images\/([a-zA-Z0-9-]+\.[a-zA-Z0-9]+)$/);
+          if (!m) continue;
+          const base = m[1].replace(/-thumb\.webp$/, '.webp').replace(/\.webp$/, '');
+          fileTargets.push(
+            path.join(UPLOAD_ROOT, 'listing-images', `${base}.webp`),
+            path.join(UPLOAD_ROOT, 'listing-images', `${base}-thumb.webp`),
+          );
+        }
+        if (before.inspectionReportUrl) {
+          const m = before.inspectionReportUrl.match(
+            /\/inspection\/files\/([a-zA-Z0-9-]+\.[a-zA-Z0-9]+)$/,
+          );
+          if (m) fileTargets.push(path.join(UPLOAD_ROOT, 'inspections', m[1]));
+        }
+        for (const target of fileTargets) {
+          try {
+            await fs.unlink(target);
+          } catch (err) {
+            const code = (err as NodeJS.ErrnoException).code;
+            if (code !== 'ENOENT') {
+              logger.warn({ err, target }, 'Could not unlink file on listing remove');
+            }
+          }
+        }
+      })();
+
       await audit({
         actorId: req.auth!.sub,
         actorRole: 'ADMIN',

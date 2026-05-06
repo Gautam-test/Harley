@@ -4,9 +4,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { requireAuth } from '../../middleware/auth.js';
+import { optionalAuth, requireAuth } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
+import { prisma } from '../../config/prisma.js';
 import { generateChecklistPdf } from './checklist-pdf.js';
 
 // ─── Local file storage for uploaded inspection PDFs ────────────────
@@ -14,24 +15,36 @@ import { generateChecklistPdf } from './checklist-pdf.js';
 const UPLOAD_DIR = path.resolve(process.cwd(), '.uploads', 'inspections');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+// Buffer the upload in memory so we can magic-byte sniff before persisting.
+// 10 MB max so the per-request memory cost is bounded.
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-    filename: (_req, file, cb) => {
-      // Random filename keeps real customer names out of URLs.
-      const ext = path.extname(file.originalname).toLowerCase() || '.pdf';
-      cb(null, `${randomUUID()}${ext}`);
-    },
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per PRD §6.2.3 AC4
   fileFilter: (_req, file, cb) => {
-    const ok =
-      file.mimetype === 'application/pdf' ||
-      file.originalname.toLowerCase().endsWith('.pdf');
-    if (!ok) return cb(new HttpError(415, 'BAD_FILE_TYPE', 'Inspection upload must be a PDF') as Error);
+    // Both mime and extension must match — was an OR, which let a `.pdf`
+    // file with `Content-Type: text/x-php` (or vice versa) through.
+    const mimeOk = file.mimetype === 'application/pdf';
+    const extOk = file.originalname.toLowerCase().endsWith('.pdf');
+    if (!mimeOk || !extOk) {
+      return cb(new HttpError(415, 'BAD_FILE_TYPE', 'Inspection upload must be a PDF') as Error);
+    }
     cb(null, true);
   },
 });
+
+// PDF files start with the literal bytes `%PDF-` (`25 50 44 46 2D`). Sniff
+// before writing to disk so a renamed-but-bytes-wrong file never lands in
+// the upload directory.
+function isPdfBuffer(buf: Buffer): boolean {
+  return (
+    buf.length >= 5 &&
+    buf[0] === 0x25 &&
+    buf[1] === 0x50 &&
+    buf[2] === 0x44 &&
+    buf[3] === 0x46 &&
+    buf[4] === 0x2d
+  );
+}
 
 export const inspectionRouter = Router();
 
@@ -59,12 +72,26 @@ inspectionRouter.post(
   '/upload',
   requireAuth(['DEALER']),
   upload.single('file'),
-  (req, res, next) => {
+  async (req, res, next) => {
     try {
       if (!req.file) throw new HttpError(400, 'FILE_MISSING', 'Attach a PDF as form field "file"');
-      const url = `/api/v1/inspection/files/${req.file.filename}`;
+      // Magic-byte check before persistence — even with mime + extension
+      // gates, a renamed file with the wrong bytes would slip through.
+      if (!isPdfBuffer(req.file.buffer)) {
+        throw new HttpError(
+          415,
+          'BAD_FILE_TYPE',
+          'File contents do not match a PDF — please upload the original PDF, not a re-typed file',
+        );
+      }
+      const filename = `${randomUUID()}.pdf`;
+      const filePath = path.join(UPLOAD_DIR, filename);
+      // node:fs.promises lazy-load to keep the imports compact at the top.
+      const { writeFile } = await import('node:fs/promises');
+      await writeFile(filePath, req.file.buffer);
+      const url = `/api/v1/inspection/files/${filename}`;
       res.status(201).json({
-        filename: req.file.filename,
+        filename,
         originalName: req.file.originalname,
         size: req.file.size,
         url,
@@ -75,14 +102,43 @@ inspectionRouter.post(
   },
 );
 
-// ─── 3. Public serve of uploaded files (URL is unguessable random UUID) ─
-inspectionRouter.get('/files/:filename', (req, res, next) => {
+// ─── 3. Serve uploaded inspection PDFs — gated by listing visibility ────
+//
+// These PDFs carry the customer's name, VIN, and signature, so a guessable
+// or leaked URL must not work indefinitely. Access rules:
+//
+//   - File is referenced by an ACTIVE listing → public (CPO buyer journey
+//     needs the link from listing-detail to work without auth).
+//   - File is referenced by any other listing state (DRAFT, DEACTIVATED,
+//     SOLD, REMOVED) → only the owning dealer or any admin can fetch it.
+//   - File is not referenced by any listing → 404 (orphaned upload, e.g.
+//     dealer cancelled the wizard mid-way; nothing should ever reach it).
+inspectionRouter.get('/files/:filename', optionalAuth, async (req, res, next) => {
   try {
     const filename = req.params.filename ?? '';
-    // Prevent path traversal — only allow simple uuid+ext basenames.
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }
+    // Look up the listing this PDF belongs to. inspectionReportUrl stores the
+    // full /api/v1/inspection/files/<filename> path, so endsWith is enough.
+    const listing = (await prisma.listing.findFirst({
+      where: { inspectionReportUrl: { endsWith: `/${filename}` } },
+      select: { dealerId: true, status: true },
+    })) as { dealerId: string; status: string } | null;
+    if (!listing) {
+      throw new HttpError(404, 'NOT_FOUND', 'File not found');
+    }
+
+    const isPubliclyVisible = listing.status === 'ACTIVE';
+    if (!isPubliclyVisible) {
+      const auth = req.auth;
+      const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
+      const isAdmin = auth?.role === 'ADMIN';
+      if (!isOwner && !isAdmin) {
+        throw new HttpError(404, 'NOT_FOUND', 'File not found');
+      }
+    }
+
     const filePath = path.join(UPLOAD_DIR, filename);
     if (!fs.existsSync(filePath)) {
       throw new HttpError(404, 'NOT_FOUND', 'File not found');

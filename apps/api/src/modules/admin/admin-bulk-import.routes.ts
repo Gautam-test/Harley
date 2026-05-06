@@ -82,7 +82,10 @@ adminBulkImportRouter.post('/dealers', upload.single('file'), async (req, res, n
           address: r.address || undefined,
           city: r.city,
           state: r.state || undefined,
-          pincode: String(r.pincode ?? '').padStart(6, '0'),
+          // Don't padStart short or empty pincodes — that turned `''` into
+          // `'000000'` which still passes the 6-digit regex but is garbage
+          // data. Let zod reject malformed values so the row error surfaces.
+          pincode: r.pincode ? String(r.pincode) : undefined,
           torqueDealerId: r.torqueDealerId || undefined,
         });
         if (!parsed.success) {

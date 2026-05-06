@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useMutation } from '@tanstack/react-query';
@@ -108,11 +108,18 @@ export function TrackPage() {
     },
   });
 
-  // Auto-look-up when ?id= is in the URL.
+  // Auto-look-up when the URL changes (back/forward, deep link, copied URL).
+  // Previously this guard ran on every render and was wedged on first 404
+  // — `error` stayed truthy so the effect refused to re-fire even when the
+  // id changed. Switching to useEffect([initialId]) + lookup.reset() runs
+  // a fresh lookup each time the id param changes.
   const initialId = params.get('id');
-  if (initialId && !lookup.data && !lookup.isPending && !lookup.error) {
-    setTimeout(() => lookup.mutate(initialId), 0);
-  }
+  useEffect(() => {
+    if (!initialId) return;
+    lookup.reset();
+    lookup.mutate(initialId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialId]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,7 +250,7 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
             <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
               Current Status
             </p>
-            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-xs px-4 py-2 rounded-card">
+            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-4 py-2 rounded-card">
               {order.currentLabel}
             </span>
           </div>
@@ -324,7 +331,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
                   ? 'bg-danger text-hd-white'
                   : lead.status === 'SUCCESS' || lead.status === 'CONVERTED'
                   ? 'bg-success text-hd-white'
-                  : 'bg-hd-orange text-hd-white'
+                  : 'bg-hd-orange text-hd-black'
               }`}
             >
               {lead.status.replace(/_/g, ' ')}
@@ -382,7 +389,7 @@ function Timeline({
               aria-hidden
               className={`absolute left-0 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 ${
                 stage.isCurrent
-                  ? 'bg-hd-orange border-hd-orange text-hd-white'
+                  ? 'bg-hd-orange border-hd-orange text-hd-black'
                   : stage.reached
                   ? 'bg-hd-orange/20 border-hd-orange text-hd-orange'
                   : 'bg-hd-white border-gray-300 text-gray-400'

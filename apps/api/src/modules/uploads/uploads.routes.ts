@@ -5,8 +5,9 @@ import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { requireAuth } from '../../middleware/auth.js';
+import { optionalAuth, requireAuth } from '../../middleware/auth.js';
 import { logger } from '../../config/logger.js';
+import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
 
 // Generic asset upload handler — first consumer is the listing image picker
@@ -31,14 +32,46 @@ const ALLOWED_IMAGE_MIME = new Set([
 ]);
 const ALLOWED_IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
+// Inline magic-byte sniffer. We only accept JPG / PNG / WebP, so a tiny
+// signature table is more reliable (and dependency-free) than trusting the
+// Content-Type header an attacker controls.
+//
+// Format references:
+//   JPEG  FF D8 FF
+//   PNG   89 50 4E 47 0D 0A 1A 0A
+//   WebP  52 49 46 46 ?? ?? ?? ?? 57 45 42 50  (RIFF....WEBP)
+function detectImageKind(buf: Buffer): 'jpeg' | 'png' | 'webp' | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
+  ) {
+    return 'png';
+  }
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) {
+    return 'webp';
+  }
+  return null;
+}
+
 // Memory storage — Sharp pipes from buffer, so no temp file needed.
+//
+// fileFilter requires BOTH mime AND extension to pass (was a logical-OR,
+// which let `.pdf` files masquerading as `image/jpeg` through). The
+// magic-byte sniff in the handler catches the third class of attack:
+// matching mime + matching extension but bytes from a different format.
 const imageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB cap on source uploads
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    const ok = ALLOWED_IMAGE_MIME.has(file.mimetype) || ALLOWED_IMAGE_EXT.has(ext);
-    if (!ok) {
+    const mimeOk = ALLOWED_IMAGE_MIME.has(file.mimetype);
+    const extOk = ALLOWED_IMAGE_EXT.has(ext);
+    if (!mimeOk || !extOk) {
       return cb(new HttpError(415, 'BAD_FILE_TYPE', 'Image must be JPG, PNG, or WebP') as Error);
     }
     cb(null, true);
@@ -56,6 +89,17 @@ uploadsRouter.post(
   async (req, res, next) => {
     try {
       if (!req.file) throw new HttpError(400, 'FILE_MISSING', 'Attach an image as form field "file"');
+      // Magic-byte verification — defends against header spoofing where the
+      // mime + extension match but the underlying bytes are something else
+      // (e.g. a PHP script renamed to .jpg). Sharp would also throw on those,
+      // but a clean 415 here keeps the error message accurate.
+      if (!detectImageKind(req.file.buffer)) {
+        throw new HttpError(
+          415,
+          'BAD_FILE_TYPE',
+          'File contents do not match a JPG, PNG, or WebP image',
+        );
+      }
 
       const id = randomUUID();
       const fullPath = path.join(LISTING_IMAGE_DIR, `${id}.webp`);
@@ -115,16 +159,40 @@ uploadsRouter.post(
   },
 );
 
-// Public serve. Filename is an unguessable UUID + ext; reject anything else
-// to block path traversal.
-uploadsRouter.get('/listing-images/:filename', (req, res, next) => {
+// Listing-image serve — gated by listing visibility, same model as the
+// inspection-PDF route. ACTIVE listings serve to anyone (the buyer search
+// grid + detail page need plain <img src> to work without auth). For any
+// other state (DRAFT / SOLD / REMOVED / DEACTIVATED) only the owning dealer
+// or an admin can fetch — prevents orphaned/leaked image URLs from leaking
+// removed-listing photos forever.
+uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, next) => {
   try {
     const filename = req.params.filename ?? '';
-    // Allow alphanumerics + hyphen for `<uuid>` and `<uuid>-thumb`; single
-    // extension at end. Two consecutive dots / slashes are blocked.
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }
+    // Listings store only the full-size image URL in the `images[]` array;
+    // thumbs are derived. Strip the -thumb suffix so both serve through the
+    // same listing lookup.
+    const fullName = filename.replace(/-thumb\.webp$/, '.webp');
+    const fullUrl = `/api/v1/uploads/listing-images/${fullName}`;
+    const listing = (await prisma.listing.findFirst({
+      where: { images: { has: fullUrl } },
+      select: { dealerId: true, status: true },
+    })) as { dealerId: string; status: string } | null;
+    if (!listing) {
+      throw new HttpError(404, 'NOT_FOUND', 'File not found');
+    }
+    const isPubliclyVisible = listing.status === 'ACTIVE';
+    if (!isPubliclyVisible) {
+      const auth = req.auth;
+      const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
+      const isAdmin = auth?.role === 'ADMIN';
+      if (!isOwner && !isAdmin) {
+        throw new HttpError(404, 'NOT_FOUND', 'File not found');
+      }
+    }
+
     const filePath = path.join(LISTING_IMAGE_DIR, filename);
     if (!fs.existsSync(filePath)) throw new HttpError(404, 'NOT_FOUND', 'File not found');
     const ext = path.extname(filename).toLowerCase();

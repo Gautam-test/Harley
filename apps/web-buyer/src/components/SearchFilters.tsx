@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Select } from '@hd-cpo/ui';
+import { EMI_DEFAULTS } from '../lib/emi';
 import { HD_FAMILIES, modelsForFamily } from '../lib/models';
 
 const COLOURS = ['', 'Vivid Black', 'Pearl White', 'Red', 'Blue', 'Silver', 'Orange', 'Black Denim', 'Industrial Yellow'];
@@ -130,17 +131,22 @@ export function SearchFilters() {
       v.maxMonthly &&
       Number(v.maxMonthly) < MONTHLY_MAX
     ) {
-      // The API has no monthly-budget filter, so derive an equivalent maxPrice
-      // using the same finance assumptions the EmiCalculator defaults to:
-      //   20% down, 48 months, 9.5% APR.
-      // monthly = principal * r * (1+r)^n / ((1+r)^n - 1), principal = price*0.8
-      // → price = monthly * ((1+r)^n - 1) / (r * (1+r)^n) / 0.8
+      // The API has no monthly-budget filter, so derive an equivalent
+      // maxPrice. EMI defaults are imported from the shared lib so this
+      // filter, the listing-detail "EMI from" hint, and the calculator
+      // tile all use the same assumptions — previously the filter ran on
+      // 9.5% / 48m while the calculator ran on 10.5% / 60m, leaving
+      // buyers confused why a "₹30 000/mo" filter returned bikes the
+      // calculator showed at ₹35 000/mo.
+      // monthly = principal * r * (1+r)^n / ((1+r)^n - 1)
+      //   where principal = price * (1 - downPct)
+      // → price = monthly * ((1+r)^n - 1) / (r * (1+r)^n) / (1 - downPct)
       const monthly = Number(v.maxMonthly);
-      const r = 0.095 / 12;
-      const n = 48;
+      const r = EMI_DEFAULTS.rateAnnual / 12;
+      const n = EMI_DEFAULTS.months;
       const factor = Math.pow(1 + r, n);
       const principal = (monthly * (factor - 1)) / (r * factor);
-      const equivalentPrice = Math.round(principal / 0.8);
+      const equivalentPrice = Math.round(principal / (1 - EMI_DEFAULTS.downPct));
       next.set('maxPrice', String(equivalentPrice));
       next.set('maxMonthly', v.maxMonthly); // keep so reload restores the slider
     }
@@ -226,7 +232,7 @@ export function SearchFilters() {
             }}
             className={`px-3 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-r-card transition ${
               searchBy === 'monthly'
-                ? 'bg-hd-orange text-hd-white border border-hd-orange'
+                ? 'bg-hd-orange text-hd-black border border-hd-orange'
                 : 'bg-gray-100 text-gray-500 border border-transparent'
             }`}
           >

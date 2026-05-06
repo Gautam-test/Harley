@@ -1,8 +1,62 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Input, Select } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
+
+// Edit-mode hydration shape — the GET /dealer/listings/:id response.
+// Only the fields the wizard cares about; any extra columns are ignored.
+interface ExistingListing {
+  id: string;
+  vin: string;
+  modelName: string;
+  modelFamily: string;
+  year: number;
+  colour: string;
+  price: number;
+  kmsDriven: number;
+  owners: number | null;
+  description: string;
+  images: string[];
+  inspectionReportUrl: string | null;
+  certificationStatus: 'CPO' | 'AS_IS';
+  status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
+  adminFeedback: string | null;
+}
+
+// Wizard form state is held in localStorage between page loads under this
+// key — a tab refresh / accidental close used to wipe the entire VIN +
+// photos + inspection trail. Single-key store is fine because a dealer
+// can only be working on one listing at a time per browser session.
+const DRAFT_STORAGE_KEY = 'hd-cpo:add-listing-draft';
+
+function readDraft(): FormState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as FormState;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(s: FormState) {
+  try {
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(s));
+  } catch {
+    // Quota exceeded / private mode — silently drop, dealer just loses
+    // the autosave benefit, no need to surface an error.
+  }
+}
+
+function clearDraft() {
+  try {
+    window.localStorage.removeItem(DRAFT_STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 // PRD §6.2.3 + Figma /Dealer/Halrey dealer_page-0002.jpg — single-page Add
 // Listing form, four numbered sections stacked top-to-bottom:
@@ -69,8 +123,83 @@ const initial: FormState = {
 
 export function AddListingPage() {
   const navigate = useNavigate();
-  const [s, setS] = useState<FormState>(initial);
+  // /listings/:id/edit reuses the same component as /listings/new — the
+  // presence of `:id` switches the wizard into edit mode (hydrate from
+  // server, PATCH on submit) while /new stays the create flow (start
+  // empty / from localStorage draft, POST on submit).
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = Boolean(editId);
+
+  // In edit mode we ignore the localStorage draft (which is keyed to the
+  // create flow); in create mode we hydrate from it as before.
+  const [s, setS] = useState<FormState>(() => (isEditMode ? initial : readDraft() ?? initial));
   const update = (patch: Partial<FormState>) => setS((p) => ({ ...p, ...patch }));
+
+  // Edit-mode hydration. Fetches the listing once on mount and seeds the
+  // form. Read-back of the FormState happens via the standard `update`
+  // path so derived `missing[]` re-runs on the seeded values. We also
+  // synthesise a "torque" object from the saved listing fields so the
+  // wizard doesn't gate Steps 2–4 behind a re-fetch.
+  const existing = useQuery({
+    queryKey: ['dealer-listing-edit', editId],
+    queryFn: () => api<ExistingListing>(`/dealer/listings/${editId}`),
+    enabled: isEditMode,
+  });
+  useEffect(() => {
+    if (!existing.data) return;
+    const e = existing.data;
+    setS({
+      vin: e.vin,
+      torque: {
+        vin: e.vin,
+        engine: '',
+        modelName: e.modelName,
+        modelFamily: e.modelFamily,
+        colour: e.colour,
+        customerName: '',
+        dateOfInvoice: '',
+        dealerId: '',
+        status: '',
+      },
+      price: String(e.price),
+      kmsDriven: String(e.kmsDriven),
+      owners: String(e.owners ?? 1),
+      description: e.description,
+      images: e.images,
+      inspectionUrl: e.inspectionReportUrl ?? '',
+      inspectionMeta: null,
+      certificationStatus: e.certificationStatus,
+    });
+  }, [existing.data]);
+
+  // Mirror state into localStorage on every change in CREATE mode only.
+  // Edit mode hydrates from the server every visit and a stale draft would
+  // overwrite admin-feedback edits — so we keep the draft scoped to /new.
+  useEffect(() => {
+    if (isEditMode) return;
+    writeDraft(s);
+  }, [s, isEditMode]);
+
+  // beforeunload guard — only warns when the form is "dirty" (anything
+  // beyond the initial empty shape). The browser shows its native confirm
+  // dialog automatically when we set returnValue.
+  useEffect(() => {
+    const isDirty =
+      Boolean(s.vin) ||
+      Boolean(s.torque) ||
+      Boolean(s.price) ||
+      Boolean(s.kmsDriven) ||
+      Boolean(s.description) ||
+      s.images.length > 0 ||
+      Boolean(s.inspectionUrl);
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [s]);
 
   const fetchVin = useMutation({
     mutationFn: (vin: string) => api<TorqueVehicle>(`/torque/vehicles/${vin}`),
@@ -87,8 +216,24 @@ export function AddListingPage() {
   });
 
   const create = useMutation({
-    mutationFn: () =>
-      api<{ id: string; slug: string }>('/dealer/listings', {
+    mutationFn: () => {
+      if (isEditMode && editId) {
+        // PATCH the existing draft. updateListingInput on the API side
+        // accepts price / kmsDriven / description / images — VIN, owners,
+        // certificationStatus and CPO docs aren't editable post-creation.
+        // Resubmitting after admin returned the draft re-queues admin
+        // review (status stays DRAFT until admin publishes).
+        return api<{ id: string }>(`/dealer/listings/${editId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            price: Number(s.price),
+            kmsDriven: Number(s.kmsDriven),
+            description: s.description,
+            images: s.images,
+          }),
+        });
+      }
+      return api<{ id: string; slug: string }>('/dealer/listings', {
         method: 'POST',
         body: JSON.stringify({
           // Vehicle facts are read server-side from Torque against the VIN —
@@ -104,8 +249,14 @@ export function AddListingPage() {
           cpoDocs:
             s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
         }),
-      }),
-    onSuccess: () => navigate('/listings'),
+      });
+    },
+    onSuccess: () => {
+      // Wipe the create-mode draft once the listing was created. In edit
+      // mode there's no draft to clear (we never wrote to localStorage).
+      if (!isEditMode) clearDraft();
+      navigate('/listings');
+    },
   });
 
   const torqueLocked = !s.torque;
@@ -131,7 +282,7 @@ export function AddListingPage() {
   const formValid = missing.length === 0;
 
   return (
-    <div className="px-8 py-8 lg:py-10">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       {/* Header row — title + back button */}
       <div className="flex items-baseline justify-between flex-wrap gap-4 mb-6">
         <h1 className="font-headline text-3xl tracking-headline uppercase text-text-on-light">
@@ -568,7 +719,7 @@ function CertToggle({
             onClick={() => onChange(opt.v)}
             className={`flex-1 py-3 transition ${
               active
-                ? 'bg-hd-orange text-hd-white'
+                ? 'bg-hd-orange text-hd-black'
                 : 'bg-hd-white text-gray-700 hover:text-text-on-light'
             } disabled:opacity-50`}
           >

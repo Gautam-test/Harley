@@ -98,7 +98,7 @@ export function MyListingsPage() {
   const returnedDrafts = (all ?? []).filter((l) => l.status === 'DRAFT' && l.adminFeedback);
 
   return (
-    <div className="max-w-container mx-auto px-6 py-10">
+    <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
           My <span className="text-hd-orange">Listings</span>
@@ -116,17 +116,31 @@ export function MyListingsPage() {
             {returnedDrafts.length === 1 ? 's' : ''} your attention
           </p>
           {returnedDrafts.map((l) => (
-            <div key={l.id} className="text-sm bg-hd-white border border-danger/30 rounded p-3">
-              <p className="font-subhead text-text-on-light">
-                {l.year} {l.modelName} ·{' '}
-                <span className="font-mono text-xs text-gray-600">{l.vin}</span>
-              </p>
-              <p className="text-gray-700 mt-1">
-                <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
-                  Admin feedback:
-                </span>{' '}
-                {l.adminFeedback}
-              </p>
+            <div
+              key={l.id}
+              className="text-sm bg-hd-white border border-danger/30 rounded p-3 flex flex-wrap gap-3 items-start justify-between"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-subhead text-text-on-light">
+                  {l.year} {l.modelName} ·{' '}
+                  <span className="font-mono text-xs text-gray-600">{l.vin}</span>
+                </p>
+                <p className="text-gray-700 mt-1">
+                  <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
+                    Admin feedback:
+                  </span>{' '}
+                  {l.adminFeedback}
+                </p>
+              </div>
+              {/* Direct CTA so the dealer doesn't have to scroll down to the
+                  table row's tiny Re-submit link. Uses the new edit route
+                  which hydrates the wizard from the existing draft. */}
+              <Link
+                to={`/listings/${l.id}/edit`}
+                className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-110 transition"
+              >
+                Resume Edit →
+              </Link>
             </div>
           ))}
         </div>
@@ -280,7 +294,7 @@ export function MyListingsPage() {
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <Link
-                        to="/listings/new"
+                        to={`/listings/${l.id}/edit`}
                         className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-danger hover:underline"
                       >
                         Re-submit

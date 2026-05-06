@@ -54,7 +54,11 @@ adminMetricsRouter.get('/', validate(rangeQuery, 'query'), async (req, res, next
       prisma.listing.count(),
       prisma.tradeInLead.count({ where: { createdAt: { gte: from, lte: to } } }),
       prisma.enquiry.count({ where: { createdAt: { gte: from, lte: to } } }),
-      prisma.enquiry.count({ where: { status: 'CONVERTED', createdAt: { gte: from, lte: to } } }),
+      // Buyer pipeline terminates at SUCCESS, not CONVERTED — accept both for
+      // legacy rows so historical dashboards don't lose data after the rename.
+      prisma.enquiry.count({
+        where: { status: { in: ['SUCCESS', 'CONVERTED'] }, createdAt: { gte: from, lte: to } },
+      }),
       prisma.listing.groupBy({
         by: ['dealerId'],
         _count: { _all: true },

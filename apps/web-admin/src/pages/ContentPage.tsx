@@ -55,7 +55,7 @@ export function ContentPage() {
   ];
 
   return (
-    <div className="max-w-container mx-auto px-6 py-10 grid lg:grid-cols-[200px_1fr] gap-6">
+    <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10 grid lg:grid-cols-[200px_1fr] gap-6">
       <aside>
         <h2 className="font-subhead uppercase tracking-subhead text-text-on-light mb-3">Pages</h2>
         <ul className="space-y-1">

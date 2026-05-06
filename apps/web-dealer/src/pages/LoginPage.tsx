@@ -43,7 +43,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-hd-white">
       {/* Left — orange marketing panel */}
-      <aside className="relative hidden lg:flex flex-col justify-between bg-hd-orange text-hd-white p-12 overflow-hidden">
+      <aside className="relative hidden lg:flex flex-col justify-between bg-hd-orange text-hd-black p-12 overflow-hidden">
         <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(0,0,0,0.6),_transparent_60%)]" />
         <div className="relative z-10">
           <p className="font-subhead uppercase tracking-subhead text-xs border-t border-hd-white/70 pt-3 inline-block">
@@ -107,13 +107,13 @@ export function LoginPage() {
                 />
                 <span>Remember me</span>
               </label>
-              <a
-                href="#"
-                onClick={(e) => e.preventDefault()}
-                className="font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:brightness-110"
-              >
-                Forgot Password?
-              </a>
+              {/* Self-serve password reset isn't built yet — point at the
+                  helpdesk instead of dead-#'ing so a stranded rep has a
+                  recovery path. Surface as plain text, not a link, until
+                  the reset flow ships. */}
+              <span className="font-subhead uppercase tracking-subhead text-xs text-gray-500">
+                Forgot? Call +91 98188 00000
+              </span>
             </div>
 
             {error && (
@@ -131,9 +131,17 @@ export function LoginPage() {
             Need Help? · +91 98188 00000
           </p>
 
-          <p className="text-xs text-gray-500 mt-10 text-center">
-            Demo: <code className="text-hd-orange">gurgaon-hd</code> / <code className="text-hd-orange">Dealer@123!</code>
-          </p>
+          {/* Demo creds are baked in for local / staging walk-throughs but
+              must NOT ship in the production HTML — that's a free credential
+              for anyone hitting the page. import.meta.env.DEV is true in
+              `pnpm dev` and false in `pnpm build`, so the line drops out
+              of the production bundle entirely (tree-shaken, not just
+              hidden). */}
+          {import.meta.env.DEV && (
+            <p className="text-xs text-gray-500 mt-10 text-center">
+              Demo: <code className="text-hd-orange">gurgaon-hd</code> / <code className="text-hd-orange">Dealer@123!</code>
+            </p>
+          )}
         </div>
       </section>
     </div>

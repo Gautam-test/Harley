@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { Select } from '@hd-cpo/ui';
 import { api } from '../lib/api';
 import { SearchFilters } from '../components/SearchFilters';
 import { HERO, PageHero } from '../components/PageHero';
@@ -116,17 +117,17 @@ export function SearchPage() {
                 <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
                   Sort By
                 </span>
-                <select
+                <Select
                   value={sort}
                   onChange={(e) => setParam('sort', e.target.value === 'newest' ? '' : e.target.value)}
-                  className="bg-hd-white border border-gray-300 rounded px-3 py-1.5 font-subhead uppercase tracking-subhead text-[11px] text-text-on-light"
+                  className="w-44"
                 >
                   {SORT_OPTIONS.map((s) => (
                     <option key={s.value} value={s.value}>
                       {s.label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-5">
@@ -143,7 +144,7 @@ export function SearchPage() {
                   onClick={() => setParam('cert', t.id)}
                   className={`px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
                     activeTab === t.id
-                      ? 'bg-hd-orange text-hd-white'
+                      ? 'bg-hd-orange text-hd-black'
                       : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
                   }`}
                 >
@@ -170,6 +171,13 @@ export function SearchPage() {
                   No bikes match your search.
                 </p>
                 <p className="text-sm text-gray-600 mt-2">Try widening the radius or clearing filters.</p>
+                <button
+                  type="button"
+                  onClick={() => setParams({})}
+                  className="mt-5 inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 rounded-card hover:brightness-110 transition"
+                >
+                  Clear all filters
+                </button>
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -201,7 +209,7 @@ export function SearchPage() {
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
           aria-label="Back to filters"
-          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-3 rounded-full shadow-2xl hover:brightness-110 transition"
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-3 rounded-full shadow-2xl hover:brightness-110 transition"
         >
           <svg
             className="w-4 h-4"
@@ -237,7 +245,7 @@ function Pagination({
   const cls = (active: boolean) =>
     `min-w-[2.25rem] h-9 px-3 inline-flex items-center justify-center font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
       active
-        ? 'bg-hd-orange text-hd-white'
+        ? 'bg-hd-orange text-hd-black'
         : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
     }`;
   // Render at most 3 numeric pages around the current.

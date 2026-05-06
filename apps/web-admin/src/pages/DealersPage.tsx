@@ -56,7 +56,7 @@ export function DealersPage() {
   });
 
   return (
-    <div className="max-w-container mx-auto px-6 py-10">
+    <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex items-baseline justify-between flex-wrap gap-4 mb-6">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">Dealers</h1>
         <div className="flex items-center gap-3">
@@ -305,7 +305,7 @@ function BulkImportModal({ onClose, onDone }: { onClose: () => void; onDone: () 
       )}
       {result && (
         <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-4 gap-2 text-center text-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
             <Stat label="Total" value={result.summary.total} />
             <Stat label="Created" value={result.summary.created} good />
             <Stat label="Skipped" value={result.summary.skipped} />

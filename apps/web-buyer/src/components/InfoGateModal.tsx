@@ -128,8 +128,13 @@ export function InfoGateModal({
   // useEffect (not during render) so React doesn't tear-render and lose the
   // resulting otpId — that's why the previous in-render version sometimes
   // left the verify button click without an otpId to verify against.
+  //
+  // The guard intentionally drops `error` from the deps — the previous
+  // version refused to retry once `error` was set, which made a transient
+  // network blip a permanent dead-end. The Resend Code button on the
+  // verify step now clears `error` + `otpId` and lets this effect re-fire.
   useEffect(() => {
-    if (!open || !prefilled || otpId || busy || error) return;
+    if (!open || !prefilled || otpId || busy) return;
     let cancelled = false;
     setBusy(true);
     api<{ otpId: string }>('/otp/send', {
@@ -137,7 +142,10 @@ export function InfoGateModal({
       body: JSON.stringify({ phone: prefilled.phone, purpose }),
     })
       .then((res) => {
-        if (!cancelled) setOtpId(res.otpId);
+        if (!cancelled) {
+          setOtpId(res.otpId);
+          setError(null);
+        }
       })
       .catch((e) => {
         if (!cancelled) {
@@ -151,7 +159,29 @@ export function InfoGateModal({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, prefilled?.phone, purpose]);
+  }, [open, prefilled?.phone, purpose, otpId]);
+
+  // 30-second resend cooldown so a buyer who didn't get the SMS within ~30s
+  // has a clear "send it again" path instead of refreshing the page (and
+  // losing the modal). Resets every time a new otpId is issued.
+  const [resendCooldown, setResendCooldown] = useState(30);
+  useEffect(() => {
+    if (!otpId) return;
+    setResendCooldown(30);
+    const timer = window.setInterval(() => {
+      setResendCooldown((n) => (n > 0 ? n - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [otpId]);
+
+  const resendOtp = () => {
+    if (busy || resendCooldown > 0) return;
+    // Clearing otpId + error makes the existing send-effect above re-fire
+    // with the same prefilled phone (or whichever phone the buyer entered
+    // in step 1).
+    setOtpId(null);
+    setError(null);
+  };
 
   // Dealers list for the "Choose Dealer" select. Loaded only when the modal
   // is open so we don't fetch eagerly on every page mount.
@@ -362,7 +392,7 @@ export function InfoGateModal({
                 trade-in form (Frame 28), not the buyer enquiry. */}
             {isBuyerEnquiry ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Labelled label="Location" show>
                     <LocationInput
                       register={register('location')}
@@ -435,7 +465,7 @@ export function InfoGateModal({
                     </Select>
                   </Labelled>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Labelled label="City" error={errors.city?.message} show>
                     <Select
                       aria-invalid={Boolean(errors.city)}
@@ -468,7 +498,7 @@ export function InfoGateModal({
                 </div>
               </>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Location" show={false}>
                   <Input placeholder="Choose location" {...register('city')} />
                 </Labelled>
@@ -487,7 +517,7 @@ export function InfoGateModal({
             )}
 
             {isBuyerEnquiry && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Looking For" show>
                   <Select {...register('lookingFor')} defaultValue="">
                     <option value="">Select a model</option>
@@ -621,6 +651,20 @@ export function InfoGateModal({
             >
               {busy ? 'Verifying…' : 'Verify'}
             </Button>
+            {/* Resend Code — gated by a 30s cooldown so a tap-happy buyer
+                doesn't spam /otp/send and trip the rate limit. After the
+                countdown the link enables; clicking nukes the otpId so the
+                send-effect re-fires with the same phone. */}
+            <button
+              type="button"
+              onClick={resendOtp}
+              disabled={resendCooldown > 0 || busy}
+              className="text-xs text-gray-600 hover:text-hd-orange w-full disabled:text-gray-400 disabled:hover:text-gray-400"
+            >
+              {resendCooldown > 0
+                ? `Didn't get it? Resend in ${resendCooldown}s`
+                : "Didn't get it? Resend code"}
+            </button>
             <button
               type="button"
               onClick={() => setStep('collect')}
