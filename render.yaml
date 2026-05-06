@@ -25,8 +25,13 @@ services:
     plan: free  # bump to `starter` ($7/mo) for production
     branch: main
     rootDir: .
+    # We install pnpm via `npm install -g` instead of corepack because
+    # Node 20.18.1's bundled corepack ships with stale signing keys and
+    # rejects pnpm releases with "Cannot find matching keyid". Bypassing
+    # corepack avoids the issue entirely; pnpm version is pinned to match
+    # the packageManager field in package.json.
     buildCommand: |
-      corepack enable
+      npm install -g pnpm@10.33.2
       pnpm install --frozen-lockfile
       pnpm --filter @hd-cpo/types build || true
       pnpm --filter @hd-cpo/torque-client build || true
