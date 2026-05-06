@@ -1,6 +1,8 @@
 import type {
   EnquiryInput,
   TradeInLeadInput,
+  DealerBuyerEnquiryInput,
+  DealerTradeInLeadInput,
   LeadStatus,
 } from '@hd-cpo/types';
 import { canTransitionLead } from '@hd-cpo/types';
@@ -264,9 +266,53 @@ export async function getLeadDetail(
 // Skips the buyer-facing OTP gate because the dealer is already authenticated
 // against their own listing/dealer scope.
 
+// Strip the keys the Enquiry table holds in dedicated columns from the
+// dealer-side payload, leaving only the qualifying answers (source, state,
+// budget, visitPreference, etc.) for the `notes` JSON column.
+function buyerEnquiryNotes(input: DealerBuyerEnquiryInput) {
+  const {
+    listingId: _l,
+    name: _n,
+    phone: _p,
+    email: _e,
+    city: _c,
+    pincode: _pin,
+    message: _m,
+    ...rest
+  } = input;
+  void _l;
+  void _n;
+  void _p;
+  void _e;
+  void _c;
+  void _pin;
+  void _m;
+  return rest;
+}
+function tradeInNotes(input: DealerTradeInLeadInput) {
+  const {
+    username: _u,
+    bikeModel: _b,
+    vin: _v,
+    phone: _p,
+    email: _e,
+    city: _c,
+    dealerId: _d,
+    ...rest
+  } = input;
+  void _u;
+  void _b;
+  void _v;
+  void _p;
+  void _e;
+  void _c;
+  void _d;
+  return rest;
+}
+
 export async function dealerCreateBuyerEnquiry(
   dealerId: string,
-  input: EnquiryInput & { listingId: string },
+  input: DealerBuyerEnquiryInput,
 ) {
   // Verify the listing belongs to this dealer — prevents a malicious dealer
   // from logging fake enquiries against another dealer's bikes.
@@ -287,6 +333,7 @@ export async function dealerCreateBuyerEnquiry(
       city: input.city,
       pincode: input.pincode,
       message: input.message,
+      notes: buyerEnquiryNotes(input),
     },
   });
   // Email confirmation — dealer rep already has the lead in front of them,
@@ -303,7 +350,7 @@ export async function dealerCreateBuyerEnquiry(
 
 export async function dealerCreateTradeInLead(
   dealerId: string,
-  input: TradeInLeadInput,
+  input: DealerTradeInLeadInput,
 ) {
   const lead = (await prisma.tradeInLead.create({
     data: {
@@ -314,6 +361,7 @@ export async function dealerCreateTradeInLead(
       phoneEnc: encryptPii(input.phone),
       emailEnc: encryptPii(input.email),
       city: input.city,
+      notes: tradeInNotes(input),
     },
   })) as unknown as { id: string };
   await notifyDealer(

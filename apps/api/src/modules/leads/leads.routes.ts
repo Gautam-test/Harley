@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   enquiryInput,
   dealerBuyerEnquiryInput,
+  dealerTradeInLeadInput,
   tradeInLeadInput,
   leadStatus,
   type LeadStatus,
@@ -192,7 +193,7 @@ dealerLeadsRouter.post(
 
 dealerLeadsRouter.post(
   '/trade-in',
-  validate(tradeInLeadInput),
+  validate(dealerTradeInLeadInput),
   async (req, res, next) => {
     try {
       const out = await dealerCreateTradeInLead(req.auth!.sub, req.body);

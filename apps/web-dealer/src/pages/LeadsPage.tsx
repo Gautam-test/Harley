@@ -189,6 +189,58 @@ export function LeadsPage() {
   );
 }
 
+// ─── Form options shared by both modals ───────────────────────────────────
+
+const INDIA_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman & Nicobar', 'Chandigarh', 'Dadra & Nagar Haveli and Daman & Diu',
+  'Delhi', 'Jammu & Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+] as const;
+
+const SOURCE_OPTIONS = [
+  { value: 'walk-in', label: 'Walk-in (showroom)' },
+  { value: 'phone', label: 'Phone call' },
+  { value: 'website', label: 'Website / online' },
+  { value: 'referral', label: 'Customer referral' },
+  { value: 'event', label: 'Event / exhibition' },
+  { value: 'other', label: 'Other' },
+];
+
+const VISIT_OPTIONS = [
+  { value: '', label: '— Not yet decided —' },
+  { value: 'test-ride', label: 'Wants a test ride' },
+  { value: 'showroom', label: 'Showroom visit only' },
+  { value: 'virtual', label: 'Virtual / video walkthrough' },
+  { value: 'none-yet', label: 'Information gathering only' },
+];
+
+const CALL_WINDOW_OPTIONS = [
+  { value: '', label: '— Anytime —' },
+  { value: 'morning', label: 'Morning (9 – 12)' },
+  { value: 'afternoon', label: 'Afternoon (12 – 5)' },
+  { value: 'evening', label: 'Evening (5 – 8)' },
+  { value: 'anytime', label: 'Anytime' },
+];
+
+// Section header inside the modal — keeps the long form scannable. Two
+// lines: a tiny orange-on-white kicker + a bold uppercase label, mirroring
+// the H-D brand subhead pattern used elsewhere on the dealer portal.
+function FormSection({ kicker, label, children }: { kicker: string; label: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="space-y-3 pt-3 border-t border-gray-100 first:pt-0 first:border-t-0">
+      <legend className="font-subhead uppercase tracking-subhead text-[11px] text-text-on-light">
+        <span className="text-hd-orange">{kicker} ·</span> {label}
+      </legend>
+      {children}
+    </fieldset>
+  );
+}
+
 // ─── Add Buyer Enquiry — manual (phone-call / walk-in) ─────────────────────
 
 interface DealerListingOption {
@@ -206,7 +258,14 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
     phone: '+91',
     email: '',
     city: '',
+    state: '',
     pincode: '',
+    source: 'walk-in',
+    budget: '',
+    visitPreference: '',
+    bestTimeToCall: '',
+    financingNeeded: false,
+    tradeInInterest: false,
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -224,11 +283,30 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
   });
 
   const submit = useMutation({
-    mutationFn: (body: typeof form) =>
-      api<{ id: string }>('/dealer/leads/buyer', {
+    mutationFn: () => {
+      // Strip empty-string optionals so the Zod input validates without
+      // tripping on `""` values where it expects undefined.
+      const body: Record<string, unknown> = {
+        listingId: form.listingId,
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        source: form.source,
+        financingNeeded: form.financingNeeded,
+        tradeInInterest: form.tradeInInterest,
+      };
+      if (form.city.trim()) body.city = form.city.trim();
+      if (form.state) body.state = form.state;
+      if (form.pincode.trim()) body.pincode = form.pincode.trim();
+      if (form.budget) body.budget = Number(form.budget);
+      if (form.visitPreference) body.visitPreference = form.visitPreference;
+      if (form.bestTimeToCall) body.bestTimeToCall = form.bestTimeToCall;
+      if (form.message.trim()) body.message = form.message.trim();
+      return api<{ id: string }>('/dealer/leads/buyer', {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leads', 'buyer'] });
       qc.invalidateQueries({ queryKey: ['dealer-leads', 'buyer', 'sidebar'] });
@@ -243,77 +321,167 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          submit.mutate(form);
+          submit.mutate();
         }}
-        className="space-y-4"
+        className="space-y-5"
       >
-        <Field label="Bike (from your listings)">
-          <Select
-            value={form.listingId}
-            onChange={(e) => setForm((f) => ({ ...f, listingId: e.target.value }))}
-            required
-          >
-            <option value="">Select a bike…</option>
-            {listings.data?.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.year} {l.modelName} · {l.vin.slice(-5)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Buyer Name">
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+        <FormSection kicker="1" label="Bike of Interest">
+          <Field label="Listing">
+            <Select
+              value={form.listingId}
+              onChange={(e) => setForm((f) => ({ ...f, listingId: e.target.value }))}
               required
-              minLength={2}
-            />
+            >
+              <option value="">Select a bike…</option>
+              {listings.data?.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.year} {l.modelName} · {l.vin.slice(-5)}
+                </option>
+              ))}
+            </Select>
           </Field>
-          <Field label="Phone (+91…)">
+        </FormSection>
+
+        <FormSection kicker="2" label="Buyer Details">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Full Name">
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                required
+                minLength={2}
+              />
+            </Field>
+            <Field label="Phone (+91…)">
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                required
+                pattern="^\+91[0-9]{10}$"
+                placeholder="+919812345678"
+              />
+            </Field>
+          </div>
+          <Field label="Email">
             <Input
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               required
-              pattern="^\+91[0-9]{10}$"
-              placeholder="+919812345678"
             />
           </Field>
-        </div>
-        <Field label="Email">
-          <Input
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            required
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="City (optional)">
-            <Input
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="State">
+              <Select
+                value={form.state}
+                onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+              >
+                <option value="">— Select —</option>
+                {INDIA_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="City">
+              <Input
+                value={form.city}
+                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                placeholder="e.g. Gurgaon"
+              />
+            </Field>
+            <Field label="PIN code">
+              <Input
+                value={form.pincode}
+                onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
+                pattern="^[0-9]{6}$"
+                placeholder="122001"
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection kicker="3" label="Lead Qualification">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="How did the lead come in?">
+              <Select
+                value={form.source}
+                onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
+                required
+              >
+                {SOURCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Stated budget (₹, optional)">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={50_000}
+                value={form.budget}
+                onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
+                placeholder="e.g. 1500000"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Visit preference">
+              <Select
+                value={form.visitPreference}
+                onChange={(e) => setForm((f) => ({ ...f, visitPreference: e.target.value }))}
+              >
+                {VISIT_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Best time to call">
+              <Select
+                value={form.bestTimeToCall}
+                onChange={(e) => setForm((f) => ({ ...f, bestTimeToCall: e.target.value }))}
+              >
+                {CALL_WINDOW_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <CheckboxField
+              checked={form.financingNeeded}
+              onChange={(v) => setForm((f) => ({ ...f, financingNeeded: v }))}
+              label="Financing / EMI needed"
+            />
+            <CheckboxField
+              checked={form.tradeInInterest}
+              onChange={(v) => setForm((f) => ({ ...f, tradeInInterest: v }))}
+              label="Has a bike to trade in"
+            />
+          </div>
+        </FormSection>
+
+        <FormSection kicker="4" label="Notes">
+          <Field label="Conversation notes (optional)">
+            <textarea
+              rows={3}
+              value={form.message}
+              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+              maxLength={1000}
+              placeholder="Walked in 11 AM, asked about EMI options, wants to bring spouse for second visit…"
+              className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
-          <Field label="PIN code (optional)">
-            <Input
-              value={form.pincode}
-              onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
-              pattern="^[0-9]{6}$"
-              placeholder="122001"
-            />
-          </Field>
-        </div>
-        <Field label="Notes (optional)">
-          <textarea
-            rows={3}
-            value={form.message}
-            onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-            maxLength={1000}
-            placeholder="Walked in 11 AM, asked about EMI options…"
-            className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
-          />
-        </Field>
+        </FormSection>
+
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -332,22 +500,54 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
 
 function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const currentYear = new Date().getFullYear();
   const [form, setForm] = useState({
     username: '',
     bikeModel: '',
     vin: '',
+    year: '',
+    kmsDriven: '',
+    owners: '1',
+    colour: '',
+    askingPrice: '',
     phone: '+91',
     email: '',
     city: '',
+    state: '',
+    source: 'walk-in',
+    bestTimeToCall: '',
+    rcAvailable: false,
+    serviceHistoryAvailable: false,
+    reasonForSelling: '',
   });
   const [error, setError] = useState<string | null>(null);
 
   const submit = useMutation({
-    mutationFn: (body: typeof form) =>
-      api<{ id: string }>('/dealer/leads/trade-in', {
+    mutationFn: () => {
+      const body: Record<string, unknown> = {
+        username: form.username,
+        bikeModel: form.bikeModel,
+        vin: form.vin,
+        phone: form.phone,
+        email: form.email,
+        city: form.city,
+        source: form.source,
+        rcAvailable: form.rcAvailable,
+        serviceHistoryAvailable: form.serviceHistoryAvailable,
+      };
+      if (form.state) body.state = form.state;
+      if (form.year) body.year = Number(form.year);
+      if (form.kmsDriven) body.kmsDriven = Number(form.kmsDriven);
+      if (form.owners) body.owners = Number(form.owners);
+      if (form.colour.trim()) body.colour = form.colour.trim();
+      if (form.askingPrice) body.askingPrice = Number(form.askingPrice);
+      if (form.bestTimeToCall) body.bestTimeToCall = form.bestTimeToCall;
+      if (form.reasonForSelling.trim()) body.reasonForSelling = form.reasonForSelling.trim();
+      return api<{ id: string }>('/dealer/leads/trade-in', {
         method: 'POST',
         body: JSON.stringify(body),
-      }),
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leads', 'trade-in'] });
       onClose();
@@ -361,56 +561,30 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          submit.mutate(form);
+          submit.mutate();
         }}
-        className="space-y-4"
+        className="space-y-5"
       >
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Seller Name">
-            <Input
-              value={form.username}
-              onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-              required
-              minLength={2}
-            />
-          </Field>
-          <Field label="City">
-            <Input
-              value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-              required
-              minLength={1}
-            />
-          </Field>
-        </div>
-        <Field label="Bike Model">
-          <Input
-            value={form.bikeModel}
-            onChange={(e) => setForm((f) => ({ ...f, bikeModel: e.target.value }))}
-            required
-            placeholder="e.g. 2019 Street Glide Special"
-          />
-        </Field>
-        <Field label="VIN">
-          <Input
-            value={form.vin.toUpperCase()}
-            onChange={(e) => setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }))}
-            required
-            pattern="^[A-HJ-NPR-Z0-9]{17}$"
-            placeholder="17-char VIN, no I/O/Q"
-            className="font-mono"
-          />
-        </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Phone (+91…)">
-            <Input
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              required
-              pattern="^\+91[0-9]{10}$"
-              placeholder="+919812345678"
-            />
-          </Field>
+        <FormSection kicker="1" label="Seller Details">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Full Name">
+              <Input
+                value={form.username}
+                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                required
+                minLength={2}
+              />
+            </Field>
+            <Field label="Phone (+91…)">
+              <Input
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                required
+                pattern="^\+91[0-9]{10}$"
+                placeholder="+919812345678"
+              />
+            </Field>
+          </div>
           <Field label="Email">
             <Input
               type="email"
@@ -419,7 +593,158 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               required
             />
           </Field>
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="State">
+              <Select
+                value={form.state}
+                onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+              >
+                <option value="">— Select —</option>
+                {INDIA_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="City">
+              <Input
+                value={form.city}
+                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                required
+                minLength={1}
+                placeholder="e.g. Gurgaon"
+              />
+            </Field>
+          </div>
+        </FormSection>
+
+        <FormSection kicker="2" label="Bike Details">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Model / Year line">
+              <Input
+                value={form.bikeModel}
+                onChange={(e) => setForm((f) => ({ ...f, bikeModel: e.target.value }))}
+                required
+                placeholder="e.g. Street Glide Special"
+              />
+            </Field>
+            <Field label="VIN">
+              <Input
+                value={form.vin.toUpperCase()}
+                onChange={(e) => setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }))}
+                required
+                pattern="^[A-HJ-NPR-Z0-9]{17}$"
+                placeholder="17-char VIN, no I/O/Q"
+                className="font-mono"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            <Field label="Year">
+              <Input
+                type="number"
+                min={1903}
+                max={currentYear}
+                value={form.year}
+                onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
+                placeholder={String(currentYear - 3)}
+              />
+            </Field>
+            <Field label="KMs driven">
+              <Input
+                type="number"
+                min={0}
+                step={500}
+                value={form.kmsDriven}
+                onChange={(e) => setForm((f) => ({ ...f, kmsDriven: e.target.value }))}
+                placeholder="e.g. 12500"
+              />
+            </Field>
+            <Field label="Owner">
+              <Select
+                value={form.owners}
+                onChange={(e) => setForm((f) => ({ ...f, owners: e.target.value }))}
+              >
+                <option value="1">1st owner</option>
+                <option value="2">2nd owner</option>
+                <option value="3">3rd owner</option>
+                <option value="4">4th+</option>
+              </Select>
+            </Field>
+            <Field label="Colour">
+              <Input
+                value={form.colour}
+                onChange={(e) => setForm((f) => ({ ...f, colour: e.target.value }))}
+                placeholder="e.g. Vivid Black"
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <CheckboxField
+              checked={form.rcAvailable}
+              onChange={(v) => setForm((f) => ({ ...f, rcAvailable: v }))}
+              label="RC available"
+            />
+            <CheckboxField
+              checked={form.serviceHistoryAvailable}
+              onChange={(v) => setForm((f) => ({ ...f, serviceHistoryAvailable: v }))}
+              label="Service history available"
+            />
+          </div>
+        </FormSection>
+
+        <FormSection kicker="3" label="Lead Qualification">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="How did the lead come in?">
+              <Select
+                value={form.source}
+                onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
+                required
+              >
+                {SOURCE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Asking price (₹, optional)">
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={10_000}
+                value={form.askingPrice}
+                onChange={(e) => setForm((f) => ({ ...f, askingPrice: e.target.value }))}
+                placeholder="e.g. 950000"
+              />
+            </Field>
+          </div>
+          <Field label="Best time to call">
+            <Select
+              value={form.bestTimeToCall}
+              onChange={(e) => setForm((f) => ({ ...f, bestTimeToCall: e.target.value }))}
+            >
+              {CALL_WINDOW_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Reason for selling (optional)">
+            <textarea
+              rows={2}
+              value={form.reasonForSelling}
+              onChange={(e) => setForm((f) => ({ ...f, reasonForSelling: e.target.value }))}
+              maxLength={500}
+              placeholder="Upgrading to a touring model, relocating abroad, etc."
+              className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+            />
+          </Field>
+        </FormSection>
+
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -447,11 +772,11 @@ function ModalShell({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 bg-hd-black/50 flex items-start justify-center pt-16 p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-hd-black/50 flex items-start justify-center pt-10 p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-hd-white border border-gray-200 rounded-card max-w-xl w-full p-6 shadow-2xl"
+        className="bg-hd-white border border-gray-200 rounded-card max-w-3xl w-full p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -480,6 +805,28 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         {label}
       </span>
       {children}
+    </label>
+  );
+}
+
+function CheckboxField({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none border border-gray-200 rounded px-3 py-2.5 hover:border-hd-orange transition">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 accent-hd-orange"
+      />
+      <span className="text-sm text-text-on-light">{label}</span>
     </label>
   );
 }
