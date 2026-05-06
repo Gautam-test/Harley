@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 80" preserveAspectRatio="xMinYMid meet" role="img" aria-label="H-D Certified">
+  <title>H-D Certified</title>
+  <!--
+    Dark variant of the H-D Certified™ wordmark — for light backgrounds.
+    Black glyphs + PMS 165C orange dash + ™. Counterpart of the light SVG
+    used directly on the dark site headers.
+  -->
+  <g fill="#000000" font-family="'1903 Sans Condensed', 'Bebas Neue', Oswald, Impact, sans-serif" font-weight="700" font-size="62" letter-spacing="2">
+    <text x="0" y="60">H</text>
+    <text x="92" y="60">D</text>
+    <text x="170" y="60">CERTIFIED</text>
+  </g>
+  <rect x="44" y="30" width="40" height="10" fill="#FF6600"/>
+  <text x="406" y="22" font-family="Arial, sans-serif" font-weight="700" font-size="14" fill="#FF6600">™</text>
+</svg>

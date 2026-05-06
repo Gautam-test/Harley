@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 80" preserveAspectRatio="xMinYMid meet" role="img" aria-label="H-D Certified">
+  <title>H-D Certified</title>
+  <!--
+    Light variant of the H-D Certified™ wordmark — for dark headers.
+    Hand-authored to stay crisp at any size; the EPS preview was a 430px
+    raster that pixelated when upscaled. Brand colours: white glyphs +
+    PMS 165C orange dash + ™.
+  -->
+  <g fill="#ffffff" font-family="'1903 Sans Condensed', 'Bebas Neue', Oswald, Impact, sans-serif" font-weight="700" font-size="62" letter-spacing="2">
+    <text x="0" y="60">H</text>
+    <text x="92" y="60">D</text>
+    <text x="170" y="60">CERTIFIED</text>
+  </g>
+  <!-- Orange dash between H and D, vertically centered on the cap-height -->
+  <rect x="44" y="30" width="40" height="10" fill="#FF6600"/>
+  <!-- TM superscript in orange -->
+  <text x="406" y="22" font-family="Arial, sans-serif" font-weight="700" font-size="14" fill="#FF6600">™</text>
+</svg>

@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { SiteHeader } from './components/SiteHeader';
 import { SiteFooter } from './components/SiteFooter';
 import { CookieBanner } from './components/CookieBanner';
+import { SellBikeModal } from './components/SellBikeModal';
 import { HomePage } from './pages/HomePage';
 import { SearchPage } from './pages/SearchPage';
 import { ListingDetailPage } from './pages/ListingDetailPage';
@@ -42,6 +43,8 @@ export function App() {
       </main>
       <SiteFooter />
       <CookieBanner />
+      {/* Globally mounted: triggered from the header "Sell Your Bike" link. */}
+      <SellBikeModal />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Select } from '@hd-cpo/ui';
@@ -35,6 +35,18 @@ const YEAR_OPTIONS = (() => {
   return out;
 })();
 
+// Slider configuration — sized to actual H-D used-bike data:
+//   - Prices: ~4 lakh to ~30 lakh, with rare CVO-tier bikes up to ~50 lakh.
+//   - KMs:    ~80 km (showroom-floor demos) to ~80,000 km (older inventory).
+// Defaults sit at the slider MAX, so "no filter applied" is the resting state;
+// the form skips forwarding the param when value === max (see onSubmit).
+const PRICE_MAX = 5_000_000;
+const PRICE_MIN = 500_000;
+const KMS_MAX = 80_000;
+const KMS_MIN = 89;
+const MONTHLY_MAX = 100_000;
+const MONTHLY_MIN = 5_000;
+
 const formDefaults = (params: URLSearchParams): FormValues => ({
   searchBy: (params.get('searchBy') as 'cash' | 'monthly') || 'cash',
   pincode: params.get('pincode') ?? '',
@@ -43,9 +55,9 @@ const formDefaults = (params: URLSearchParams): FormValues => ({
   minYear: params.get('minYear') ?? '',
   colour: params.get('colour') ?? '',
   cert: (params.get('cert') as FormValues['cert']) ?? '',
-  maxPrice: params.get('maxPrice') ?? '4900000',
-  maxMonthly: params.get('maxMonthly') ?? '49995',
-  maxKms: params.get('maxKms') ?? '5000',
+  maxPrice: params.get('maxPrice') ?? String(PRICE_MAX),
+  maxMonthly: params.get('maxMonthly') ?? String(MONTHLY_MAX),
+  maxKms: params.get('maxKms') ?? String(KMS_MAX),
 });
 
 // Filter sidebar mirrors the frozen Figma "Search Stock" layout:
@@ -71,7 +83,16 @@ export function SearchFilters() {
     }
   }, [watchedModel, validModels, setValue]);
 
+  // Track whether the in-flight params change came from this component (so we
+  // don't reset the form back to URL state mid-edit, which would clobber the
+  // user's typing). When we push params via setParams from auto-apply, we set
+  // this flag; the params-watcher then ignores that one round-trip.
+  const selfDrivenChange = useRef(false);
   useEffect(() => {
+    if (selfDrivenChange.current) {
+      selfDrivenChange.current = false;
+      return;
+    }
     reset(formDefaults(params));
   }, [params, reset]);
 
@@ -85,18 +106,30 @@ export function SearchFilters() {
   const onSubmit = (v: FormValues) => {
     const next = new URLSearchParams();
     if (v.searchBy === 'monthly') next.set('searchBy', 'monthly');
-    // Only forward pincode/distance to the API when both are supplied — the
-    // server-side dealer-radius filter requires the pair (pincode without
-    // distance has no meaning, and vice versa).
-    if (v.pincode && /^\d{6}$/.test(v.pincode)) next.set('pincode', v.pincode);
-    if (v.pincode && v.distance) next.set('distance', v.distance);
+    // Pincode triggers the dealer-radius filter. The API requires BOTH pincode
+    // and distance; when the user enters a pincode but leaves distance on
+    // "Any", we apply a sensible 50 km catchment (matches the default H-D
+    // dealer outreach radius). Distance alone (no pincode) does nothing.
+    if (v.pincode && /^\d{6}$/.test(v.pincode)) {
+      next.set('pincode', v.pincode);
+      next.set('distance', v.distance || '50');
+    }
     if (v.model) next.set('model', v.model);
     if (v.minYear) next.set('minYear', v.minYear);
     if (v.colour) next.set('colour', v.colour);
     if (v.cert) next.set('cert', v.cert);
-    if (searchBy === 'cash' && v.maxPrice) {
+    // Sliders only forward their value when the user has constrained below
+    // the slider max. At-max values represent "no upper bound" and shouldn't
+    // act as filters — otherwise a user clicking Apply without touching the
+    // sliders would silently exclude bikes priced above 4.9 lakh or with
+    // more than 5,000 km.
+    if (searchBy === 'cash' && v.maxPrice && Number(v.maxPrice) < PRICE_MAX) {
       next.set('maxPrice', v.maxPrice);
-    } else if (searchBy === 'monthly' && v.maxMonthly) {
+    } else if (
+      searchBy === 'monthly' &&
+      v.maxMonthly &&
+      Number(v.maxMonthly) < MONTHLY_MAX
+    ) {
       // The API has no monthly-budget filter, so derive an equivalent maxPrice
       // using the same finance assumptions the EmiCalculator defaults to:
       //   20% down, 48 months, 9.5% APR.
@@ -111,14 +144,57 @@ export function SearchFilters() {
       next.set('maxPrice', String(equivalentPrice));
       next.set('maxMonthly', v.maxMonthly); // keep so reload restores the slider
     }
-    if (v.maxKms) next.set('maxKms', v.maxKms);
+    if (v.maxKms && Number(v.maxKms) < KMS_MAX) next.set('maxKms', v.maxKms);
+    selfDrivenChange.current = true;
     setParams(next);
   };
 
   const onReset = () => {
     setSearchBy('cash');
+    selfDrivenChange.current = true;
     setParams(new URLSearchParams());
   };
+
+  // Auto-apply: every form change kicks off a debounced submit so the result
+  // grid reflects the filter immediately without the dealer needing to click
+  // Apply. Slider drags get a short 250 ms debounce; selects/radios fire on
+  // the next tick. Cleared on unmount.
+  const allValues = useWatch({ control });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      handleSubmit(onSubmit)();
+    }, 250);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    allValues.model,
+    allValues.minYear,
+    allValues.colour,
+    allValues.cert,
+    allValues.maxPrice,
+    allValues.maxKms,
+    allValues.maxMonthly,
+    allValues.distance,
+    searchBy,
+  ]);
+  // Pincode is a free-text input — only auto-apply once it's a valid 6-digit
+  // value, so we don't fire a request after each keystroke.
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!allValues.pincode || /^\d{6}$/.test(allValues.pincode)) {
+      debounceRef.current = setTimeout(() => {
+        handleSubmit(onSubmit)();
+      }, 400);
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allValues.pincode]);
 
   return (
     <form
@@ -218,40 +294,54 @@ export function SearchFilters() {
 
         {searchBy === 'cash' ? (
           <SliderField
-            label="Max Monthly Payment"
+            label="Max Price"
             value={maxPrice}
-            min={500000}
-            max={5000000}
+            min={PRICE_MIN}
+            max={PRICE_MAX}
             step={50000}
             register={register('maxPrice')}
-            displayValue={`₹${Number(maxPrice).toLocaleString('en-IN')}.00`}
+            displayValue={
+              Number(maxPrice) >= PRICE_MAX
+                ? 'Any'
+                : `₹${Number(maxPrice).toLocaleString('en-IN')}`
+            }
           />
         ) : (
           <SliderField
             label="Max Monthly Payment"
             value={maxMonthly}
-            min={5000}
-            max={100000}
+            min={MONTHLY_MIN}
+            max={MONTHLY_MAX}
             step={500}
             register={register('maxMonthly')}
-            displayValue={`₹${Number(maxMonthly).toLocaleString('en-IN')}.00`}
+            displayValue={
+              Number(maxMonthly) >= MONTHLY_MAX
+                ? 'Any'
+                : `₹${Number(maxMonthly).toLocaleString('en-IN')}/mo`
+            }
           />
         )}
 
         <SliderField
           label="Km Driven"
           value={maxKms}
-          min={89}
-          max={5000}
-          step={50}
+          min={KMS_MIN}
+          max={KMS_MAX}
+          step={500}
           register={register('maxKms')}
+          displayValue={
+            Number(maxKms) >= KMS_MAX
+              ? 'Any'
+              : `Up to ${Number(maxKms).toLocaleString('en-IN')} km`
+          }
           showRange
-          rangeLabels={[`89 KM`, `5000 KM`]}
+          rangeLabels={[`${KMS_MIN} KM`, `${KMS_MAX.toLocaleString('en-IN')} KM`]}
         />
 
-        <div className="grid grid-cols-1 gap-2 pt-2">
-          <Button type="submit">Apply Filters</Button>
-          <Button type="button" variant="secondary" onClick={onReset}>
+        {/* Filters now auto-apply on change, so the explicit Apply button is
+            gone. Clear All remains so the user can wipe everything in one go. */}
+        <div className="pt-2">
+          <Button type="button" variant="secondary" onClick={onReset} className="w-full">
             Clear All
           </Button>
         </div>

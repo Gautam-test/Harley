@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Input, Select } from '@hd-cpo/ui';
@@ -124,22 +124,34 @@ export function InfoGateModal({
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
-  // When prefilled, fire the OTP send as soon as the modal opens. We guard
-  // with a one-shot ref so re-renders don't kick off duplicate sends.
-  const [autoSendDone, setAutoSendDone] = useState(false);
-  if (open && prefilled && !autoSendDone && !otpId && !busy) {
-    setAutoSendDone(true);
+  // When prefilled, fire the OTP send as soon as the modal opens. Done in a
+  // useEffect (not during render) so React doesn't tear-render and lose the
+  // resulting otpId — that's why the previous in-render version sometimes
+  // left the verify button click without an otpId to verify against.
+  useEffect(() => {
+    if (!open || !prefilled || otpId || busy || error) return;
+    let cancelled = false;
     setBusy(true);
     api<{ otpId: string }>('/otp/send', {
       method: 'POST',
       body: JSON.stringify({ phone: prefilled.phone, purpose }),
     })
-      .then((res) => setOtpId(res.otpId))
-      .catch((e) =>
-        setError(e instanceof ApiError ? e.message : 'Could not send OTP'),
-      )
-      .finally(() => setBusy(false));
-  }
+      .then((res) => {
+        if (!cancelled) setOtpId(res.otpId);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError(e instanceof ApiError ? e.message : 'Could not send OTP');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, prefilled?.phone, purpose]);
 
   // Dealers list for the "Choose Dealer" select. Loaded only when the modal
   // is open so we don't fetch eagerly on every page mount.

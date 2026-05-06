@@ -18,8 +18,19 @@ export function AdminShell() {
     <div className="min-h-screen bg-surface-light text-text-on-light flex flex-col">
       <header className="bg-hd-black text-hd-white border-b border-surface-2 sticky top-0 z-30">
         <div className="max-w-container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/dashboard" className="font-headline text-xl tracking-headline">
-            H-D <span className="text-hd-orange">ADMIN</span>
+          <Link to="/dashboard" className="flex items-center gap-3 group">
+            {/* Hand-authored SVG wordmark — light variant for the dark admin header. */}
+            <img
+              src="/brand/hd-certified-wordmark-light.svg"
+              alt="H-D Certified™"
+              className="h-7 w-auto"
+              width={150}
+              height={28}
+              decoding="async"
+            />
+            <span className="font-headline text-xl tracking-headline border-l border-surface-2 pl-3 hidden sm:inline">
+              <span className="text-hd-orange">ADMIN</span>
+            </span>
           </Link>
           <nav className="flex items-center gap-6">
             <NavLink to="/dashboard" className={linkClasses}>Dashboard</NavLink>

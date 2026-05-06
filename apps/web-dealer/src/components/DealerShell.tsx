@@ -82,10 +82,16 @@ export function DealerShell() {
       <header className="bg-hd-white border-b border-gray-200 sticky top-0 z-30">
         <div className="px-6 h-20 flex items-center justify-between gap-6">
           <Link to="/dashboard" className="flex items-center gap-3 group">
-            <span className="inline-flex h-10 w-10 items-center justify-center bg-hd-orange/10 border border-hd-orange/40 text-hd-orange font-headline tracking-headline">
-              H-D
-            </span>
-            <span className="leading-tight">
+            {/* Hand-authored SVG wordmark — dark variant for the white dealer header. */}
+            <img
+              src="/brand/hd-certified-wordmark.svg"
+              alt="H-D Certified™"
+              className="h-9 w-auto"
+              width={193}
+              height={36}
+              decoding="async"
+            />
+            <span className="leading-tight border-l border-gray-200 pl-3">
               <span className="block font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
                 Dealer Portal
               </span>
@@ -110,8 +116,12 @@ export function DealerShell() {
       </header>
 
       <div className="flex-1 flex">
-        <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-hd-white border-r border-gray-200">
-          <nav className="flex-1 py-4">
+        {/* Sticky sidebar — header is 80px tall, so we offset top-20 (5rem)
+            and clamp the height to the remaining viewport. Internal flex
+            column lets the nav scroll while Log Out stays pinned at the
+            bottom. */}
+        <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-hd-white border-r border-gray-200 sticky top-20 self-start h-[calc(100vh-5rem)]">
+          <nav className="flex-1 overflow-y-auto py-4">
             {NAV.map((n) => {
               const badge = n.badgeKey ? badges[n.badgeKey] : 0;
               return (
@@ -129,7 +139,7 @@ export function DealerShell() {
               );
             })}
           </nav>
-          <div className="p-4">
+          <div className="p-4 border-t border-gray-200 shrink-0">
             <button
               onClick={onSignOut}
               className="w-full border border-gray-300 px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition"
