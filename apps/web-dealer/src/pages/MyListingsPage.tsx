@@ -152,31 +152,32 @@ export function MyListingsPage() {
         })}
       </nav>
 
-      <div className="bg-hd-white border border-gray-200 overflow-x-auto">
+      {/* 8 cols → 4. Listing column carries the thumbnail + model + a meta
+          line that folds in ID, year, km, and last-7 of VIN. Price column
+          stacks rupee + CPO/As-Is badge. Status column stacks the status
+          badge + the listed date. Actions stack vertically so the column
+          stays narrow and the available actions remain glanceable. */}
+      <div className="bg-hd-white border border-gray-200 rounded-card overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-text-on-light">
+          <thead className="bg-gray-50/80 text-text-on-light">
             <tr>
-              <Th>ID</Th>
-              <Th>Bike</Th>
-              <Th>VIN</Th>
+              <Th>Listing</Th>
               <Th>Price</Th>
-              <Th>Cert</Th>
               <Th>Status</Th>
-              <Th>Listed</Th>
-              <Th className="text-right">Actions</Th>
+              <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={8} className="text-center text-gray-500 py-6">
+                <td colSpan={4} className="text-center text-gray-500 py-8">
                   Loading…
                 </td>
               </tr>
             )}
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="text-center text-gray-500 py-10">
+                <td colSpan={4} className="text-center text-gray-500 py-12">
                   {tab === 'ALL' ? (
                     <>
                       No listings yet.{' '}
@@ -191,12 +192,16 @@ export function MyListingsPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((l) => (
-              <tr key={l.id} className="hover:bg-gray-50">
-                <Td className="font-mono text-xs">HD-{l.id.slice(-6).toUpperCase()}</Td>
+            {filtered.map((l, idx) => (
+              <tr
+                key={l.id}
+                className={`hover:bg-hd-orange/5 transition-colors ${
+                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                }`}
+              >
                 <Td>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-9 bg-gray-200 overflow-hidden flex-shrink-0">
+                  <div className="flex items-start gap-3">
+                    <div className="w-16 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                       {l.primaryImage && (
                         <img
                           src={l.primaryImage}
@@ -205,93 +210,111 @@ export function MyListingsPage() {
                         />
                       )}
                     </div>
-                    <div>
-                      <span className="font-subhead text-text-on-light">{l.modelName}</span>
-                      <span className="block text-[11px] text-gray-500">
+                    <div className="min-w-0">
+                      <div className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight">
+                        {l.modelName}
+                      </div>
+                      <div className="text-[11px] text-gray-500 leading-tight mt-0.5">
                         {l.year} · {l.kmsDriven.toLocaleString('en-IN')} km
-                      </span>
+                      </div>
+                      <div className="font-mono text-[10px] text-gray-400 leading-tight mt-1">
+                        HD-{l.id.slice(-6).toUpperCase()} · VIN&hellip;{l.vin.slice(-7)}
+                      </div>
                     </div>
                   </div>
                 </Td>
-                <Td className="font-mono text-xs">…{l.vin.slice(-7)}</Td>
-                <Td>₹{l.price.toLocaleString('en-IN')}</Td>
                 <Td>
-                  {l.certificationStatus === 'CPO' ? (
-                    <Badge variant="cpo">CPO</Badge>
-                  ) : (
-                    <Badge variant="as-is">As-Is</Badge>
-                  )}
+                  <div className="font-subhead text-text-on-light whitespace-nowrap">
+                    ₹{l.price.toLocaleString('en-IN')}
+                  </div>
+                  <div className="mt-1">
+                    {l.certificationStatus === 'CPO' ? (
+                      <Badge variant="cpo">CPO</Badge>
+                    ) : (
+                      <Badge variant="as-is">As-Is</Badge>
+                    )}
+                  </div>
                 </Td>
                 <Td>
                   <StatusBadge status={l.status} />
+                  <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
+                    {l.publishedAt
+                      ? new Date(l.publishedAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: '2-digit',
+                        })
+                      : new Date(l.createdAt).toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: '2-digit',
+                        })}
+                  </div>
                 </Td>
-                <Td className="text-xs text-gray-600">
-                  {l.publishedAt
-                    ? new Date(l.publishedAt).toLocaleDateString('en-IN')
-                    : new Date(l.createdAt).toLocaleDateString('en-IN')}
-                </Td>
-                <Td className="text-right space-x-2 whitespace-nowrap">
-                  {l.status === 'DRAFT' && !l.adminFeedback && (
-                    <span
-                      className="inline-flex items-center gap-1 text-[11px] font-subhead uppercase tracking-subhead text-warning"
-                      title="An H-D admin will review and publish this listing."
-                    >
-                      <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
-                      Awaiting review
-                    </span>
-                  )}
-                  {l.status === 'DRAFT' && l.adminFeedback && (
-                    <Link
-                      to="/listings/new"
-                      className="inline-flex items-center gap-1 text-[11px] font-subhead uppercase tracking-subhead text-danger hover:underline"
-                    >
-                      Re-submit
-                    </Link>
-                  )}
-                  {(l.status === 'ACTIVE' || l.status === 'DEACTIVATED') && (
-                    <a
-                      href={`http://localhost:5180/listings/${l.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center text-[11px] font-subhead uppercase tracking-subhead text-gray-700 hover:text-hd-orange border border-gray-300 px-2 py-1 rounded"
-                    >
-                      Preview
-                    </a>
-                  )}
-                  {l.status === 'ACTIVE' && (
-                    <>
+                <Td className="text-right pr-4">
+                  <div className="inline-flex flex-col items-stretch gap-1.5 min-w-[120px]">
+                    {l.status === 'DRAFT' && !l.adminFeedback && (
+                      <span
+                        className="inline-flex items-center justify-end gap-1 text-[11px] font-subhead uppercase tracking-subhead text-warning"
+                        title="An H-D admin will review and publish this listing."
+                      >
+                        <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
+                        Awaiting review
+                      </span>
+                    )}
+                    {l.status === 'DRAFT' && l.adminFeedback && (
+                      <Link
+                        to="/listings/new"
+                        className="text-right text-[11px] font-subhead uppercase tracking-subhead text-danger hover:underline"
+                      >
+                        Re-submit
+                      </Link>
+                    )}
+                    {(l.status === 'ACTIVE' || l.status === 'DEACTIVATED') && (
+                      <a
+                        href={`http://localhost:5180/listings/${l.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-center text-[11px] font-subhead uppercase tracking-subhead text-gray-700 hover:text-hd-orange border border-gray-300 hover:border-hd-orange px-2 py-1.5 rounded transition"
+                      >
+                        Preview
+                      </a>
+                    )}
+                    {l.status === 'ACTIVE' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => markSold.mutate(l.id)}
+                        >
+                          Mark Sold
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => turnOff.mutate(l.id)}
+                          disabled={turnOff.isPending}
+                        >
+                          Turn Off
+                        </Button>
+                      </>
+                    )}
+                    {l.status === 'DEACTIVATED' && (
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => markSold.mutate(l.id)}
+                        onClick={() => turnOn.mutate(l.id)}
+                        disabled={turnOn.isPending}
                       >
-                        Mark Sold
+                        Turn On
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => turnOff.mutate(l.id)}
-                        disabled={turnOff.isPending}
-                      >
-                        Turn Off
+                    )}
+                    {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
+                      <Button size="sm" variant="ghost" onClick={() => remove.mutate(l.id)}>
+                        Remove
                       </Button>
-                    </>
-                  )}
-                  {l.status === 'DEACTIVATED' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => turnOn.mutate(l.id)}
-                      disabled={turnOn.isPending}
-                    >
-                      Turn On
-                    </Button>
-                  )}
-                  {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
-                    <Button size="sm" variant="ghost" onClick={() => remove.mutate(l.id)}>
-                      Remove
-                    </Button>
-                  )}
+                    )}
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -305,14 +328,14 @@ export function MyListingsPage() {
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <th
-      className={`px-4 py-3 text-left text-xs font-subhead uppercase tracking-subhead text-gray-500 ${className}`}
+      className={`px-4 py-3 text-left text-[10px] font-subhead uppercase tracking-subhead text-gray-500 ${className}`}
     >
       {children}
     </th>
   );
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3.5 align-top ${className}`}>{children}</td>;
 }
 
 function StatusBadge({ status }: { status: DealerListingRow['status'] }) {

@@ -124,89 +124,108 @@ export function ListingsPage() {
         ))}
       </nav>
 
-      <div className="bg-hd-white border border-gray-200 overflow-x-auto">
+      {/* 9 cols → 5. Listing column carries thumbnail + model + year + VIN.
+          Price stacks rupee + CPO/As-Is badge. Dealer stays its own column.
+          Status stacks badge + created date. Actions stack vertically so
+          the column stays narrow even with the Publish / Return / Deactivate /
+          Remove combinations on draft rows. */}
+      <div className="bg-hd-white border border-gray-200 rounded-card overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50/80">
             <tr>
               <Th>Listing</Th>
-              <Th>VIN</Th>
-              <Th>Year</Th>
               <Th>Price</Th>
-              <Th>Cert</Th>
               <Th>Dealer</Th>
               <Th>Status</Th>
-              <Th>Created</Th>
-              <Th className="text-right">Actions</Th>
+              <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={9} className="text-center py-6 text-gray-500">Loading…</td>
+                <td colSpan={5} className="text-center py-8 text-gray-500">Loading…</td>
               </tr>
             )}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={9} className="text-center py-10 text-gray-500">No listings.</td>
+                <td colSpan={5} className="text-center py-12 text-gray-500">No listings.</td>
               </tr>
             )}
-            {data?.map((l) => (
+            {data?.map((l, idx) => (
               <tr
                 key={l.id}
-                className="hover:bg-gray-50 cursor-pointer"
+                className={`cursor-pointer transition-colors hover:bg-hd-orange/5 ${
+                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
+                }`}
                 onClick={() => setPreviewId(l.id)}
               >
                 <Td>
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-9 bg-gray-200 overflow-hidden">
+                  <div className="flex items-start gap-3">
+                    <div className="w-16 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
                       {l.primaryImage && (
                         <img src={l.primaryImage} alt="" className="w-full h-full object-cover" />
                       )}
                     </div>
-                    <div>
-                      <div className="font-subhead">{l.modelName}</div>
-                      <div className="text-[11px] text-hd-orange hover:underline">Preview ↗</div>
+                    <div className="min-w-0">
+                      <div className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight">
+                        {l.modelName}
+                      </div>
+                      <div className="text-[11px] text-gray-500 leading-tight mt-0.5">
+                        {l.year}
+                      </div>
+                      <div className="font-mono text-[10px] text-gray-400 leading-tight mt-1">
+                        VIN&hellip;{l.vin.slice(-7)}
+                      </div>
                     </div>
                   </div>
                 </Td>
-                <Td className="font-mono text-xs">{l.vin}</Td>
-                <Td>{l.year}</Td>
-                <Td>₹{l.price.toLocaleString('en-IN')}</Td>
                 <Td>
-                  {l.certificationStatus === 'CPO' ? (
-                    <Badge variant="cpo">CPO</Badge>
-                  ) : (
-                    <Badge variant="as-is">As-Is</Badge>
-                  )}
+                  <div className="font-subhead text-text-on-light whitespace-nowrap">
+                    ₹{l.price.toLocaleString('en-IN')}
+                  </div>
+                  <div className="mt-1">
+                    {l.certificationStatus === 'CPO' ? (
+                      <Badge variant="cpo">CPO</Badge>
+                    ) : (
+                      <Badge variant="as-is">As-Is</Badge>
+                    )}
+                  </div>
                 </Td>
-                <Td className="text-xs">{l.dealerName}</Td>
+                <Td className="text-xs text-gray-700">{l.dealerName}</Td>
                 <Td>
                   <StatusBadge status={l.status} />
+                  <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
+                    {new Date(l.createdAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: '2-digit',
+                    })}
+                  </div>
                 </Td>
-                <Td className="text-xs text-gray-600">
-                  {new Date(l.createdAt).toLocaleDateString('en-IN')}
-                </Td>
-                <Td className="text-right space-x-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                  {l.status === 'DRAFT' && (
-                    <>
-                      <Button size="sm" onClick={() => publish.mutate(l.id)} disabled={publish.isPending}>
-                        Publish
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => setReturning(l)}>
-                        Return to Dealer
-                      </Button>
-                    </>
-                  )}
-                  {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
-                    <>
-                      <Button size="sm" variant="secondary" onClick={() => deactivate.mutate(l.id)}>
-                        Deactivate
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setRemoving(l)}>
-                        Remove
-                      </Button>
-                    </>
-                  )}
+                <Td className="text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="inline-flex flex-col items-stretch gap-1.5 min-w-[140px]">
+                    {l.status === 'DRAFT' && (
+                      <>
+                        <Button size="sm" onClick={() => publish.mutate(l.id)} disabled={publish.isPending}>
+                          Publish
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => setReturning(l)}>
+                          Return to Dealer
+                        </Button>
+                      </>
+                    )}
+                    {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
+                      <>
+                        <Button size="sm" variant="secondary" onClick={() => deactivate.mutate(l.id)}>
+                          Deactivate
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setRemoving(l)}>
+                          Remove
+                        </Button>
+                      </>
+                    )}
+                    {/* No actions for SOLD / REMOVED / DEACTIVATED — clicking the row still opens the preview drawer. */}
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -337,7 +356,7 @@ function ReturnModal({
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-subhead uppercase tracking-subhead text-gray-500 ${className}`}>
+    <th className={`px-4 py-3 text-left text-[10px] font-subhead uppercase tracking-subhead text-gray-500 ${className}`}>
       {children}
     </th>
   );
@@ -352,7 +371,7 @@ function Td({
   onClick?: (e: React.MouseEvent<HTMLTableCellElement>) => void;
 }) {
   return (
-    <td className={`px-4 py-3 ${className}`} onClick={onClick}>
+    <td className={`px-4 py-3.5 align-top ${className}`} onClick={onClick}>
       {children}
     </td>
   );
