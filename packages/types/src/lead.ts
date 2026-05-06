@@ -136,6 +136,7 @@ export type TradeInLeadInput = z.infer<typeof tradeInLeadInput>;
 export const dealerTradeInLeadInput = tradeInLeadInput.extend({
   source: leadChannel,
   state: z.string().min(1).max(60).optional(),
+  pincode: pincodeIN.optional(),
   year: z.number().int().min(1903).max(2100).optional(),
   kmsDriven: z.number().int().min(0).max(1_000_000).optional(),
   /** Number of previous owners — 1 / 2 / 3 / 4+. */
@@ -147,5 +148,13 @@ export const dealerTradeInLeadInput = tradeInLeadInput.extend({
   rcAvailable: z.boolean().optional(),
   serviceHistoryAvailable: z.boolean().optional(),
   bestTimeToCall: callWindow.optional(),
+  /** ISO YYYY-MM-DD; the seller's insurance expiry. */
+  insuranceValidUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  /** True if there's an unpaid loan against the bike — affects re-titling. */
+  loanOutstanding: z.boolean().optional(),
+  /** Free-text list of accessories / modifications (HOG, exhaust, panniers…). */
+  modifications: z.string().max(500).optional(),
+  /** Free-form conversation notes from the rep — visible to the buyback team. */
+  message: z.string().max(2000).optional(),
 });
 export type DealerTradeInLeadInput = z.infer<typeof dealerTradeInLeadInput>;

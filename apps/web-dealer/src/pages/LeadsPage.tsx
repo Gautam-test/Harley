@@ -514,11 +514,16 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     email: '',
     city: '',
     state: '',
+    pincode: '',
     source: 'walk-in',
     bestTimeToCall: '',
     rcAvailable: false,
     serviceHistoryAvailable: false,
+    insuranceValidUntil: '',
+    loanOutstanding: false,
+    modifications: '',
     reasonForSelling: '',
+    message: '',
   });
   const [error, setError] = useState<string | null>(null);
 
@@ -534,15 +539,20 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         source: form.source,
         rcAvailable: form.rcAvailable,
         serviceHistoryAvailable: form.serviceHistoryAvailable,
+        loanOutstanding: form.loanOutstanding,
       };
       if (form.state) body.state = form.state;
+      if (form.pincode.trim()) body.pincode = form.pincode.trim();
       if (form.year) body.year = Number(form.year);
       if (form.kmsDriven) body.kmsDriven = Number(form.kmsDriven);
       if (form.owners) body.owners = Number(form.owners);
       if (form.colour.trim()) body.colour = form.colour.trim();
       if (form.askingPrice) body.askingPrice = Number(form.askingPrice);
       if (form.bestTimeToCall) body.bestTimeToCall = form.bestTimeToCall;
+      if (form.insuranceValidUntil) body.insuranceValidUntil = form.insuranceValidUntil;
+      if (form.modifications.trim()) body.modifications = form.modifications.trim();
       if (form.reasonForSelling.trim()) body.reasonForSelling = form.reasonForSelling.trim();
+      if (form.message.trim()) body.message = form.message.trim();
       return api<{ id: string }>('/dealer/leads/trade-in', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -593,7 +603,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               required
             />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Field label="State">
               <Select
                 value={form.state}
@@ -614,6 +624,14 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 required
                 minLength={1}
                 placeholder="e.g. Gurgaon"
+              />
+            </Field>
+            <Field label="PIN code">
+              <Input
+                value={form.pincode}
+                onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
+                pattern="^[0-9]{6}$"
+                placeholder="122001"
               />
             </Field>
           </div>
@@ -733,13 +751,46 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               ))}
             </Select>
           </Field>
+        </FormSection>
+
+        <FormSection kicker="4" label="Bike Condition & Notes">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Insurance valid until (optional)">
+              <Input
+                type="date"
+                value={form.insuranceValidUntil}
+                onChange={(e) => setForm((f) => ({ ...f, insuranceValidUntil: e.target.value }))}
+              />
+            </Field>
+            <CheckboxField
+              checked={form.loanOutstanding}
+              onChange={(v) => setForm((f) => ({ ...f, loanOutstanding: v }))}
+              label="Loan outstanding on the bike"
+            />
+          </div>
+          <Field label="Accessories / modifications (optional)">
+            <Input
+              value={form.modifications}
+              onChange={(e) => setForm((f) => ({ ...f, modifications: e.target.value }))}
+              maxLength={500}
+              placeholder="HOG sticker, V&H exhaust, panniers, top-box…"
+            />
+          </Field>
           <Field label="Reason for selling (optional)">
-            <textarea
-              rows={2}
+            <Input
               value={form.reasonForSelling}
               onChange={(e) => setForm((f) => ({ ...f, reasonForSelling: e.target.value }))}
               maxLength={500}
               placeholder="Upgrading to a touring model, relocating abroad, etc."
+            />
+          </Field>
+          <Field label="Conversation notes (optional)">
+            <textarea
+              rows={3}
+              value={form.message}
+              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+              maxLength={2000}
+              placeholder="Walked in 3 PM, has paperwork ready, prefers WhatsApp follow-up…"
               className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
