@@ -39,6 +39,10 @@ services:
     healthCheckPath: /api/v1/health/ready
     autoDeploy: true
     envVars:
+      # Pin Node 20 explicitly — without this Render's loose engines.node
+      # match sometimes picks the latest available (e.g. Node 26).
+      - key: NODE_VERSION
+        value: '20.18.1'
       - key: NODE_ENV
         value: production
       - key: PORT
