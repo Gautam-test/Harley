@@ -1,16 +1,14 @@
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// Buyer app is the apex / root SPA on harleydavidson.ciadmin.in. Apache's
+// catch-all `ProxyPass /` rule routes everything that isn't /api, /dealer,
+// /admin, or a Vite-internal path here.
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5180,
-    // Bind on every interface so nginx (or any reverse proxy on the same
-    // box) can reach the dev server on localhost without DNS games.
     host: true,
-    // Vite 5.4+ blocks requests whose Host header isn't in this list as a
-    // DNS-rebinding defence. Add the production-domain entry that fronts
-    // this dev server, plus the dev defaults so local browsers still work.
     allowedHosts: [
       'localhost',
       '.localhost',
@@ -18,14 +16,14 @@ export default defineConfig({
       '.ciadmin.in',
     ],
     fs: {
-      // pnpm workspace — the entry app lives under apps/web-buyer but its
-      // imports reach into packages/ui, packages/types, etc. Vite normally
-      // auto-detects the workspace root, but on some Linux server setups
-      // (symlinked /var/www, non-standard pnpm layouts) the auto-detect
-      // misfires and /@fs requests for shared packages 500 with EACCES or
-      // a path-not-allowed error. Pinning the allow list to the resolved
-      // workspace root makes the dev server portable.
       allow: [searchForWorkspaceRoot(process.cwd())],
+    },
+    // HMR over the public HTTPS domain — needs mod_proxy_wstunnel on Apache.
+    // Falls back to full page reloads if the websocket can't upgrade.
+    hmr: {
+      protocol: 'wss',
+      host: 'harleydavidson.ciadmin.in',
+      clientPort: 443,
     },
     proxy: {
       '/api': { target: 'http://localhost:4001', changeOrigin: true },

@@ -15,7 +15,10 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* Mounted under /dealer on the production domain (Apache reverse-proxy);
+          must match the Vite `base` in vite.config.ts so internal links and
+          asset URLs all stay inside this SPA's path namespace. */}
+      <BrowserRouter basename="/dealer">
         <App />
       </BrowserRouter>
     </QueryClientProvider>

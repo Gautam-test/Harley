@@ -32,6 +32,19 @@ const TABS: { id: TabId; label: string; statusFilter: DealerListingRow['status']
   { id: 'REMOVED', label: 'Removed', statusFilter: 'REMOVED' },
 ];
 
+// "Preview" opens the buyer-facing listing detail page. The buyer SPA lives
+// at the apex domain in production (relative URL works) and at port 5180 in
+// local dev. VITE_BUYER_URL overrides if a team member runs the buyer on a
+// non-default port.
+function buyerListingHref(slug: string): string {
+  const override = import.meta.env.VITE_BUYER_URL as string | undefined;
+  if (override) return `${override.replace(/\/$/, '')}/listings/${slug}`;
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return `http://localhost:5180/listings/${slug}`;
+  }
+  return `/listings/${slug}`;
+}
+
 const STATUS_TO_LABEL: Record<DealerListingRow['status'], string> = {
   DRAFT: 'Pending Approval',
   ACTIVE: 'Live',
@@ -277,7 +290,7 @@ export function MyListingsPage() {
                       <IconAction
                         as="a"
                         label="Preview"
-                        href={`http://localhost:5180/listings/${l.slug}`}
+                        href={buyerListingHref(l.slug)}
                       >
                         <EyeIcon />
                       </IconAction>

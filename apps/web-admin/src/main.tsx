@@ -15,7 +15,9 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* Mounted under /admin on the production domain (Apache reverse-proxy);
+          must match the Vite `base` in vite.config.ts. */}
+      <BrowserRouter basename="/admin">
         <App />
       </BrowserRouter>
     </QueryClientProvider>
