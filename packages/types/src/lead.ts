@@ -61,6 +61,11 @@ export function canTransitionLead(
 ): boolean {
   const pipe = PIPELINE_BY_KIND[kind];
   if (from === to) return true;
+  // DEAD / LOST are universal alt-terminals — every lead can be marked as
+  // either at any time, regardless of which pipeline it's on. Check this
+  // FIRST so the toIdx === -1 short-circuit below doesn't block LOST
+  // (which is intentionally absent from the per-kind pipelines).
+  if (to === 'DEAD' || to === 'LOST') return true;
   // Either status is off-pipeline (legacy data) — allow any move into the
   // canonical pipeline so dealers can clean up old rows.
   const fromIdx = pipe.indexOf(from);
@@ -68,7 +73,7 @@ export function canTransitionLead(
   if (fromIdx === -1) return true;
   if (toIdx === -1) return false;
   // Forward-only within the pipeline.
-  return toIdx > fromIdx || to === 'DEAD' || to === 'LOST';
+  return toIdx > fromIdx;
 }
 
 export const enquiryInput = z.object({

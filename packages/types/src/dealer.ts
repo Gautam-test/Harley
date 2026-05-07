@@ -41,6 +41,10 @@ export type DealerPublic = z.infer<typeof dealerPublic>;
 export const nearestDealersQuery = z.object({
   lat: z.coerce.number(),
   lng: z.coerce.number(),
-  radius: z.coerce.number().min(1).max(500).default(50),
+  // Cap at 5000 km so the home-page locator (centred at the India
+  // centroid, lat 20.5937 lng 78.9629) can include every dealer in
+  // the country. The 500 km cap missed Delhi / Mumbai / Bengaluru /
+  // Chennai in a single sweep (QA bug 1).
+  radius: z.coerce.number().min(1).max(5000).default(50),
 });
 export type NearestDealersQuery = z.infer<typeof nearestDealersQuery>;
