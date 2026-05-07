@@ -54,7 +54,10 @@ export function ListingDetailPage() {
 
   const heading = `${data.year} ${data.modelName}`;
   const stockCode = data.vin.slice(-5).toUpperCase();
-  const metaLine = [stockCode, data.year, `${data.kmsDriven.toLocaleString('en-IN')} KM`, data.colour.toUpperCase()].join(' · ');
+  // Header meta strip — keeps the H1's quick context tight without
+  // repeating the labelled spec rows below. Stock Code is its own row in
+  // the at-a-glance strip so it's NOT included here.
+  const metaLine = [data.year, `${data.kmsDriven.toLocaleString('en-IN')} KM`, data.colour.toUpperCase()].join(' · ');
   const emiFrom = approxEmi(data.price);
   const listedOn = data.publishedAt
     ? new Date(data.publishedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
@@ -139,9 +142,14 @@ export function ListingDetailPage() {
           {/* Spec rows + EMI calculator */}
           <div className="mt-8 grid lg:grid-cols-[1fr_360px] gap-8 items-start">
             <div>
+              {/* "At a glance" strip — facts that aren't already in the
+                  meta line (year/km/colour) or the H1, plus the inspection
+                  badge. Year + Colour + KM live in the metaLine above; the
+                  full spec sheet (Model Family, VIN, etc.) lives under the
+                  Specifications tab below. Splitting like this stops the
+                  same value from being shown 2-3 times on the page. */}
               <SpecRow
                 items={[
-                  { label: 'Year', value: String(data.year) },
                   { label: 'Stock Code', value: stockCode },
                   {
                     label: 'Owners',
@@ -151,11 +159,9 @@ export function ListingDetailPage() {
                         : `${data.owners}`
                       : '—',
                   },
-                  // Mileage isn't on the API contract yet — show — instead
-                  // of the misleading 'Not Specified' that read like data.
+                  // Mileage isn't on the API contract yet — show — until
+                  // the field exists on Listing.
                   { label: 'Mileage (km/L)', value: '—' },
-                  { label: 'Chassis No', value: data.vin.slice(0, 8) + '…' },
-                  { label: 'KM Driven', value: data.kmsDriven.toLocaleString('en-IN') },
                 ]}
               />
               <SpecRow
@@ -165,19 +171,12 @@ export function ListingDetailPage() {
                     value: data.certificationStatus === 'CPO' ? 'Passed' : 'As-Is',
                   },
                   { label: 'Listed On', value: listedOn },
-                  // Engine number is dealer-private (RTO records) — not
-                  // exposed on public listings to avoid VIN-cloning leak
-                  // vectors. Was previously showing a duplicate of the
-                  // stock code, which read as fake data.
-                  { label: 'Colour', value: data.colour },
                   { label: 'Listing Status', value: 'Active' },
                 ]}
               />
               <SpecRow
                 items={[
                   { label: 'Location', value: data.city },
-                  // Vehicle Registration is the same — withheld until the
-                  // buyer enquires. The dealer surfaces it in the call-back.
                   { label: 'Available For', value: 'Test Ride · Showroom Visit' },
                 ]}
                 full
@@ -303,22 +302,20 @@ function SpecRow({
 }
 
 function SpecsTable({ data }: { data: ListingDetail }) {
+  // Specifications is the canonical full reference card — every static
+  // attribute the buyer might care about that isn't already shown on the
+  // header strip / spec rows / dealer card / EMI tile. Stock Code, Owners,
+  // Mileage, Inspection, Listed On, Listing Status all live above this
+  // tab so they're intentionally NOT repeated here. Year / Colour / KM
+  // also live in the meta line directly under the H1 — also dropped here
+  // to remove the triple-display the buyer flagged.
   const rows: Array<[string, string]> = [
     ['Model Family', data.modelFamily],
     ['Model', data.modelName],
-    ['Year', String(data.year)],
-    ['Colour', data.colour],
-    ['Kilometres', `${data.kmsDriven.toLocaleString('en-IN')} km`],
     ['VIN', data.vin],
     [
       'Certification',
       data.certificationStatus === 'CPO' ? 'H-D Certified™' : 'As-Is',
-    ],
-    [
-      'Listed',
-      data.publishedAt
-        ? new Date(data.publishedAt).toLocaleDateString('en-IN', { dateStyle: 'medium' })
-        : '—',
     ],
   ];
   return (
