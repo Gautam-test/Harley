@@ -195,7 +195,7 @@ export function HeroSearch() {
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2fr_auto] gap-3 items-end"
+            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end"
           >
             <FieldLabel label="Pin Code">
               <Input
