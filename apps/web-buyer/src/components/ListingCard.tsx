@@ -69,7 +69,11 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
         <h3 className="font-subhead uppercase tracking-subhead text-base text-text-on-light leading-tight">
           {listing.modelName}
         </h3>
-        <p className="flex items-center gap-1.5 text-xs text-gray-500 italic mt-2">
+        {/* Dropped the italic + bumped to 13px / gray-600 — the H-D brand
+            spec keeps body copy upright (italic is an emphasis cut, not a
+            default secondary-text styling) and the previous gray-500 12px
+            italic was borderline against the white card background. */}
+        <p className="flex items-center gap-1.5 text-[13px] text-gray-600 mt-2">
           <MapPin />
           {listing.dealerName}
         </p>

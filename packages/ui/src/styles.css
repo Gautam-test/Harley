@@ -14,14 +14,39 @@
 
   body {
     @apply bg-hd-white text-text-on-light font-body;
+    /* Body copy: 1903 Sans Regular (400), normal letter-spacing + leading,
+       sentence case. Brand spec p. 71. Tailwind's preflight already sets
+       line-height: 1.5 on body, leaving font-weight inheritable. */
+    font-weight: 400;
   }
 
   /* Brand rule (H-D 2026 guidelines, p. 71): headlines use 1903 Bold Condensed,
-     ALL CAPS, tight leading, no tracking. line-height set as plain CSS so it
-     applies even before the preset's leading-headline utility is generated. */
+     ALL CAPS, tight leading, no tracking. font-weight: 700 must be declared
+     explicitly because the .font-headline Tailwind utility only sets
+     font-family — without this rule the @font-face cascade resolves to the
+     Regular (400) cut and Headlines render at the wrong weight everywhere. */
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline tracking-headline uppercase;
+    font-weight: 700;
     line-height: 0.95;
+  }
+
+  /* Strong / bold inline emphasis on body copy still picks the 700 cut of
+     1903 Sans automatically thanks to Tailwind preflight's `b, strong`
+     rule. No extra declaration needed. */
+}
+
+/* Component-layer additions: bundle font-weight 700 with the .font-headline
+   and .font-subhead utilities so any element using them — buttons, badges,
+   table cells, etc. — gets the brand-correct Bold weight without each
+   author having to remember to add `font-bold`. Body utility (.font-body)
+   keeps its 400 default so paragraphs don't accidentally come out heavy. */
+@layer components {
+  .font-headline {
+    font-weight: 700;
+  }
+  .font-subhead {
+    font-weight: 700;
   }
 }
 
