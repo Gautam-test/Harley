@@ -46,10 +46,15 @@ interface LeadTrackResult {
   dealerName: string | null;
 }
 
-// Pipelines mirror the dealer-portal stage machines so buyers see the same
-// journey their dealer is moving them through.
+// Pipelines mirror the dealer-portal stage machines exactly — pulled from
+// the same shared constants (BUYER_LEAD_PIPELINE / SELLER_LEAD_PIPELINE
+// in @hd-cpo/types) so buyer-facing tracking can never drift from the
+// dealer's status dropdown. Each entry is `[apiStatus, label, note]`;
+// the buyer copy is what the buyer sees while the apiStatus is the raw
+// enum value the dealer moves the lead through.
 const BUYER_STAGES: { status: LeadTrackResult['status']; label: string; note: string }[] = [
   { status: 'NEW', label: 'Enquiry Received', note: 'We have your details and notified the dealer.' },
+  { status: 'CONTACTED', label: 'Dealer Contacted You', note: 'A dealer rep has reached out about this bike.' },
   { status: 'ON_SITE_VISIT', label: 'On-Site Visit', note: 'Dealer scheduled an in-store visit.' },
   { status: 'LOAN_APPROVAL', label: 'Loan Approval', note: 'Finance assessment in progress.' },
   { status: 'CLOSED', label: 'Booking Closed', note: 'Booking finalised — paperwork next.' },

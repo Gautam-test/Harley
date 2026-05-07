@@ -87,8 +87,18 @@ export function HeroSearch() {
       params.set('maxMonthly', v.maxMonthly);
     }
 
-    if (v.pinCode && /^\d{6}$/.test(v.pinCode)) params.set('pincode', v.pinCode);
-    if (v.pinCode && v.distance) params.set('distance', v.distance);
+    // Pincode + distance both feed the dealer-radius filter on /listings.
+    // The API requires BOTH; a buyer who supplies a pincode but leaves
+    // distance on "Any" gets a sensible 50 km catchment by default
+    // (matches the H-D dealer outreach radius). This fixes the "search
+    // by distance does nothing" report — previously distance was only
+    // forwarded when the user explicitly set it, so picking distance
+    // alone (or leaving it on default after typing pincode) silently
+    // dropped the geo filter.
+    if (v.pinCode && /^\d{6}$/.test(v.pinCode)) {
+      params.set('pincode', v.pinCode);
+      params.set('distance', v.distance || '50');
+    }
     navigate(`/search?${params.toString()}`);
   };
 
@@ -119,28 +129,34 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        {/* Decorative orange side band — Figma reference shows a vertical
-            orange strip with the H-D bar-and-shield mark in white,
-            anchored to the top-left of the hero. Hidden below md so the
+        {/* Decorative orange side band — sized down (was 80×192 px,
+            overlapping the headline on tablet widths; now 56×128 px and
+            sits flush in the top-left corner). Hidden below md so the
             phone hero stays uncluttered. */}
         <div
           aria-hidden
           className="hidden md:block absolute top-0 left-0 z-[1]"
         >
-          <div className="relative w-20 bg-hd-orange overflow-hidden h-48">
+          <div className="relative w-14 bg-hd-orange overflow-hidden h-32">
             {/* Diagonal cut at the bottom so the band reads as a banner,
                 matching the freeze design. */}
             <div
-              className="absolute -bottom-6 inset-x-0 h-12 bg-hd-black"
+              className="absolute -bottom-4 inset-x-0 h-8 bg-hd-black"
               style={{ clipPath: 'polygon(0 100%, 100% 100%, 100% 50%, 0 0)' }}
             />
-            <div className="absolute inset-0 flex items-start justify-center pt-7">
+            <div className="absolute inset-0 flex items-start justify-center pt-5">
               <BarAndShield />
             </div>
           </div>
         </div>
 
-        <div className="relative max-w-container mx-auto px-6 py-24 md:py-32 lg:py-40">
+        {/*
+          md+ adds 80px left padding so the headline never sits under the
+          decorative band on tablet widths (where max-w-container can
+          extend below the viewport edge). lg keeps the standard rhythm
+          since the centred container already clears the band.
+        */}
+        <div className="relative max-w-container mx-auto px-6 md:pl-24 lg:pl-6 py-24 md:py-32 lg:py-40">
           <div className="max-w-3xl">
             {/* Single-line headline + ™ — replaces the previous stacked
                 "H-D CERTIFIED / APPROVED USED BIKES". Figma uses one

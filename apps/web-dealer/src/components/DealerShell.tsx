@@ -27,7 +27,7 @@ const NAV: NavItem[] = [
   { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings' },
   { to: '/leads/buyer', label: 'Buyer Enquiries', badgeKey: 'newBuyerLeads' },
   { to: '/leads/trade-in', label: 'Seller Enquiries' },
-  { to: '/settings', label: 'Settings' },
+  { to: '/profile', label: 'Profile' },
 ];
 
 function initials(name?: string | null) {
@@ -147,7 +147,12 @@ export function DealerShell() {
           <Link to="/dashboard" className="flex items-center gap-3 group min-w-0">
             {/* Hand-authored SVG wordmark — dark variant for the white dealer header. */}
             <img
-              src="/brand/hd-certified-wordmark.svg"
+              // Vite base for the dealer SPA is "/dealer/", so an absolute
+              // "/brand/..." path 404s in production (the buyer SPA owns
+              // root). Prefix every static asset URL with import.meta.env
+              // .BASE_URL so dev (`/dealer/`) and prod (`/dealer/`) both
+              // resolve to the right public/brand path.
+              src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
               alt="H-D Certified™"
               className="h-9 w-auto shrink-0"
               width={193}

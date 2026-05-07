@@ -14,16 +14,20 @@ interface DealerLocation {
 // Map is an embed (Google Maps Embed API); a real Maps JS integration with
 // markers + clustering wires once GOOGLE_MAPS_API_KEY is provided.
 //
-// Radius is set to 5000 km from the India centroid so every dealer in
-// the country is included (was 500 km, which only caught the central
-// belt — the locator showed an empty list to anyone in the south or
-// north-east). Per QA bug 1: "View All Dealers" CTA was removed; the
-// full nearest list scrolls in-place inside this widget.
+// Shows the THREE nearest dealers. The API endpoint sorts by haversine
+// distance from the supplied lat/lng (we use the India centroid since the
+// buyer hasn't shared their location at this point in the journey), so
+// slicing top 3 gives the geographically closest dealerships. Buyers who
+// want the full list can use the search-page filter sidebar's pincode +
+// distance fields.
+const VISIBLE_DEALERS = 3;
+
 export function DealerLocator() {
   const { data, isLoading } = useQuery({
     queryKey: ['public-dealers'],
     queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=5000'),
   });
+  const visible = data?.slice(0, VISIBLE_DEALERS) ?? [];
 
   // Centre on India by default; recentre client-side with geolocation in Sprint 6.
   const mapSrc =
@@ -39,7 +43,7 @@ export function DealerLocator() {
           Every certified bike is sold through an authorised H-D dealer.
           {data && data.length > 0 && (
             <>
-              {' '}<span className="font-subhead text-text-on-light">{data.length}</span> across India.
+              {' '}Showing the <span className="font-subhead text-text-on-light">3 closest</span> of {data.length} dealerships.
             </>
           )}
         </p>
@@ -63,7 +67,7 @@ export function DealerLocator() {
               <p className="text-gray-600 mt-6 text-sm">No dealers added yet.</p>
             )}
             <ul className="mt-6 space-y-4">
-              {data?.map((d) => (
+              {visible.map((d) => (
                 <li key={d.id} className="border border-gray-200 p-4 hover:border-hd-orange transition">
                   <div className="font-subhead text-text-on-light">{d.name}</div>
                   <div className="text-sm text-gray-600 mt-1">

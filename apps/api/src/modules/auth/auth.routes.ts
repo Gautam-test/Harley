@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { dealerLoginInput, adminLoginInput } from '@hd-cpo/types';
 import { validate } from '../../middleware/validate.js';
 import { getEnv } from '../../config/env.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { prisma } from '../../config/prisma.js';
+import { HttpError } from '../../middleware/error-handler.js';
 import { adminLogin, dealerLogin, refreshAccessToken } from './auth.service.js';
 
 // Login attempt limit per IP. Production uses a tight cap (brute-force defence);
@@ -61,6 +64,46 @@ authRouter.post('/refresh', refreshLimiter, validate(refreshInput), async (req, 
   try {
     const { refreshToken } = req.body as { refreshToken: string };
     res.json(await refreshAccessToken(refreshToken));
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Self-profile lookup. Returns the full record for the authenticated user
+// (dealer or admin) so the in-app profile page can render every detail
+// without needing a role-specific endpoint per surface.
+authRouter.get('/me', requireAuth(['DEALER', 'ADMIN']), async (req, res, next) => {
+  try {
+    const auth = req.auth!;
+    if (auth.role === 'DEALER') {
+      const dealer = (await prisma.dealer.findUnique({
+        where: { id: auth.sub },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          legalName: true,
+          email: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          pincode: true,
+          status: true,
+          torqueDealerId: true,
+          createdAt: true,
+        },
+      })) as Record<string, unknown> | null;
+      if (!dealer) throw new HttpError(404, 'NOT_FOUND', 'Profile not found');
+      res.json({ role: 'DEALER', ...dealer });
+      return;
+    }
+    const admin = (await prisma.adminUser.findUnique({
+      where: { id: auth.sub },
+      select: { id: true, email: true, name: true, createdAt: true },
+    })) as Record<string, unknown> | null;
+    if (!admin) throw new HttpError(404, 'NOT_FOUND', 'Profile not found');
+    res.json({ role: 'ADMIN', ...admin });
   } catch (e) {
     next(e);
   }

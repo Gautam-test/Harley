@@ -30,6 +30,8 @@ interface ListingDetail {
   dealerId: string;
   dealerName: string;
   city: string;
+  pincode?: string | null;
+  state?: string | null;
 }
 
 // "EMI from" hint reuses the shared helper — same defaults as the
@@ -176,7 +178,16 @@ export function ListingDetailPage() {
               />
               <SpecRow
                 items={[
-                  { label: 'Location', value: data.city },
+                  {
+                    label: 'Location',
+                    // Combine city + pincode + state so the buyer has the
+                    // full mailing context up-front. Falls back to city
+                    // only if the dealer record predates the pincode/state
+                    // columns.
+                    value: [data.city, data.pincode, data.state]
+                      .filter(Boolean)
+                      .join(' · '),
+                  },
                   { label: 'Available For', value: 'Test Ride · Showroom Visit' },
                 ]}
                 full

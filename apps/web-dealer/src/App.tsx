@@ -5,7 +5,7 @@ import { MyListingsPage } from './pages/MyListingsPage';
 import { AddListingPage } from './pages/AddListingPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { LeadDetailPage } from './pages/LeadDetailPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { DealerShell } from './components/DealerShell';
 import { useAuthStore } from './store/auth';
 
@@ -29,7 +29,9 @@ export function App() {
           <Route path="/leads/general/:id" element={<Navigate to="/leads/buyer" replace />} />
           <Route path="/leads/:kind" element={<LeadsPage />} />
           <Route path="/leads/:kind/:id" element={<LeadDetailPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          {/* Settings page retired May 2026; replaced by view-only Profile. */}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<Navigate to="/profile" replace />} />
         </Route>
       ) : null}
       <Route path="*" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />

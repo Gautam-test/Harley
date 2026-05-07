@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { to: '/enquiries', label: 'Enquiries' },
   { to: '/content', label: 'Content' },
   { to: '/audit', label: 'Audit' },
+  { to: '/profile', label: 'Profile' },
 ] as const;
 
 export function AdminShell() {
@@ -51,7 +52,7 @@ export function AdminShell() {
         <div className="max-w-container mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           <Link to="/dashboard" className="flex items-center gap-3 group min-w-0">
             <img
-              src="/brand/hd-certified-wordmark-light.svg"
+              src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark-light.svg`}
               alt="H-D Certified™"
               className="h-7 w-auto shrink-0"
               width={150}

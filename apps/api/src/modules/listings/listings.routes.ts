@@ -134,7 +134,11 @@ listingsRouter.get('/:slug', async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({
       where: { slug: req.params.slug },
-      include: { dealer: { select: { id: true, name: true, city: true } } },
+      include: {
+        dealer: {
+          select: { id: true, name: true, city: true, pincode: true, state: true },
+        },
+      },
     });
     if (!listing || listing.status !== 'ACTIVE') {
       throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
@@ -163,6 +167,11 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       dealerId: listing.dealer.id,
       dealerName: listing.dealer.name,
       city: listing.dealer.city,
+      // Surface the dealer's pincode + state on the public detail
+      // payload so the buyer can see exactly where the bike is and use
+      // the location for distance / pincode-based search refinement.
+      pincode: (listing.dealer as { pincode?: string }).pincode ?? null,
+      state: (listing.dealer as { state?: string }).state ?? null,
     });
   } catch (e) {
     next(e);
