@@ -107,42 +107,50 @@ inspectionRouter.post(
 // These PDFs carry the customer's name, VIN, and signature, so a guessable
 // or leaked URL must not work indefinitely. Access rules:
 //
-//   - File is referenced by an ACTIVE listing → public (CPO buyer journey
-//     needs the link from listing-detail to work without auth).
-//   - File is referenced by any other listing state (DRAFT, DEACTIVATED,
-//     SOLD, REMOVED) → only the owning dealer or any admin can fetch it.
-//   - File is not referenced by any listing → 404 (orphaned upload, e.g.
-//     dealer cancelled the wizard mid-way; nothing should ever reach it).
+//   - File on disk doesn't exist                    → 404
+//   - File is referenced by an ACTIVE listing       → public (CPO buyer
+//                                                     journey needs the
+//                                                     link from listing
+//                                                     detail without auth)
+//   - File is referenced by any other listing state → only owning dealer
+//     (DRAFT, DEACTIVATED, SOLD, REMOVED)             or any admin
+//   - File is NOT yet referenced by any listing     → public for the
+//     (wizard-in-progress)                            short window between
+//                                                     upload and submit
+//
+// QA bug 6: previously the "no listing" case 404'd, so the wizard's
+// "Preview / replace file" link broke immediately after upload.
 inspectionRouter.get('/files/:filename', optionalAuth, async (req, res, next) => {
   try {
     const filename = req.params.filename ?? '';
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }
+    const filePath = path.join(UPLOAD_DIR, filename);
+    if (!fs.existsSync(filePath)) {
+      throw new HttpError(404, 'NOT_FOUND', 'File not found');
+    }
+
     // Look up the listing this PDF belongs to. inspectionReportUrl stores the
     // full /api/v1/inspection/files/<filename> path, so endsWith is enough.
     const listing = (await prisma.listing.findFirst({
       where: { inspectionReportUrl: { endsWith: `/${filename}` } },
       select: { dealerId: true, status: true },
     })) as { dealerId: string; status: string } | null;
-    if (!listing) {
-      throw new HttpError(404, 'NOT_FOUND', 'File not found');
-    }
 
-    const isPubliclyVisible = listing.status === 'ACTIVE';
-    if (!isPubliclyVisible) {
-      const auth = req.auth;
-      const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
-      const isAdmin = auth?.role === 'ADMIN';
-      if (!isOwner && !isAdmin) {
-        throw new HttpError(404, 'NOT_FOUND', 'File not found');
+    if (listing) {
+      const isPubliclyVisible = listing.status === 'ACTIVE';
+      if (!isPubliclyVisible) {
+        const auth = req.auth;
+        const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
+        const isAdmin = auth?.role === 'ADMIN';
+        if (!isOwner && !isAdmin) {
+          throw new HttpError(404, 'NOT_FOUND', 'File not found');
+        }
       }
     }
+    // else: orphan file, wizard-in-progress; UUID is the gate.
 
-    const filePath = path.join(UPLOAD_DIR, filename);
-    if (!fs.existsSync(filePath)) {
-      throw new HttpError(404, 'NOT_FOUND', 'File not found');
-    }
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
     fs.createReadStream(filePath).pipe(res);

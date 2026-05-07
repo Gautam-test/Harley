@@ -115,15 +115,21 @@ export class TorqueMockClient implements TorqueClient {
 
   async getCpoKit(vin: string): Promise<TorqueCpoKit> {
     if (!VIN_FORMAT.test(vin)) return {};
+    // Point at the mock-doc PDF generator on our own API rather than the
+    // literal hostname `torque.mock` (which DNS doesn't resolve, leaving
+    // the dealer wizard with non-clickable buttons that returned "site
+    // can't be reached" — QA bug 7). The live Torque client overrides
+    // this with the real signed-URLs from the DMS.
+    const base = '/api/v1/torque/mock-docs';
     return {
-      cpoCertUrl: `https://torque.mock/cpo-cert/${vin}.pdf`,
-      rsaUrl: `https://torque.mock/rsa/${vin}.pdf`,
-      espUrl: `https://torque.mock/esp/${vin}.pdf`,
-      serviceHistoryUrl: `https://torque.mock/service-history/${vin}.pdf`,
-      rcUrl: `https://torque.mock/rc/${vin}.pdf`,
-      deliveryNoteUrl: `https://torque.mock/delivery-note/${vin}.pdf`,
-      hogUrl: `https://torque.mock/hog-membership/${vin}.pdf`,
-      insuranceUrl: `https://torque.mock/insurance/${vin}.pdf`,
+      cpoCertUrl: `${base}/cpo-cert/${vin}.pdf`,
+      rsaUrl: `${base}/rsa/${vin}.pdf`,
+      espUrl: `${base}/esp/${vin}.pdf`,
+      serviceHistoryUrl: `${base}/service-history/${vin}.pdf`,
+      rcUrl: `${base}/rc/${vin}.pdf`,
+      deliveryNoteUrl: `${base}/delivery-note/${vin}.pdf`,
+      hogUrl: `${base}/hog-membership/${vin}.pdf`,
+      insuranceUrl: `${base}/insurance/${vin}.pdf`,
     };
   }
 

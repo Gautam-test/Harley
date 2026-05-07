@@ -1,6 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { Button } from '@hd-cpo/ui';
 import { api } from '../lib/api';
 
 interface DealerLocation {
@@ -15,10 +13,16 @@ interface DealerLocation {
 // PRD §6.1.1 — dealer locator with map + list of nearest dealers.
 // Map is an embed (Google Maps Embed API); a real Maps JS integration with
 // markers + clustering wires once GOOGLE_MAPS_API_KEY is provided.
+//
+// Radius is set to 5000 km from the India centroid so every dealer in
+// the country is included (was 500 km, which only caught the central
+// belt — the locator showed an empty list to anyone in the south or
+// north-east). Per QA bug 1: "View All Dealers" CTA was removed; the
+// full nearest list scrolls in-place inside this widget.
 export function DealerLocator() {
   const { data, isLoading } = useQuery({
     queryKey: ['public-dealers'],
-    queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=500'),
+    queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=5000'),
   });
 
   // Centre on India by default; recentre client-side with geolocation in Sprint 6.
@@ -32,7 +36,12 @@ export function DealerLocator() {
           Find Your <span className="text-hd-orange">Nearest Dealer</span>
         </h2>
         <p className="font-body text-gray-600 mt-4 max-w-2xl">
-          Every certified bike is sold through an authorised H-D dealer. Tap a card to centre the map.
+          Every certified bike is sold through an authorised H-D dealer.
+          {data && data.length > 0 && (
+            <>
+              {' '}<span className="font-subhead text-text-on-light">{data.length}</span> across India.
+            </>
+          )}
         </p>
         <div className="mt-10 grid lg:grid-cols-2 gap-8 items-stretch">
           <div className="bg-hd-white border border-gray-200 min-h-80 overflow-hidden">
@@ -55,7 +64,7 @@ export function DealerLocator() {
             )}
             <ul className="mt-6 space-y-4">
               {data?.map((d) => (
-                <li key={d.id} className="border border-gray-200 p-4">
+                <li key={d.id} className="border border-gray-200 p-4 hover:border-hd-orange transition">
                   <div className="font-subhead text-text-on-light">{d.name}</div>
                   <div className="text-sm text-gray-600 mt-1">
                     {d.city} &middot; {d.pincode}
@@ -63,11 +72,6 @@ export function DealerLocator() {
                 </li>
               ))}
             </ul>
-            <Link to="/dealers" className="block">
-              <Button className="mt-6 w-full" variant="secondary">
-                View All Dealers
-              </Button>
-            </Link>
           </div>
         </div>
       </div>

@@ -156,8 +156,16 @@ export function SearchFilters() {
   };
 
   const onReset = () => {
+    // QA bug 4: previously also flipped selfDrivenChange.current = true,
+    // which caused the params-watcher to skip resetting the form fields.
+    // Net effect: URL cleared but form state kept the old typed pincode /
+    // sliders / etc, then the auto-apply useEffect re-pushed those stale
+    // values back into the URL — Clear All looked like a no-op.
+    //
+    // Fix: let the params-watcher run normally so it calls
+    // `reset(formDefaults(emptyParams))` which wipes every field. The
+    // searchBy state has its own `useState`, so we still reset it here.
     setSearchBy('cash');
-    selfDrivenChange.current = true;
     setParams(new URLSearchParams());
   };
 

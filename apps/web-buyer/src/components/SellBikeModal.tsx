@@ -398,13 +398,27 @@ export function SellBikeModal() {
                 />
                 <span>
                   I have read, understood and accept the{' '}
-                  <Link to="/terms" className="text-hd-orange underline hover:brightness-110">
+                  {/* External links so the modal stays mounted with all
+                      the user's typed data; previously these were
+                      <Link to=> which client-side-routed away and
+                      destroyed the in-flight enquiry form (QA bug 2). */}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-hd-orange underline hover:brightness-110"
+                  >
                     Terms and Conditions
-                  </Link>{' '}
+                  </a>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-hd-orange underline hover:brightness-110">
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-hd-orange underline hover:brightness-110"
+                  >
                     Privacy Policy
-                  </Link>
+                  </a>
                   .
                 </span>
               </label>

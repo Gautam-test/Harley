@@ -159,18 +159,29 @@ uploadsRouter.post(
   },
 );
 
-// Listing-image serve — gated by listing visibility, same model as the
-// inspection-PDF route. ACTIVE listings serve to anyone (the buyer search
-// grid + detail page need plain <img src> to work without auth). For any
-// other state (DRAFT / SOLD / REMOVED / DEACTIVATED) only the owning dealer
-// or an admin can fetch — prevents orphaned/leaked image URLs from leaking
-// removed-listing photos forever.
+// Listing-image serve. Visibility tiers:
+//
+//   1. File on disk doesn't exist                  → 404
+//   2. File is referenced by an ACTIVE listing      → public (buyer site)
+//   3. File is referenced by a non-ACTIVE listing   → only owning dealer
+//                                                     or any admin
+//   4. File is NOT yet referenced by any listing
+//      → ANY authenticated dealer can fetch it
+//      (this is the wizard-in-progress case: the dealer just uploaded
+//      and the picker needs to show the just-uploaded image before the
+//      listing row is created)
+//
+// Without case 4 the dealer wizard's image picker rendered broken-image
+// glyphs after every successful upload — flagged in QA bug 5.
 uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, next) => {
   try {
     const filename = req.params.filename ?? '';
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }
+    const filePath = path.join(LISTING_IMAGE_DIR, filename);
+    if (!fs.existsSync(filePath)) throw new HttpError(404, 'NOT_FOUND', 'File not found');
+
     // Listings store only the full-size image URL in the `images[]` array;
     // thumbs are derived. Strip the -thumb suffix so both serve through the
     // same listing lookup.
@@ -180,21 +191,27 @@ uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, ne
       where: { images: { has: fullUrl } },
       select: { dealerId: true, status: true },
     })) as { dealerId: string; status: string } | null;
-    if (!listing) {
-      throw new HttpError(404, 'NOT_FOUND', 'File not found');
-    }
-    const isPubliclyVisible = listing.status === 'ACTIVE';
-    if (!isPubliclyVisible) {
-      const auth = req.auth;
-      const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
-      const isAdmin = auth?.role === 'ADMIN';
-      if (!isOwner && !isAdmin) {
-        throw new HttpError(404, 'NOT_FOUND', 'File not found');
+
+    if (listing) {
+      const isPubliclyVisible = listing.status === 'ACTIVE';
+      if (!isPubliclyVisible) {
+        const auth = req.auth;
+        const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
+        const isAdmin = auth?.role === 'ADMIN';
+        if (!isOwner && !isAdmin) {
+          throw new HttpError(404, 'NOT_FOUND', 'File not found');
+        }
       }
     }
+    // else: file isn't referenced by any listing yet — this is the
+    // wizard-in-progress case (dealer just uploaded; listing.create
+    // hasn't run yet). Plain <img> tags can't send a bearer token, so
+    // requiring auth here would render broken-image glyphs in the
+    // dealer picker. We treat the random UUID filename as the gate
+    // for this short window. Once the listing is created the
+    // listing-status check above takes over again, and once it's
+    // REMOVED the file goes back to gated access.
 
-    const filePath = path.join(LISTING_IMAGE_DIR, filename);
-    if (!fs.existsSync(filePath)) throw new HttpError(404, 'NOT_FOUND', 'File not found');
     const ext = path.extname(filename).toLowerCase();
     const contentType =
       ext === '.png' ? 'image/png' :

@@ -203,7 +203,31 @@ export function AddListingPage() {
 
   const fetchVin = useMutation({
     mutationFn: (vin: string) => api<TorqueVehicle>(`/torque/vehicles/${vin}`),
-    onSuccess: (vehicle) => update({ torque: vehicle }),
+    onSuccess: (vehicle) => {
+      // Auto-fill the description from Torque fields the moment the VIN
+      // resolves. The dealer can still edit; we only seed when the
+      // textarea is empty so we never clobber typed-in copy. Per QA
+      // sheet: "Description should be auto fetch from torque".
+      update({ torque: vehicle });
+      setS((prev) => {
+        if (prev.description.trim().length > 0) return prev;
+        const seed =
+          `${vehicle.modelName} ${vehicle.modelFamily}` +
+          ` in ${vehicle.colour}.` +
+          ` Originally invoiced ${
+            vehicle.dateOfInvoice
+              ? new Date(vehicle.dateOfInvoice).toLocaleDateString('en-IN', {
+                  month: 'long',
+                  year: 'numeric',
+                })
+              : '—'
+          }.` +
+          ` ${vehicle.engine ? `${vehicle.engine}.` : ''}` +
+          ` Inspected and certified by an authorised H-D dealer.` +
+          ` Edit this copy to highlight the bike's condition, service history, and any add-ons.`;
+        return { ...prev, description: seed };
+      });
+    },
   });
 
   // CPO Kit auto-fetched as soon as Torque returns a vehicle AND the dealer
@@ -981,6 +1005,27 @@ function ListingImagePicker({
 }) {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  // Local blob-URL preview cache. The server URL goes into FormState
+  // (it's what /dealer/listings POST will store), but rendering relies
+  // on the local blob — the upload route's serve-side gate would 404
+  // before the listing row exists, and a plain <img src=> can't send
+  // a bearer token. The blob holds the same bytes, instant render, no
+  // round-trip needed. Cleaned up on unmount and on remove.
+  const [blobByUrl, setBlobByUrl] = useState<Record<string, string>>({});
+  useEffect(() => {
+    return () => {
+      // Revoke every blob the picker made — leaving them alive keeps
+      // the file bytes resident in memory until the page closes.
+      Object.values(blobByUrl).forEach((b) => {
+        try {
+          URL.revokeObjectURL(b);
+        } catch {
+          /* ignore */
+        }
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const addFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -994,6 +1039,7 @@ function ListingImagePicker({
     setUploading(true);
     const localErrors: string[] = [];
     const uploaded: string[] = [];
+    const newBlobs: Record<string, string> = {};
     for (const file of queue) {
       const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
       if (!ALLOWED_IMAGE_EXT.includes(ext)) {
@@ -1013,12 +1059,19 @@ function ListingImagePicker({
           formData: true,
         });
         uploaded.push(res.url);
+        // Mint a blob URL pointing at the original File so the picker
+        // renders instantly without waiting for the server URL to
+        // become reachable (it might 404 until the listing exists).
+        newBlobs[res.url] = URL.createObjectURL(file);
       } catch (e) {
         localErrors.push(`${file.name}: ${e instanceof ApiError ? e.message : 'upload failed'}`);
       }
     }
     setUploading(false);
-    if (uploaded.length) onChange([...images, ...uploaded]);
+    if (uploaded.length) {
+      setBlobByUrl((prev) => ({ ...prev, ...newBlobs }));
+      onChange([...images, ...uploaded]);
+    }
     if (localErrors.length) setErrors(localErrors);
   };
 
@@ -1067,6 +1120,11 @@ function ListingImagePicker({
           <PhotoSlot
             key={slot.index}
             slot={slot}
+            // Prefer the local blob (instant render, no auth dance) when
+            // the file was just uploaded in this session. Fall back to
+            // the server URL on edit-mode hydration / page reload — by
+            // then the listing exists OR the dealer has signed in.
+            displayUrl={slot.url ? blobByUrl[slot.url] ?? slot.url : null}
             uploading={uploading && slot.index === images.length}
             disabled={disabled}
             onRemove={() => removeAt(slot.index)}
@@ -1081,7 +1139,11 @@ function ListingImagePicker({
               key={src}
               className="relative aspect-[4/3] overflow-hidden border border-gray-200 rounded group"
             >
-              <img src={src} alt="" className="w-full h-full object-cover" />
+              <img
+                src={blobByUrl[src] ?? src}
+                alt=""
+                className="w-full h-full object-cover"
+              />
               <button
                 type="button"
                 onClick={() => removeAt(SLOT_HINTS.length + i)}
@@ -1110,11 +1172,15 @@ function ListingImagePicker({
 
 function PhotoSlot({
   slot,
+  displayUrl,
   uploading,
   disabled,
   onRemove,
 }: {
   slot: { url: string | null; hint: string; index: number };
+  /** What goes into <img src=>. Usually blob URL for fresh uploads or
+      the server URL for hydrated edits. Null for empty slots. */
+  displayUrl: string | null;
   uploading: boolean;
   disabled: boolean;
   onRemove: () => void;
@@ -1159,7 +1225,7 @@ function PhotoSlot({
       ) : (
         <>
           <img
-            src={slot.url ?? ''}
+            src={displayUrl ?? slot.url ?? ''}
             alt=""
             className="w-full h-full object-cover"
           />

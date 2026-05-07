@@ -99,7 +99,54 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         )}
         {data && (
           <article
-            className="prose max-w-none text-gray-700 leading-relaxed [&_h2]:text-text-on-light [&_h2]:font-subhead [&_h2]:uppercase [&_h2]:tracking-subhead [&_a]:text-hd-orange"
+            // QA bug 3: typography drifted across legal / info pages — different
+            // sizes for the same heading level, inconsistent paragraph spacing,
+            // varying link colors. The class chain below pins ALL headings,
+            // paragraphs, lists, and links to a single rule set so privacy /
+            // terms / about / faq / contact share identical rhythm.
+            //
+            //   p / li     → 15px regular, leading 1.7, gray-700, mt-4
+            //   h2         → 22px font-subhead uppercase, hd-orange, mt-10
+            //   h3         → 16px font-subhead uppercase, mt-6
+            //   a          → hd-orange, underlined on hover
+            //   ul         → disc bullets, indent
+            className="
+              text-[15px] text-gray-700
+              [&>*]:max-w-none
+              [&_p]:leading-[1.7]
+              [&_p]:mt-4
+              [&_p:first-child]:mt-0
+              [&_h2]:font-subhead
+              [&_h2]:uppercase
+              [&_h2]:tracking-subhead
+              [&_h2]:text-hd-orange
+              [&_h2]:text-[22px]
+              [&_h2]:mt-10
+              [&_h2]:mb-3
+              [&_h2:first-child]:mt-0
+              [&_h3]:font-subhead
+              [&_h3]:uppercase
+              [&_h3]:tracking-subhead
+              [&_h3]:text-text-on-light
+              [&_h3]:text-base
+              [&_h3]:mt-6
+              [&_h3]:mb-2
+              [&_a]:text-hd-orange
+              [&_a]:underline
+              [&_a]:underline-offset-2
+              [&_a:hover]:brightness-110
+              [&_ul]:list-disc
+              [&_ul]:pl-6
+              [&_ul]:mt-3
+              [&_ul]:space-y-1
+              [&_ol]:list-decimal
+              [&_ol]:pl-6
+              [&_ol]:mt-3
+              [&_ol]:space-y-1
+              [&_li]:leading-[1.7]
+              [&_strong]:text-text-on-light
+              [&_strong]:font-subhead
+            "
             dangerouslySetInnerHTML={{ __html: cleanHtml }}
           />
         )}

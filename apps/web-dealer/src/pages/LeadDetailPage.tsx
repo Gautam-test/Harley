@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button } from '@hd-cpo/ui';
-import { BUYER_LEAD_PIPELINE, leadStatus, type LeadStatus } from '@hd-cpo/types';
+import {
+  BUYER_LEAD_PIPELINE,
+  SELLER_LEAD_PIPELINE,
+  type LeadStatus,
+} from '@hd-cpo/types';
 import { useAuthStore } from '../store/auth';
 import { api } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
@@ -109,7 +113,17 @@ export function LeadDetailPage() {
   }
 
   const lead = detail.data;
-  const pipelineStatuses = leadStatus.options;
+  // Show ONLY the statuses the API will accept for this kind. Previously
+  // we exposed the full leadStatus enum (CONVERTED / IN_PROGRESS etc.)
+  // to every lead — picking a seller-only status on a buyer lead made
+  // canTransitionLead reject the move with 409 INVALID_TRANSITION, which
+  // looked to QA like "the pipeline is failing to move leads".
+  // LOST is added universally as the alt-terminal escape.
+  const basePipeline =
+    kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
+  const pipelineStatuses: readonly LeadStatus[] = basePipeline.includes('LOST' as never)
+    ? basePipeline
+    : ([...basePipeline, 'LOST'] as readonly LeadStatus[]);
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
