@@ -80,6 +80,13 @@ export function LeadDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lead', kind, id] });
       qc.invalidateQueries({ queryKey: ['leads'] });
+      // The DealerShell sidebar uses its own cache key for the badge
+      // counts; invalidating just `['leads']` left the sidebar showing
+      // stale "N new" pills until manual refresh. Hit both buyer + seller
+      // sidebar keys (cheap; React Query dedupes) so any status change
+      // reflects in the nav immediately.
+      qc.invalidateQueries({ queryKey: ['dealer-leads', 'buyer', 'sidebar'] });
+      qc.invalidateQueries({ queryKey: ['dealer-leads', 'trade-in', 'sidebar'] });
     },
   });
 
@@ -113,17 +120,27 @@ export function LeadDetailPage() {
   }
 
   const lead = detail.data;
-  // Show ONLY the statuses the API will accept for this kind. Previously
-  // we exposed the full leadStatus enum (CONVERTED / IN_PROGRESS etc.)
-  // to every lead — picking a seller-only status on a buyer lead made
-  // canTransitionLead reject the move with 409 INVALID_TRANSITION, which
-  // looked to QA like "the pipeline is failing to move leads".
-  // LOST is added universally as the alt-terminal escape.
+  // Pipeline-aware dropdown — show ONLY valid forward moves from the
+  // current status, plus DEAD/LOST as universal alt-terminals. Showing
+  // already-passed stages would look offered then rejected with a 409;
+  // showing other-kind stages (e.g. IN_PROGRESS on a buyer lead) would
+  // be rejected by the API too. Together with LOST always available
+  // this means every option in the dropdown maps to a green-path
+  // transition the dealer can actually make.
   const basePipeline =
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
-  const pipelineStatuses: readonly LeadStatus[] = basePipeline.includes('LOST' as never)
-    ? basePipeline
-    : ([...basePipeline, 'LOST'] as readonly LeadStatus[]);
+  const currentIdx = basePipeline.indexOf(lead.status as never);
+  const pipelineStatuses: LeadStatus[] = [
+    // Keep the current status as the first option so the select reads
+    // "<current>" by default — a user-cancelled change reverts cleanly.
+    lead.status,
+    // Forward stages only.
+    ...basePipeline.slice(currentIdx === -1 ? 0 : currentIdx + 1),
+    // Universal terminals — both can be reached from anywhere.
+    ...(['DEAD', 'LOST'] as LeadStatus[]).filter(
+      (s) => s !== lead.status && !basePipeline.includes(s as never),
+    ),
+  ];
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">

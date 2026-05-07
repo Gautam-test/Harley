@@ -139,8 +139,14 @@ inspectionRouter.get('/files/:filename', optionalAuth, async (req, res, next) =>
     })) as { dealerId: string; status: string } | null;
 
     if (listing) {
-      const isPubliclyVisible = listing.status === 'ACTIVE';
-      if (!isPubliclyVisible) {
+      // Soft-gate: ACTIVE / DRAFT / DEACTIVATED listings serve their
+      // inspection PDF publicly because admin links open in a new tab
+      // (no auth header on plain `<a target="_blank">`), and the URL
+      // is an unguessable UUID. Hard-gate kicks in for SOLD/REMOVED
+      // where the listing is explicitly off-market — those still
+      // require dealer-owner or admin credentials.
+      const softTier = listing.status === 'ACTIVE' || listing.status === 'DRAFT' || listing.status === 'DEACTIVATED';
+      if (!softTier) {
         const auth = req.auth;
         const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
         const isAdmin = auth?.role === 'ADMIN';

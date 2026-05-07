@@ -50,6 +50,22 @@
   }
 }
 
+/* Hide native scrollbar UI while keeping the element scrollable. Used on
+   horizontally-overflowing tab bars (e.g. dealer My Listings, admin Listings)
+   where the visible scrollbar gutter showed a permanent grey track even when
+   nothing was overflowing — flagged in QA as a stray "scrollbar icon" in the
+   menu strip. Scroll behaviour itself is preserved via touch / shift-wheel /
+   keyboard. */
+@layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* legacy Edge / IE */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome / Safari */
+  }
+}
+
 /* 1903 brand family (H-D 2026 guidelines, p. 70-71). OTF files served from each
    app's /public/fonts. font-display: swap so any FOUT is on the fallback. */
 @font-face {

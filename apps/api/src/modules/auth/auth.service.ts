@@ -51,11 +51,34 @@ async function issueTokens(claims: AuthClaims) {
 
 export async function dealerLogin(username: string, password: string) {
   const dealer = await prisma.dealer.findUnique({ where: { username } });
-  if (!dealer || dealer.status !== 'ACTIVE') {
+  // Step 1: existence + password — generic message keeps the username-
+  // enumeration surface flat (an attacker can't tell whether the username
+  // exists by comparing error text).
+  if (!dealer) {
     throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid username or password');
   }
   const ok = await bcrypt.compare(password, dealer.passwordHash);
   if (!ok) throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid username or password');
+
+  // Step 2: status. Only reach this branch when credentials are valid,
+  // so a tailored message doesn't leak any signal a username-enumerator
+  // couldn't already get from a successful auth attempt with their own
+  // password. Suspended / inactive dealers get a clear reason instead
+  // of the misleading "Invalid username or password" they used to see.
+  if (dealer.status === 'SUSPENDED') {
+    throw new HttpError(
+      403,
+      'ACCOUNT_SUSPENDED',
+      'Your account is suspended. Contact your H-D Certified admin to restore access.',
+    );
+  }
+  if (dealer.status === 'INACTIVE') {
+    throw new HttpError(
+      403,
+      'ACCOUNT_INACTIVE',
+      'Your account is inactive. Contact your H-D Certified admin to activate it.',
+    );
+  }
 
   const claims: AuthClaims = { sub: dealer.id, role: 'DEALER', name: dealer.name };
   // Lifting any stale revocation marker from a prior compromise — a fresh

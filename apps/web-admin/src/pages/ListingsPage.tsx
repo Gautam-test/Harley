@@ -84,6 +84,22 @@ export function ListingsPage() {
     },
   });
 
+  // Reactivate flips DEACTIVATED → ACTIVE in one click. Confirmed inline
+  // because the button itself only appears on the Deactivated tab — no risk
+  // of a mis-click on an unrelated row.
+  const reactivate = useMutation({
+    mutationFn: (id: string) => api(`/admin/listings/${id}/reactivate`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-listings'] }),
+  });
+
+  // Restore flips REMOVED → DRAFT (sends it back through the normal review
+  // queue). Server stamps adminFeedback noting the dealer must re-upload
+  // assets, since the removal step deleted them from disk.
+  const restore = useMutation({
+    mutationFn: (id: string) => api(`/admin/listings/${id}/restore`, { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-listings'] }),
+  });
+
   // Pending-approval count drives the orange chip on the Drafts tab.
   const { data: draftsForBadge } = useQuery({
     queryKey: ['admin-listings', 'DRAFT', 'badge'],
@@ -263,7 +279,55 @@ export function ListingsPage() {
                         </IconAction>
                       </>
                     )}
-                    {/* No actions for SOLD / REMOVED / DEACTIVATED — clicking the row still opens the preview drawer. */}
+                    {/* Off-market rows still surface an action so the column
+                        isn't empty (QA blocker — admins thought the page was
+                        broken). SOLD is read-only since the bike is gone, so
+                        the View icon just opens the same preview drawer the
+                        row click would. DEACTIVATED → reactivate flips back
+                        to ACTIVE in one click. REMOVED → restore sends the
+                        listing back through the DRAFT review queue (the
+                        dealer is told to re-upload missing assets). */}
+                    {l.status === 'SOLD' && (
+                      <IconAction label="View" onClick={() => setPreviewId(l.id)}>
+                        <EyeIcon />
+                      </IconAction>
+                    )}
+                    {l.status === 'DEACTIVATED' && (
+                      <IconAction
+                        label="Reactivate"
+                        tone="primary"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Reactivate "${l.year} ${l.modelName}" (${l.dealerName})? It will return to the buyer site immediately.`,
+                            )
+                          ) {
+                            reactivate.mutate(l.id);
+                          }
+                        }}
+                        disabled={reactivate.isPending}
+                      >
+                        <PowerIcon />
+                      </IconAction>
+                    )}
+                    {l.status === 'REMOVED' && (
+                      <IconAction
+                        label="Restore"
+                        tone="primary"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Restore "${l.year} ${l.modelName}" (${l.dealerName})? The listing returns to DRAFT and the dealer will be asked to re-upload any missing assets.`,
+                            )
+                          ) {
+                            restore.mutate(l.id);
+                          }
+                        }}
+                        disabled={restore.isPending}
+                      >
+                        <RestoreIcon />
+                      </IconAction>
+                    )}
                   </div>
                 </Td>
               </tr>
@@ -496,6 +560,24 @@ function TrashIcon() {
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+function EyeIcon() {
+  // Eye glyph — read-only "View" action for SOLD rows.
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+function RestoreIcon() {
+  // Counter-clockwise rewind arrow — "undo the removal".
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
     </svg>
   );
 }

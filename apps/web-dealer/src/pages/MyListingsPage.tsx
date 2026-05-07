@@ -171,8 +171,11 @@ export function MyListingsPage() {
         </div>
       )}
 
-      {/* Tab bar — Figma terminology with badge counts */}
-      <nav className="flex items-end gap-1 mb-4 border-b border-gray-200 overflow-x-auto">
+      {/* Tab bar — Figma terminology with badge counts. scrollbar-hide
+          suppresses the always-visible horizontal track that QA flagged
+          as a stray "scrollbar icon" sitting under the tab labels. The
+          nav can still scroll on narrow viewports via touch / wheel. */}
+      <nav className="flex items-end gap-1 mb-4 border-b border-gray-200 overflow-x-auto scrollbar-hide">
         {TABS.map((t) => {
           const count =
             t.id === 'ALL'

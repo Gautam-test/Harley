@@ -85,7 +85,12 @@ export const createListingInput = z.object({
   images: z.array(z.string()).min(5).max(20),
   inspectionReportUrl: z.string().nullable(),
   certificationStatus: certStatus,
-  cpoDocs: z.record(z.string()).optional(),
+  // AS-IS listings carry no CPO docs — wizard sends `null`. The earlier
+  // schema rejected null with "Expected object, received null" because
+  // .optional() only accepts an object OR undefined. .nullable() lets
+  // the explicit-null payload pass while still requiring an object on
+  // CPO submissions (validated client-side via the form).
+  cpoDocs: z.record(z.string()).nullable().optional(),
 });
 export type CreateListingInput = z.infer<typeof createListingInput>;
 

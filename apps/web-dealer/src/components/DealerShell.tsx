@@ -16,7 +16,7 @@ interface NavItem {
   to: string;
   label: string;
   end?: boolean;
-  badgeKey?: 'pendingListings' | 'newBuyerLeads';
+  badgeKey?: 'pendingListings' | 'newBuyerLeads' | 'newSellerLeads';
 }
 
 // Sidebar order matches Figma /Dealer/Halrey dealer_page-0007.jpg, minus the
@@ -26,7 +26,7 @@ const NAV: NavItem[] = [
   { to: '/listings/new', label: 'Add Listing' },
   { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings' },
   { to: '/leads/buyer', label: 'Buyer Enquiries', badgeKey: 'newBuyerLeads' },
-  { to: '/leads/trade-in', label: 'Seller Enquiries' },
+  { to: '/leads/trade-in', label: 'Seller Enquiries', badgeKey: 'newSellerLeads' },
   { to: '/profile', label: 'Profile' },
 ];
 
@@ -60,10 +60,20 @@ export function DealerShell() {
     enabled,
     staleTime: 60_000,
   });
+  // Seller-side counterpart so the Seller Enquiries item gets the same
+  // unread-count chip Buyer Enquiries already had (QA blocker — dealers
+  // were missing fresh trade-in leads because nothing flagged the tab).
+  const sellerLeadsQuery = useQuery({
+    queryKey: ['dealer-leads', 'trade-in', 'sidebar'],
+    queryFn: () => api<DealerLeadRow[]>('/dealer/leads/trade-in'),
+    enabled,
+    staleTime: 60_000,
+  });
 
   const badges = {
     pendingListings: (listingsQuery.data ?? []).filter((l) => l.status === 'DRAFT').length,
     newBuyerLeads: (buyerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
+    newSellerLeads: (sellerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
   } as const;
 
   const onSignOut = () => {

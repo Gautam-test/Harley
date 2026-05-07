@@ -71,7 +71,7 @@ export function DealersPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All statuses</option>
+            <option value="">All status</option>
             <option value="ACTIVE">Active</option>
             <option value="INACTIVE">Inactive</option>
             <option value="SUSPENDED">Suspended</option>
@@ -136,12 +136,34 @@ export function DealersPage() {
                   <StatusBadge status={d.status} />
                 </Td>
                 <Td className="text-right space-x-2 whitespace-nowrap">
+                  {/* Three transitions are valid: ACTIVE | INACTIVE | SUSPENDED.
+                      Each button only renders when the dealer isn't already in
+                      that state, so the row never shows a no-op button. The
+                      Inactive action was missing entirely (QA blocker — admins
+                      had no way to soft-disable a dealer without a full Suspend). */}
                   {d.status !== 'ACTIVE' && (
                     <Button
                       size="sm"
                       onClick={() => setStatus.mutate({ id: d.id, status: 'ACTIVE' })}
                     >
                       Activate
+                    </Button>
+                  )}
+                  {d.status !== 'INACTIVE' && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            `Mark "${d.name}" as Inactive? They will be unable to sign in until you reactivate the account.`,
+                          )
+                        ) {
+                          setStatus.mutate({ id: d.id, status: 'INACTIVE' });
+                        }
+                      }}
+                    >
+                      Set Inactive
                     </Button>
                   )}
                   {d.status !== 'SUSPENDED' && (

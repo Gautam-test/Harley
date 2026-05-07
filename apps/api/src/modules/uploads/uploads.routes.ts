@@ -193,8 +193,12 @@ uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, ne
     })) as { dealerId: string; status: string } | null;
 
     if (listing) {
-      const isPubliclyVisible = listing.status === 'ACTIVE';
-      if (!isPubliclyVisible) {
+      // Soft-gate matches inspection PDFs: ACTIVE / DRAFT / DEACTIVATED
+      // listings serve their photos publicly so admin preview drawers
+      // (which use plain <img src=> without auth headers) can render
+      // them. SOLD/REMOVED stay auth-only since those are off-market.
+      const softTier = listing.status === 'ACTIVE' || listing.status === 'DRAFT' || listing.status === 'DEACTIVATED';
+      if (!softTier) {
         const auth = req.auth;
         const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
         const isAdmin = auth?.role === 'ADMIN';

@@ -371,3 +371,104 @@ adminListingsRouter.post('/:id/deactivate', validate(idParam, 'params'), async (
     next(e);
   }
 });
+
+// Reactivate a previously DEACTIVATED listing — flips back to ACTIVE without
+// going through the DRAFT review queue (the listing was already approved
+// once; deactivation is a soft pause, not a re-removal). Best-effort Torque
+// re-sync mirrors what /publish does.
+adminListingsRouter.post('/:id/reactivate', validate(idParam, 'params'), async (req, res, next) => {
+  try {
+    const { id } = req.params as { id: string };
+    const existing = (await prisma.listing.findUnique({
+      where: { id },
+      select: { id: true, status: true, vin: true, dealerId: true, publishedAt: true },
+    })) as
+      | { id: string; status: ListingStatus; vin: string; dealerId: string; publishedAt: Date | null }
+      | null;
+    if (!existing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+    if (existing.status !== 'DEACTIVATED') {
+      throw new HttpError(
+        409,
+        'INVALID_STATE',
+        `Only DEACTIVATED listings can be reactivated (current: ${existing.status})`,
+      );
+    }
+    const listing = await prisma.listing.update({
+      where: { id },
+      // Preserve original publishedAt if it exists so analytics keep the
+      // first-published date; otherwise stamp it now (covers listings that
+      // were deactivated before publishedAt was tracked).
+      data: { status: 'ACTIVE', publishedAt: existing.publishedAt ?? new Date() },
+    });
+    try {
+      await torque.updateVehicleStatus(existing.vin, 'AVAILABLE');
+    } catch (e) {
+      logger.warn({ err: e, vin: existing.vin }, 'Torque status push failed on reactivate');
+    }
+    await audit({
+      actorId: req.auth!.sub,
+      actorRole: 'ADMIN',
+      action: 'LISTING_REACTIVATED',
+      entityType: 'Listing',
+      entityId: id,
+      metadata: { dealerId: existing.dealerId, vin: existing.vin },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+    res.json({ id: listing.id, status: listing.status });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Restore a REMOVED listing — flips status back to DRAFT so the dealer can
+// fix whatever caused the removal and resubmit through the normal review
+// flow. The original removal also unlinked image + inspection files from
+// disk, so the dealer will need to re-upload assets; we surface that in
+// adminFeedback so they aren't surprised.
+adminListingsRouter.post('/:id/restore', validate(idParam, 'params'), async (req, res, next) => {
+  try {
+    const { id } = req.params as { id: string };
+    const existing = (await prisma.listing.findUnique({
+      where: { id },
+      select: { id: true, status: true, dealerId: true, adminFeedback: true },
+    })) as
+      | { id: string; status: ListingStatus; dealerId: string; adminFeedback: string | null }
+      | null;
+    if (!existing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+    if (existing.status !== 'REMOVED') {
+      throw new HttpError(
+        409,
+        'INVALID_STATE',
+        `Only REMOVED listings can be restored (current: ${existing.status})`,
+      );
+    }
+    const restoreNote =
+      'Restored by admin — please re-upload listing images and the inspection PDF (the previous files were cleaned up on removal), then resubmit for review.';
+    const listing = await prisma.listing.update({
+      where: { id },
+      data: {
+        status: 'DRAFT',
+        // publishedAt deliberately left as-is — buyer-side queries gate on
+        // status === 'ACTIVE' so a stale publishedAt on a DRAFT row is harmless,
+        // and clearing it would erase the audit trail of the original publish.
+        adminFeedback: existing.adminFeedback
+          ? `${existing.adminFeedback}\n\n${restoreNote}`
+          : restoreNote,
+      },
+    });
+    await audit({
+      actorId: req.auth!.sub,
+      actorRole: 'ADMIN',
+      action: 'LISTING_RESTORED',
+      entityType: 'Listing',
+      entityId: id,
+      metadata: { dealerId: existing.dealerId },
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent') ?? undefined,
+    });
+    res.json({ id: listing.id, status: listing.status });
+  } catch (e) {
+    next(e);
+  }
+});

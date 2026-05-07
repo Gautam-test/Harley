@@ -146,7 +146,7 @@ export function EnquiriesPage() {
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s || 'all'} value={s}>
-              {s ? s.replace(/_/g, ' ') : 'All Statuses'}
+              {s ? s.replace(/_/g, ' ') : 'All Status'}
             </option>
           ))}
         </Select>
