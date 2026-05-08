@@ -11,6 +11,7 @@ import { HttpError } from '../../middleware/error-handler.js';
 import { audit } from '../audit/audit.service.js';
 import { torque } from '../torque/torque.module.js';
 import { emailProvider } from '../email/email.module.js';
+import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
 
 interface AdminListingRow {
   id: string;
@@ -23,7 +24,7 @@ interface AdminListingRow {
   publishedAt: Date | null;
   createdAt: Date;
   images: string[];
-  dealer: { id: string; name: string };
+  dealer: { id: string; name: string; city: string; pincode: string };
 }
 
 export const adminListingsRouter = Router();
@@ -52,7 +53,9 @@ adminListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next
       where,
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { dealer: { select: { id: true, name: true } } },
+      include: {
+        dealer: { select: { id: true, name: true, city: true, pincode: true } },
+      },
     })) as unknown as AdminListingRow[];
     res.json(
       rows.map((l) => ({
@@ -68,6 +71,10 @@ adminListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next
         createdAt: l.createdAt.toISOString(),
         dealerId: l.dealer.id,
         dealerName: l.dealer.name,
+        // Surface dealer location on the row so admins can scan across
+        // dealers without opening the preview drawer for each listing.
+        dealerCity: l.dealer.city,
+        dealerPincode: l.dealer.pincode,
       })),
     );
   } catch (e) {
@@ -97,7 +104,13 @@ interface AdminListingDetailRow {
   adminFeedback: string | null;
   publishedAt: Date | null;
   createdAt: Date;
-  dealer: { id: string; name: string; city: string; phone: string | null };
+  dealer: {
+    id: string;
+    name: string;
+    city: string;
+    pincode: string;
+    phone: string | null;
+  };
 }
 
 adminListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, next) => {
@@ -105,7 +118,11 @@ adminListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, ne
     const { id } = req.params as { id: string };
     const row = (await prisma.listing.findUnique({
       where: { id },
-      include: { dealer: { select: { id: true, name: true, city: true, phone: true } } },
+      include: {
+        dealer: {
+          select: { id: true, name: true, city: true, pincode: true, phone: true },
+        },
+      },
     })) as unknown as AdminListingDetailRow | null;
     if (!row) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
     res.json({
@@ -121,8 +138,11 @@ adminListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, ne
       description: row.description,
       images: row.images,
       certificationStatus: row.certificationStatus,
-      inspectionReportUrl: row.inspectionReportUrl,
-      cpoDocs: row.cpoDocs,
+      // Repair legacy URLs (torque.mock host / bare filename) so the admin
+      // preview drawer's "Open inspection PDF" link doesn't 'site can't be
+      // reached' on rows seeded before the mock-doc proxy landed (QA BUG-19).
+      inspectionReportUrl: normalizeInspectionUrl(row.inspectionReportUrl),
+      cpoDocs: normalizeCpoDocs(row.cpoDocs),
       status: row.status,
       adminFeedback: row.adminFeedback,
       publishedAt: row.publishedAt?.toISOString() ?? null,

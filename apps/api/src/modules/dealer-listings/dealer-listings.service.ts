@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import type { CreateListingInput, UpdateListingInput } from '@hd-cpo/types';
 import { prisma } from '../../config/prisma.js';
 import { logger } from '../../config/logger.js';
@@ -6,6 +8,13 @@ import { HttpError } from '../../middleware/error-handler.js';
 import { torque } from '../torque/torque.module.js';
 import { buildListingSlug } from '../../utils/slug.js';
 import { decodeVinYear } from '../../utils/vinYear.js';
+
+// Short random discriminator used to disambiguate slugs when two listings
+// share year + model + last-6-of-VIN. 4 hex chars = 65k possibilities,
+// well above the chance of a second collision after one retry.
+function slugDiscriminator(): string {
+  return randomBytes(2).toString('hex');
+}
 
 export async function createListing(dealerId: string, input: CreateListingInput) {
   // PRD §6.2.3 AC1 — VIN must exist in Torque AND be assigned to this dealer.
@@ -19,9 +28,30 @@ export async function createListing(dealerId: string, input: CreateListingInput)
   }
 
   // PRD §6.2.3 AC2 — duplicate VIN check, exclude REMOVED.
+  //
+  // The DB-level `vin` unique constraint covers REMOVED listings too, so a
+  // dealer who tries to re-list a previously-removed bike would have hit
+  // a 500 (P2002 on `vin`). We free up the constraint by retiring the old
+  // REMOVED row's vin + slug to a sentinel value before the create — the
+  // history row stays for audit, but its identifying keys are released.
   const existing = await prisma.listing.findUnique({ where: { vin: input.vin } });
   if (existing && existing.status !== 'REMOVED') {
-    throw new HttpError(409, 'VIN_DUPLICATE', 'A non-removed listing already exists for this VIN');
+    throw new HttpError(
+      409,
+      'VIN_DUPLICATE',
+      'A listing for this VIN is already live or pending. Mark the previous one Sold or Removed before re-listing.',
+    );
+  }
+  if (existing && existing.status === 'REMOVED') {
+    // Suffix with the row id so the historical record stays unique among
+    // any number of past REMOVED listings for the same VIN.
+    await prisma.listing.update({
+      where: { id: existing.id },
+      data: {
+        vin: `removed:${existing.id}:${existing.vin}`,
+        slug: `removed-${existing.id}-${existing.slug}`,
+      },
+    });
   }
 
   // Year is not in Torque's seven-field payload (VIN, ENGINE, MODEL NAME,
@@ -38,7 +68,7 @@ export async function createListing(dealerId: string, input: CreateListingInput)
     );
   }
 
-  const slug = buildListingSlug(year, vehicle.modelName, input.vin);
+  const baseSlug = buildListingSlug(year, vehicle.modelName, input.vin);
 
   // Default trust model (PRD §6.3.4): create as DRAFT, admin reviews + publishes.
   // For demos / sales walk-throughs the LISTINGS_AUTO_PUBLISH env flag flips
@@ -46,33 +76,71 @@ export async function createListing(dealerId: string, input: CreateListingInput)
   const autoPublish = getEnv().LISTINGS_AUTO_PUBLISH;
   const now = new Date();
 
-  const listing = await prisma.listing.create({
-    data: {
-      vin: input.vin,
-      slug,
-      dealerId,
-      // Vehicle facts come from Torque, never the client — prevents a dealer
-      // from spoofing model/family/colour against the VIN.
-      modelFamily: vehicle.modelFamily,
-      modelName: vehicle.modelName,
-      year,
-      colour: vehicle.colour,
-      price: input.price,
-      kmsDriven: input.kmsDriven,
-      // `owners` was added to the Prisma schema in migration 20260506100000.
-      // Using a typed cast until the next clean `prisma generate` regenerates
-      // the client types — the migration has already been applied to the DB,
-      // so the column write succeeds at the engine layer.
-      ...({ owners: input.owners } as Record<string, unknown>),
-      description: input.description,
-      images: input.images,
-      certificationStatus: input.certificationStatus,
-      inspectionReportUrl: input.inspectionReportUrl,
-      cpoDocs: input.cpoDocs ?? undefined,
-      status: autoPublish ? 'ACTIVE' : 'DRAFT',
-      publishedAt: autoPublish ? now : null,
-    },
+  // Slug = `${year}-${model-slug}-${last-6-of-VIN}`. Two listings with
+  // matching year + model + last-6 chars collide on the unique slug, which
+  // used to surface as 500 INTERNAL_ERROR when a dealer hit Submit. Retry
+  // up to 3 times with a short random discriminator on collision; that
+  // gives 65k^3 distinct fall-back slugs which comfortably outruns realistic
+  // collision rates without ever needing to surface the failure to the dealer.
+  const buildData = (slug: string) => ({
+    vin: input.vin,
+    slug,
+    dealerId,
+    modelFamily: vehicle.modelFamily,
+    modelName: vehicle.modelName,
+    year,
+    colour: vehicle.colour,
+    price: input.price,
+    kmsDriven: input.kmsDriven,
+    // `owners` was added to the Prisma schema in migration 20260506100000.
+    // Using a typed cast until the next clean `prisma generate` regenerates
+    // the client types — the migration has already been applied to the DB,
+    // so the column write succeeds at the engine layer.
+    ...({ owners: input.owners } as Record<string, unknown>),
+    description: input.description,
+    images: input.images,
+    certificationStatus: input.certificationStatus,
+    inspectionReportUrl: input.inspectionReportUrl,
+    cpoDocs: input.cpoDocs ?? undefined,
+    status: autoPublish ? ('ACTIVE' as const) : ('DRAFT' as const),
+    publishedAt: autoPublish ? now : null,
   });
+
+  let listing;
+  let slug = baseSlug;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      listing = await prisma.listing.create({ data: buildData(slug) });
+      break;
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const target = (e.meta?.target as string[] | undefined) ?? [];
+        if (target.includes('slug') && attempt < 3) {
+          slug = `${baseSlug}-${slugDiscriminator()}`;
+          logger.info({ vin: input.vin, attempt, slug }, 'Slug collision, retrying with discriminator');
+          continue;
+        }
+        if (target.includes('vin')) {
+          // Should be unreachable given the upfront vin dedup + REMOVED-row
+          // retirement above, but if a race slipped through we surface a
+          // clean 409 instead of the 500 the raw Prisma error produced.
+          throw new HttpError(
+            409,
+            'VIN_DUPLICATE',
+            'A listing for this VIN was created concurrently. Please refresh and try again.',
+          );
+        }
+      }
+      throw e;
+    }
+  }
+  if (!listing) {
+    throw new HttpError(
+      500,
+      'SLUG_GENERATION_FAILED',
+      'Could not generate a unique slug for this listing after 4 attempts.',
+    );
+  }
 
   // PRD §7.1 — push inspection PDF to Torque if provided.
   if (input.inspectionReportUrl) {
@@ -121,9 +189,21 @@ export async function updateListing(
   // PRD §6.2.4 — only price/description/KMs/images editable; VIN + spec locked.
   // Clear adminFeedback on any dealer edit so the red banner disappears once
   // the dealer has acted on it; the next admin review starts from a clean slate.
+  //
+  // The Zod schema accepts `cpoDocs: null` (used when a dealer flips a CPO
+  // listing back to AS_IS), but Prisma's typed JSON column rejects raw null
+  // — mirror createListing's `?? undefined` shim so the column is left
+  // untouched on null. Same for inspectionReportUrl: the column itself is
+  // nullable in the DB so passing null is fine, but the spread keeps the
+  // explicit-null intent intact.
+  const { cpoDocs, ...rest } = input;
   return prisma.listing.update({
     where: { id: listingId },
-    data: { ...input, adminFeedback: null },
+    data: {
+      ...rest,
+      ...(cpoDocs === undefined ? {} : { cpoDocs: cpoDocs ?? undefined }),
+      adminFeedback: null,
+    },
   });
 }
 

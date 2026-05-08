@@ -4,6 +4,7 @@ import { prisma } from '../../config/prisma.js';
 import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { distanceKm, pincodeCoord } from './pincode-coords.js';
+import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
 
 // Narrow row shapes — make this module typecheck before `prisma generate` runs.
 // The generated client returns structurally-compatible types.
@@ -19,8 +20,16 @@ interface PublicListingRow {
   kmsDriven: number;
   images: string[];
   certificationStatus: 'CPO' | 'AS_IS';
-  dealer: { id?: string; name: string; city: string };
+  status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
+  soldAt: Date | null;
+  dealer: { id?: string; name: string; city: string; pincode: string };
 }
+
+// SOLD listings stay visible to buyers for one hour after the dealer hits
+// "Mark Sold" — long enough for the buyer who saw the bike in their last
+// session to spot the SOLD watermark and understand why their pick is gone.
+// After the window the listing 404s on the public site exactly like REMOVED.
+const SOLD_VISIBILITY_MS = 60 * 60 * 1000;
 
 export const listingsRouter = Router();
 
@@ -57,8 +66,20 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
       }
     }
 
+    // Visibility window: ACTIVE listings always show up; SOLD listings
+    // surface for SOLD_VISIBILITY_MS (1h) after the dealer marked them
+    // sold so the search grid can render a SOLD watermark before the row
+    // disappears entirely. After the window, the SOLD row drops off the
+    // grid as if REMOVED.
+    const soldVisibleSince = new Date(Date.now() - SOLD_VISIBILITY_MS);
+    const visibilityFilter = {
+      OR: [
+        { status: 'ACTIVE' as const },
+        { status: 'SOLD' as const, soldAt: { gte: soldVisibleSince } },
+      ],
+    };
     const where = {
-      status: 'ACTIVE' as const,
+      ...visibilityFilter,
       ...(dealerIdFilter ? { dealerId: dealerIdFilter } : {}),
       ...(q.modelFamily ? { modelFamily: q.modelFamily } : {}),
       ...(q.model ? { modelName: q.model } : {}),
@@ -98,7 +119,7 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         orderBy,
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
-        include: { dealer: { select: { name: true, city: true } } },
+        include: { dealer: { select: { name: true, city: true, pincode: true } } },
       }),
       prisma.listing.count({ where }),
     ]);
@@ -117,8 +138,14 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         kmsDriven: l.kmsDriven,
         primaryImage: l.images[0] ?? '',
         certificationStatus: l.certificationStatus,
+        // Status surfaces SOLD rows in the 1-hour visibility window — the
+        // buyer card overlays a SOLD watermark and disables the click-
+        // through to the (now-404'd shortly) detail page.
+        status: l.status,
+        soldAt: l.soldAt?.toISOString() ?? null,
         dealerName: l.dealer.name,
         city: l.dealer.city,
+        pincode: l.dealer.pincode,
       })),
       total,
       page: q.page,
@@ -129,7 +156,10 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
   }
 });
 
-// PRD §6.1.3 — public listing detail by slug. 404 on SOLD/REMOVED/DEACTIVATED (AC5).
+// PRD §6.1.3 — public listing detail by slug. 404 on REMOVED / DRAFT /
+// DEACTIVATED. SOLD listings stay reachable for 1 hour after the dealer
+// marked them sold, with a "SOLD" watermark on the gallery; after the
+// window they 404 like REMOVED.
 listingsRouter.get('/:slug', async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({
@@ -140,7 +170,12 @@ listingsRouter.get('/:slug', async (req, res, next) => {
         },
       },
     });
-    if (!listing || listing.status !== 'ACTIVE') {
+    if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+    const soldVisible =
+      listing.status === 'SOLD' &&
+      listing.soldAt &&
+      Date.now() - listing.soldAt.getTime() < SOLD_VISIBILITY_MS;
+    if (listing.status !== 'ACTIVE' && !soldVisible) {
       throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
     }
     res.json({
@@ -157,8 +192,17 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       images: listing.images,
       primaryImage: listing.images[0] ?? '',
       certificationStatus: listing.certificationStatus,
-      inspectionReportUrl: listing.inspectionReportUrl,
-      cpoDocs: listing.cpoDocs,
+      // Status + soldAt surface SOLD rows still inside the 1-hour grace
+      // window so the buyer detail page can render the "SOLD" overlay on
+      // every gallery image and disable the Enquire CTA.
+      status: listing.status,
+      soldAt: listing.soldAt?.toISOString() ?? null,
+      // Legacy rows stored CPO-kit URLs against `https://torque.mock` and a
+      // few inspection rows used bare filenames; normalise both shapes so
+      // anchor clicks resolve through the API instead of triggering a DNS
+      // failure or hitting the wrong relative path (QA BUG-19).
+      inspectionReportUrl: normalizeInspectionUrl(listing.inspectionReportUrl),
+      cpoDocs: normalizeCpoDocs(listing.cpoDocs),
       // `owners` joined the Listing model in migration 20260506100000_listing_add_owners.
       // The generated Prisma type is typed-cast here until the next clean
       // regenerate; engine queries already select all columns.

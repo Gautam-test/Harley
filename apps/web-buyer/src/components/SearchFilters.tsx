@@ -104,6 +104,12 @@ export function SearchFilters() {
   const maxMonthly = watch('maxMonthly');
   const maxKms = watch('maxKms');
 
+  // Auto-apply debounce timer — declared up here so onReset (Clear All)
+  // can cancel any in-flight submit before clearing form state. Without
+  // this hoist the reset path raced with a pending pincode-effect timer
+  // (QA BUG-4: filter values appeared to "stick" after Clear All).
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const onSubmit = (v: FormValues) => {
     const next = new URLSearchParams();
     if (v.searchBy === 'monthly') next.set('searchBy', 'monthly');
@@ -162,6 +168,16 @@ export function SearchFilters() {
     // visibly snap back even if the watcher path is interrupted by a
     // parallel auto-apply pass. selfDrivenChange flag is intentionally
     // NOT raised — we WANT the watcher to confirm the reset on its tick.
+    //
+    // Cancel any in-flight auto-apply timer so a pending submit can't
+    // re-apply the now-cleared form values after we've already reset.
+    // QA BUG-4: previously a pending pincode timeout could race past the
+    // reset and silently push the cleared form back through onSubmit.
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    selfDrivenChange.current = false;
     setSearchBy('cash');
     reset(formDefaults(new URLSearchParams()));
     setParams(new URLSearchParams());
@@ -172,7 +188,6 @@ export function SearchFilters() {
   // Apply. Slider drags get a short 250 ms debounce; selects/radios fire on
   // the next tick. Cleared on unmount.
   const allValues = useWatch({ control });
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {

@@ -25,6 +25,11 @@ interface ListingDetail {
   images: string[];
   inspectionReportUrl: string | null;
   certificationStatus: 'CPO' | 'AS_IS';
+  /** ACTIVE in normal flow; SOLD only when within the 1-hour grace window
+   *  after the dealer marked the bike sold. After the window the API
+   *  returns 404 and the buyer hits the NotFound page. */
+  status: 'ACTIVE' | 'SOLD';
+  soldAt: string | null;
   owners: number | null;
   publishedAt: string | null;
   dealerId: string;
@@ -104,7 +109,11 @@ export function ListingDetailPage() {
           {/* Top section — gallery left, price/dealer card right */}
           <div className="grid lg:grid-cols-[1fr_360px] gap-8">
             <div>
-              <ImageGallery images={data.images} alt={heading} />
+              <ImageGallery
+                images={data.images}
+                alt={heading}
+                sold={data.status === 'SOLD'}
+              />
             </div>
 
             <aside>

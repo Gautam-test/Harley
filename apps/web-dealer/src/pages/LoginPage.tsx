@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@hd-cpo/ui';
@@ -14,6 +14,19 @@ export function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
   const [error, setError] = useState<string | null>(null);
+  // Session-expiry banner — set by api.ts when a 401-after-refresh-fail
+  // boots the user back to /login. Cleared on the next successful login
+  // OR when the dealer dismisses it. Read once on mount so navigating
+  // back to /login from a fresh action doesn't re-fire the toast.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem('hd-cpo:session-expired') === '1') {
+        setSessionExpired(true);
+        window.sessionStorage.removeItem('hd-cpo:session-expired');
+      }
+    } catch { /* ignore */ }
+  }, []);
   const { register, handleSubmit, formState } = useForm<FormValues>({
     defaultValues: { remember: true },
   });
@@ -41,7 +54,13 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-hd-white">
+    // h-screen + overflow-hidden caps the layout to one viewport so the
+    // login page can never scroll (QA: should be a fixed single-view).
+    // The marketing aside + form section are constrained vertically and
+    // their inner content uses overflow-y-auto only if absolutely needed
+    // on tiny phones — desktop never produces overflow because both
+    // columns are sized to the viewport height.
+    <div className="h-screen overflow-hidden grid lg:grid-cols-2 bg-hd-white">
       {/* Left — orange marketing panel */}
       <aside className="relative hidden lg:flex flex-col justify-between bg-hd-orange text-hd-black p-12 overflow-hidden">
         <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(0,0,0,0.6),_transparent_60%)]" />
@@ -107,15 +126,33 @@ export function LoginPage() {
                 />
                 <span>Remember me</span>
               </label>
-              {/* Self-serve password reset isn't built yet — point at the
-                  helpdesk instead of dead-#'ing so a stranded rep has a
-                  recovery path. Surface as plain text, not a link, until
-                  the reset flow ships. */}
-              <span className="font-subhead uppercase tracking-subhead text-xs text-gray-500">
-                Forgot? Call +91 98188 00000
-              </span>
+              {/* Self-serve password reset isn't built yet — point the
+                  link at a tel: URL + mailto chain via a small popup so a
+                  stranded rep has a real recovery path (QA: link must be
+                  clickable). Mobile clicks dial directly; desktop offers
+                  to open the system phone / mail handler. */}
+              <button
+                type="button"
+                onClick={() => {
+                  const ok = window.confirm(
+                    'Self-serve password reset is coming soon.\n\nFor now, contact H-D Certified support to reset your password:\n  · Phone: +91 98188 00000\n  · Email: support@hd-certified.in\n\nClick OK to call now.',
+                  );
+                  if (ok) window.location.href = 'tel:+919818800000';
+                }}
+                className="font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:underline"
+              >
+                Forgot password?
+              </button>
             </div>
 
+            {sessionExpired && !error && (
+              <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card">
+                <strong className="font-subhead uppercase tracking-subhead text-xs block mb-0.5">
+                  Session timed out
+                </strong>
+                Your 12-hour session has expired. Please sign in again to continue.
+              </div>
+            )}
             {error && (
               <div className="text-danger text-sm bg-danger/10 border border-danger/30 px-3 py-2 rounded-card">
                 {error}

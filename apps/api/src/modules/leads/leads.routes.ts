@@ -131,6 +131,74 @@ dealerLeadsRouter.get(
   },
 );
 
+// Activity timeline for a lead — every pipeline status change + the
+// implicit "Lead Created" anchor at the row's createdAt. Backed by the
+// AuditLog table (already indexed on entityType + entityId). Dealer-scoped
+// so a dealer can never read another dealer's lead history.
+dealerLeadsRouter.get(
+  '/:kind/:id/activity',
+  validate(z.object({ kind: z.enum(['buyer', 'trade-in']), id: z.string().min(1) }), 'params'),
+  async (req, res, next) => {
+    try {
+      const { kind, id } = req.params as { kind: 'buyer' | 'trade-in'; id: string };
+      // Dealer-scope check: confirm the lead belongs to this dealer before
+      // returning any activity rows.
+      const { prisma } = await import('../../config/prisma.js');
+      const owns =
+        kind === 'buyer'
+          ? await prisma.enquiry.findFirst({
+              where: { id, dealerId: req.auth!.sub },
+              select: { id: true, createdAt: true },
+            })
+          : await prisma.tradeInLead.findFirst({
+              where: { id, dealerId: req.auth!.sub },
+              select: { id: true, createdAt: true },
+            });
+      if (!owns) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+
+      const entityType = kind === 'buyer' ? 'Enquiry' : 'TradeInLead';
+      const rows = await prisma.auditLog.findMany({
+        where: { entityType, entityId: id },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          actorRole: true,
+          action: true,
+          metadata: true,
+          createdAt: true,
+        },
+      });
+      // Synthesise a Lead Created anchor at the row's createdAt timestamp
+      // so the timeline always has a starting point, including for buyer
+      // OTP-flow enquiries that skipped the LEAD_CREATED_MANUAL audit row.
+      const hasCreated = rows.some((r) => r.action.startsWith('LEAD_CREATED'));
+      const items = (
+        hasCreated
+          ? rows
+          : [
+              {
+                id: `synthetic-created-${id}`,
+                actorRole: 'SYSTEM' as const,
+                action: 'LEAD_CREATED',
+                metadata: null,
+                createdAt: owns.createdAt,
+              },
+              ...rows,
+            ]
+      ).map((r) => ({
+        id: r.id,
+        actorRole: r.actorRole,
+        action: r.action,
+        metadata: r.metadata as Record<string, unknown> | null,
+        createdAt: r.createdAt.toISOString(),
+      }));
+      res.json(items);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
 dealerLeadsRouter.patch(
   '/:kind/:id/status',
   validate(z.object({ kind: z.enum(['buyer', 'trade-in']), id: z.string().min(1) }), 'params'),
@@ -140,21 +208,29 @@ dealerLeadsRouter.patch(
       const { kind, id } = req.params as { kind: 'buyer' | 'trade-in'; id: string };
       const { status } = req.body as { status: LeadStatus };
       const updated = await updateLeadStatus(req.auth!.sub, kind, id, status);
-      // Audit every pipeline move so admins (via /audit) can reconstruct
-      // exactly when a lead changed state and which dealer did it.
-      void audit({
-        actorId: req.auth!.sub,
-        actorRole: 'DEALER',
-        action: 'LEAD_STATUS_CHANGED',
-        entityType: kind === 'buyer' ? 'Enquiry' : 'TradeInLead',
-        entityId: id,
-        metadata: { newStatus: status, kind },
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent') ?? undefined,
-      }).catch(() => {
-        /* swallow audit failure */
-      });
-      res.json({ id: updated.id, status: updated.status });
+      // Audit every pipeline move so admins (via /audit) and dealers (via
+      // the activity timeline on the lead detail page) can reconstruct
+      // exactly when a lead changed state, who did it, and what the prior
+      // status was. No-op moves (current === target) skip the audit row.
+      if (updated.changed) {
+        void audit({
+          actorId: req.auth!.sub,
+          actorRole: 'DEALER',
+          action: 'LEAD_STATUS_CHANGED',
+          entityType: kind === 'buyer' ? 'Enquiry' : 'TradeInLead',
+          entityId: id,
+          metadata: {
+            from: updated.fromStatus,
+            to: updated.toStatus,
+            kind,
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent') ?? undefined,
+        }).catch(() => {
+          /* swallow audit failure */
+        });
+      }
+      res.json({ id, status: updated.toStatus });
     } catch (e) {
       next(e);
     }

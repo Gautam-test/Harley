@@ -20,7 +20,13 @@ interface AdminListingDetail {
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
   publishedAt: string | null;
   createdAt: string;
-  dealer: { id: string; name: string; city: string; phone: string | null };
+  dealer: {
+    id: string;
+    name: string;
+    city: string;
+    pincode: string;
+    phone: string | null;
+  };
 }
 
 interface DrawerProps {
@@ -227,7 +233,9 @@ function DrawerBody({ listing }: { listing: AdminListingDetail }) {
       <Section label="Dealer">
         <div className="text-sm text-text-on-light">
           <div className="font-subhead">{listing.dealer.name}</div>
-          <div className="text-gray-600">{listing.dealer.city}</div>
+          <div className="text-gray-600">
+            {[listing.dealer.city, listing.dealer.pincode].filter(Boolean).join(' · ')}
+          </div>
           {listing.dealer.phone && <div className="text-gray-600">{listing.dealer.phone}</div>}
         </div>
       </Section>

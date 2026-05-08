@@ -312,13 +312,25 @@ export function MyListingsPage() {
                       actions are valid for the row at once. */}
                   <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
-                      <span
-                        className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
-                        title="An H-D admin will review and publish this listing."
-                      >
-                        <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
-                        Awaiting review
-                      </span>
+                      <>
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
+                          title="An H-D admin will review and publish this listing."
+                        >
+                          <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
+                          Awaiting review
+                        </span>
+                        {/* Edit link is always available on a DRAFT — the
+                            dealer might spot a typo before admin review or
+                            want to swap a photo. The wizard hydrates from
+                            the saved draft (no localStorage redux). */}
+                        <Link
+                          to={`/listings/${l.id}/edit`}
+                          className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline ml-2"
+                        >
+                          Edit
+                        </Link>
+                      </>
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <Link
@@ -402,6 +414,32 @@ export function MyListingsPage() {
                       >
                         <TrashIcon />
                       </IconAction>
+                    )}
+                    {/* Off-market rows still need an action affordance —
+                        previously the column went empty for SOLD / REMOVED
+                        rows (QA flagged "missing operational links"). View
+                        opens the dealer-side detail/edit page hydrated from
+                        the server so the dealer can see photos, price, VIN,
+                        admin feedback, etc. for record-keeping. */}
+                    {(l.status === 'SOLD' || l.status === 'REMOVED') && (
+                      <Link
+                        to={`/listings/${l.id}/edit`}
+                        aria-label={
+                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
+                        }
+                        title={
+                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
+                        }
+                        className="group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50"
+                      >
+                        <EyeIcon />
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
+                        >
+                          {l.status === 'SOLD' ? 'View Details' : 'View / Restore'}
+                        </span>
+                      </Link>
                     )}
                   </div>
                 </Td>

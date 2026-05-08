@@ -2,20 +2,27 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useSellBikeStore } from '../store/sellBike';
 
+// Top-nav link weight: H-D 2026 guidelines reserve 1903 Bold (700) for
+// page headlines and primary CTAs. Nav items + the drawer rows use 1903
+// Regular (400) — overriding the .font-subhead utility's bundled 700 with
+// `font-normal` so the header doesn't read as visually heavier than the
+// page headline below it (QA bug — "Header font weight too heavy"). The
+// uppercase + tracking-subhead treatment carries the brand voice without
+// the bold cut.
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `font-subhead uppercase tracking-subhead text-sm transition pb-1 border-b-2 ${
+  `font-subhead font-normal uppercase tracking-subhead text-sm transition pb-1 border-b-2 ${
     isActive
       ? 'text-hd-orange border-hd-orange'
       : 'text-text-primary border-transparent hover:text-hd-orange'
   }`;
 
 const navButtonClasses =
-  'font-subhead uppercase tracking-subhead text-sm transition pb-1 border-b-2 border-transparent text-text-primary hover:text-hd-orange';
+  'font-subhead font-normal uppercase tracking-subhead text-sm transition pb-1 border-b-2 border-transparent text-text-primary hover:text-hd-orange';
 
 // Same NavLink active classes but adapted for the mobile drawer (no
 // underline; full-width row instead).
 const drawerLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `block px-6 py-4 font-subhead uppercase tracking-subhead text-base border-l-4 transition ${
+  `block px-6 py-4 font-subhead font-normal uppercase tracking-subhead text-base border-l-4 transition ${
     isActive
       ? 'text-hd-orange border-hd-orange bg-hd-orange/10'
       : 'text-text-primary border-transparent hover:text-hd-orange hover:bg-surface-2/40'
@@ -141,7 +148,7 @@ export function SiteHeader() {
                 openSellBike();
                 setDrawerOpen(false);
               }}
-              className="block w-full text-left px-6 py-4 font-subhead uppercase tracking-subhead text-base border-l-4 border-transparent text-text-primary hover:text-hd-orange hover:bg-surface-2/40 transition"
+              className="block w-full text-left px-6 py-4 font-subhead font-normal uppercase tracking-subhead text-base border-l-4 border-transparent text-text-primary hover:text-hd-orange hover:bg-surface-2/40 transition"
             >
               Sell Your Bike
             </button>
