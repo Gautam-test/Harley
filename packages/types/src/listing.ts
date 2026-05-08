@@ -50,6 +50,12 @@ export const listingCard = z.object({
   // judge proximity at a glance without having to click into the detail
   // page. Required (Dealer.pincode is NOT NULL in Prisma schema).
   pincode: z.string(),
+  // Status + soldAt surface SOLD rows in the 1-hour visibility window
+  // (after that the row drops off the search grid entirely). The card
+  // overlays a SOLD watermark + disables the click-through whenever
+  // status === 'SOLD'.
+  status: listingStatus,
+  soldAt: z.string().nullable(),
 });
 export type ListingCard = z.infer<typeof listingCard>;
 

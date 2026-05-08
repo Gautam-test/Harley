@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Select } from '@hd-cpo/ui';
 import { PRICE_MAX, KMS_MAX } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
@@ -123,6 +123,7 @@ const initial: FormState = {
 
 export function AddListingPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   // /listings/:id/edit reuses the same component as /listings/new — the
   // presence of `:id` switches the wizard into edit mode (hydrate from
   // server, PATCH on submit) while /new stays the create flow (start
@@ -284,6 +285,11 @@ export function AddListingPage() {
       // Belt-and-braces: drop any legacy draft a previous build may have
       // left in localStorage so the next "Add Listing" click stays clean.
       if (!isEditMode) clearLegacyDraft();
+      // Invalidate every consumer of /dealer/listings so the dashboard's
+      // Listings Snapshot tile, the My Listings tab counts, the Leads
+      // form's listing dropdown, and the sidebar badges all reflect the
+      // new row immediately (QA: "Listing Snapshot count not updating").
+      qc.invalidateQueries({ queryKey: ['dealer-listings'] });
       navigate('/listings');
     },
   });
@@ -298,6 +304,7 @@ export function AddListingPage() {
       api(`/dealer/listings/${editId}`, { method: 'DELETE' }),
     onSuccess: () => {
       clearLegacyDraft();
+      qc.invalidateQueries({ queryKey: ['dealer-listings'] });
       navigate('/listings');
     },
   });
@@ -1354,20 +1361,22 @@ function PhotoSlot({
     >
       {empty ? (
         <>
-          {isCoverSlot && (
-            <svg
-              className="w-6 h-6 text-hd-orange mb-1"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-          )}
+          {/* Upload arrow on every empty tile (not just the cover slot) so
+              the affordance is visually consistent across Front · Side ·
+              Rear · Engine · Cockpit. The cover slot still gets a darker
+              label below to flag its primacy. */}
+          <svg
+            className="w-6 h-6 text-hd-orange mb-1"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
           <span
             className={`font-subhead uppercase tracking-subhead text-[10px] leading-tight px-2 ${
               isCoverSlot ? 'text-text-on-light' : 'text-gray-500'

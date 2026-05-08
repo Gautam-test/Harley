@@ -154,30 +154,37 @@ export function DealerShell() {
               )}
             </svg>
           </button>
-          <Link to="/dashboard" className="flex items-center gap-3 group min-w-0">
-            {/* Hand-authored SVG wordmark — dark variant for the white dealer header. */}
-            <img
-              // Vite base for the dealer SPA is "/dealer/", so an absolute
-              // "/brand/..." path 404s in production (the buyer SPA owns
-              // root). Prefix every static asset URL with import.meta.env
-              // .BASE_URL so dev (`/dealer/`) and prod (`/dealer/`) both
-              // resolve to the right public/brand path.
-              src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
-              alt="H-D Certified™"
-              className="h-9 w-auto shrink-0"
-              width={193}
-              height={36}
-              decoding="async"
-            />
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Only the wordmark is the clickable home-link target. The
+                dealer name sits beside it as plain caption text — earlier
+                builds wrapped both in a single <Link>, so hovering anywhere
+                in the lockup turned "Capital Harley-Davidson Gurgaon"
+                orange and showed a hand cursor over the dealer name (QA:
+                "incorrect orange + unnecessary hand icon"). */}
+            <Link to="/dashboard" aria-label="H-D Certified — Dashboard" className="shrink-0">
+              <img
+                // Vite base for the dealer SPA is "/dealer/", so an absolute
+                // "/brand/..." path 404s in production (the buyer SPA owns
+                // root). Prefix every static asset URL with import.meta.env
+                // .BASE_URL so dev (`/dealer/`) and prod (`/dealer/`) both
+                // resolve to the right public/brand path.
+                src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
+                alt="H-D Certified™"
+                className="h-9 w-auto"
+                width={193}
+                height={36}
+                decoding="async"
+              />
+            </Link>
             <span className="leading-tight border-l border-gray-200 pl-3 hidden sm:block">
               <span className="block font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
                 Dealer Portal
               </span>
-              <span className="block font-headline tracking-headline text-lg uppercase text-text-on-light group-hover:text-hd-orange transition truncate">
+              <span className="block font-headline tracking-headline text-lg uppercase text-text-on-light truncate">
                 {dealerName}
               </span>
             </span>
-          </Link>
+          </div>
 
           <div className="flex items-center gap-3 shrink-0">
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-sm">

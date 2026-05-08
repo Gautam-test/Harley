@@ -17,6 +17,11 @@ export interface ListingCardData {
    *  proximity without clicking into the detail page. */
   pincode: string;
   colour: string;
+  /** Listing status — only ACTIVE and (within 1 hour) SOLD reach the
+   *  buyer site. SOLD rows render a watermark overlay and the click is
+   *  intercepted on the wrapper. */
+  status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
+  soldAt: string | null;
 }
 
 // Card layout matches the frozen Figma design exactly:
@@ -32,17 +37,25 @@ export interface ListingCardData {
 //   └────────────────────────┘
 export function ListingCardItem({ listing }: { listing: ListingCardData }) {
   const stockCode = listing.vin?.slice(-5).toUpperCase() || '';
+  const isSold = listing.status === 'SOLD';
   return (
     <Link
       to={`/listings/${listing.slug}`}
-      className="group block bg-hd-white border border-gray-200 rounded-card overflow-hidden hover:border-hd-orange transition"
+      // Click-through still works for SOLD rows so buyers can see the
+      // watermark + dealer info on the detail page; after the 1h window
+      // the detail will 404, mirroring the search grid hiding the row.
+      className={`group block bg-hd-white border border-gray-200 rounded-card overflow-hidden hover:border-hd-orange transition ${
+        isSold ? 'opacity-90' : ''
+      }`}
     >
       <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
         <img
           src={listing.primaryImage || '/brand/listing-placeholder.svg'}
           alt={`${listing.year} ${listing.modelName}`}
           loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-[1.02] transition"
+          className={`w-full h-full object-cover transition ${
+            isSold ? 'grayscale-[35%]' : 'group-hover:scale-[1.02]'
+          }`}
           onError={(e) => {
             // Dealer-uploaded URL 404'd (deleted, wrong path, transient
             // network) — swap to the local placeholder so the card
@@ -56,6 +69,21 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             }
           }}
         />
+        {/* SOLD watermark — diagonal banner overlay rendered for the 1-
+            hour visibility window after the dealer hits Mark Sold. After
+            the window the row drops off the grid entirely (server-side
+            filter), so this overlay is the only place a buyer ever sees
+            "SOLD" on a card. */}
+        {isSold && (
+          <div
+            aria-hidden
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <span className="-rotate-12 select-none bg-danger/90 text-hd-white font-headline tracking-headline uppercase text-3xl sm:text-4xl px-8 py-2 border-4 border-hd-white shadow-lg">
+              Sold
+            </span>
+          </div>
+        )}
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (
             <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">

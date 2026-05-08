@@ -24,8 +24,15 @@ const envSchema = z.object({
 
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  // Access token TTL — keep short (15 min) so revocation propagates fast;
+  // the SPA silently refreshes via the rotating refresh token below.
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
-  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(604800),
+  // Refresh token (= effective dealer / admin session length): 12 hours
+  // per QA. Once expired, the SPA's silent-refresh path returns null and
+  // the api.ts client clears auth + bounces to /login with a "Session
+  // expired" toast. Override via env in long-lived demo / staging if a
+  // longer window is needed (production stays at the 12h default).
+  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(12 * 60 * 60),
 
   OTP_VERIFIED_TOKEN_SECRET: z.string().min(16),
   OTP_VERIFIED_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),

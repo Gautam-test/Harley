@@ -64,6 +64,15 @@ const KIND_LABEL: Record<Kind, string> = {
   'trade-in': 'Seller Lead',
 };
 
+// Breadcrumb back-link copy — the dealer's queue tabs are labelled "Buyer
+// Enquiries" / "Seller Enquiries" (matching the buyer-facing terminology),
+// so the back link reads "← Back to Buyer Enquiries" rather than the
+// internal "Lead" word.
+const KIND_BACK_LABEL: Record<Kind, string> = {
+  buyer: 'Buyer Enquiries',
+  'trade-in': 'Seller Enquiries',
+};
+
 export function LeadDetailPage() {
   const navigate = useNavigate();
   const { kind: rawKind, id } = useParams<{ kind: string; id: string }>();
@@ -175,7 +184,7 @@ export function LeadDetailPage() {
         to={`/leads/${kind}`}
         className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5 rounded-card"
       >
-        ← Back to {KIND_LABEL[kind]}s
+        ← Back to {KIND_BACK_LABEL[kind]}
       </Link>
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-8 mt-6">

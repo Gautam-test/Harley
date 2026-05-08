@@ -415,6 +415,32 @@ export function MyListingsPage() {
                         <TrashIcon />
                       </IconAction>
                     )}
+                    {/* Off-market rows still need an action affordance —
+                        previously the column went empty for SOLD / REMOVED
+                        rows (QA flagged "missing operational links"). View
+                        opens the dealer-side detail/edit page hydrated from
+                        the server so the dealer can see photos, price, VIN,
+                        admin feedback, etc. for record-keeping. */}
+                    {(l.status === 'SOLD' || l.status === 'REMOVED') && (
+                      <Link
+                        to={`/listings/${l.id}/edit`}
+                        aria-label={
+                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
+                        }
+                        title={
+                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
+                        }
+                        className="group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50"
+                      >
+                        <EyeIcon />
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
+                        >
+                          {l.status === 'SOLD' ? 'View Details' : 'View / Restore'}
+                        </span>
+                      </Link>
+                    )}
                   </div>
                 </Td>
               </tr>
