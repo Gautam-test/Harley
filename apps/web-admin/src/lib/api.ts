@@ -68,7 +68,10 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
         headers: buildHeaders(init, newToken),
       });
       if (retry.ok) return (await retry.json()) as T;
-      if (retry.status === 401) useAuthStore.getState().clear();
+      if (retry.status === 401) {
+        useAuthStore.getState().clear();
+        try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
+      }
       const body = (await retry.json().catch(() => null)) as
         | { error?: { code: string; message: string } }
         | null;
@@ -79,6 +82,7 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
       );
     }
     useAuthStore.getState().clear();
+    try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
   }
 
   if (!res.ok) {

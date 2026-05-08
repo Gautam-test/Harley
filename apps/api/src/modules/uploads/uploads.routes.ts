@@ -175,7 +175,10 @@ uploadsRouter.post(
 // glyphs after every successful upload — flagged in QA bug 5.
 uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, next) => {
   try {
-    const filename = req.params.filename ?? '';
+    // Express 5 widens params to `string | string[]`; coerce so the regex
+    // gate below treats anything else as a bad filename.
+    const raw = req.params.filename;
+    const filename = typeof raw === 'string' ? raw : '';
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }

@@ -122,7 +122,12 @@ inspectionRouter.post(
 // "Preview / replace file" link broke immediately after upload.
 inspectionRouter.get('/files/:filename', optionalAuth, async (req, res, next) => {
   try {
-    const filename = req.params.filename ?? '';
+    // Express 5 types params as `string | string[]`; coerce to string so the
+    // regex narrowing below covers both shapes (an array would never match
+    // the single-segment regex anyway, so it falls into the BAD_FILENAME
+    // branch as intended).
+    const raw = req.params.filename;
+    const filename = typeof raw === 'string' ? raw : '';
     if (!/^[a-zA-Z0-9-]+\.[a-zA-Z0-9]+$/.test(filename)) {
       throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
     }

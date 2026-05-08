@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@hd-cpo/ui';
@@ -13,6 +13,18 @@ export function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
   const [error, setError] = useState<string | null>(null);
+  // Session-expiry banner — set by api.ts when a 12-hour session times out
+  // and the silent-refresh fails. Cleared on first read so navigating back
+  // to /login from a fresh action doesn't re-show the toast.
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    try {
+      if (window.sessionStorage.getItem('hd-cpo:session-expired') === '1') {
+        setSessionExpired(true);
+        window.sessionStorage.removeItem('hd-cpo:session-expired');
+      }
+    } catch { /* ignore */ }
+  }, []);
   const { register, handleSubmit, formState } = useForm<FormValues>();
 
   const onSubmit = async (values: FormValues) => {
@@ -65,6 +77,14 @@ export function LoginPage() {
               {...register('password', { required: true, minLength: 8 })}
             />
           </div>
+          {sessionExpired && !error && (
+            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card">
+              <strong className="font-subhead uppercase tracking-subhead text-xs block mb-0.5">
+                Session timed out
+              </strong>
+              Your 12-hour admin session has expired. Please sign in again to continue.
+            </div>
+          )}
           {error && <div className="text-danger text-sm">{error}</div>}
           <Button type="submit" className="w-full" disabled={formState.isSubmitting}>
             {formState.isSubmitting ? 'Signing in…' : 'Sign In'}

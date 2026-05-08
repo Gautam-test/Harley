@@ -6,6 +6,7 @@ interface DealerListingRow {
   id: string;
   status: string;
   publishedAt: string | null;
+  createdAt: string;
 }
 
 interface LeadRow {
@@ -37,6 +38,13 @@ export function DashboardPage() {
   const newCount = (rows?: LeadRow[]) =>
     rows?.filter((l) => new Date(l.createdAt).getTime() >= sevenDaysAgo).length ?? 0;
 
+  // Listings created in the last 7 days, regardless of status — backs the
+  // "New Listings" tile (renamed from "New Leads" per QA). Counts every
+  // status so a dealer who immediately publishes still sees their fresh
+  // bike in the count.
+  const newListingsCount =
+    listings?.filter((l) => new Date(l.createdAt).getTime() >= sevenDaysAgo).length ?? 0;
+
   const stats = {
     active: listings?.filter((l) => l.status === 'ACTIVE').length ?? 0,
     drafts: listings?.filter((l) => l.status === 'DRAFT').length ?? 0,
@@ -54,11 +62,15 @@ export function DashboardPage() {
       )
       .map((l) => l.id) ?? [];
 
+  // Tile labels now drop the "(7d)" suffix per QA — the time-window is
+  // implicit from the dashboard's recency framing. "New Listings" replaces
+  // the old "New Leads" tile (which was confusingly counting buyer + trade-
+  // in leads under a single label that read like a listings metric).
   const tiles = [
     { label: 'Active Listings', value: stats.active },
-    { label: 'New Leads (7d)', value: newCount(buyer) + newCount(tradeIn) },
-    { label: 'Trade-In (7d)', value: newCount(tradeIn) },
-    { label: 'Listing Enquiries (7d)', value: newCount(buyer) },
+    { label: 'New Listings', value: newListingsCount },
+    { label: 'Trade-In', value: newCount(tradeIn) },
+    { label: 'Listing Enquiries', value: newCount(buyer) },
   ];
 
   return (

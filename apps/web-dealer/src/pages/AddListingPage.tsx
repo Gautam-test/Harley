@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input, Select } from '@hd-cpo/ui';
+import { PRICE_MAX, KMS_MAX } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 
 // Edit-mode hydration shape — the GET /dealer/listings/:id response.
@@ -24,33 +25,32 @@ interface ExistingListing {
   adminFeedback: string | null;
 }
 
-// Wizard form state is held in localStorage between page loads under this
-// key — a tab refresh / accidental close used to wipe the entire VIN +
-// photos + inspection trail. Single-key store is fine because a dealer
-// can only be working on one listing at a time per browser session.
+// Maps the `cause` field-name in a backend Zod field-error payload to the
+// label the dealer recognises from the wizard. Keeps the validation error
+// readout in plain English ("Selling Price: cannot exceed ₹1 crore")
+// instead of leaking the schema field names ("price").
+const FIELD_LABEL: Record<string, string> = {
+  vin: 'VIN',
+  price: 'Selling Price',
+  kmsDriven: 'KMs Driven',
+  owners: 'Owners',
+  description: 'Description',
+  images: 'Photos',
+  inspectionReportUrl: 'Inspection Report',
+  certificationStatus: 'Certification Tag',
+  cpoDocs: 'CPO Documents',
+};
+
+// Legacy auto-save key — earlier builds persisted in-progress wizard state to
+// localStorage so a tab refresh wouldn't wipe the form. Dealers found this
+// confusing because clicking "Add Listing" after a previous submit silently
+// pre-filled the form with the old VIN / photos / description. We now start
+// every Add Listing visit on a fresh form; this helper clears any draft a
+// returning user might still have in their browser from the older build.
 const DRAFT_STORAGE_KEY = 'hd-cpo:add-listing-draft';
 
-function readDraft(): FormState | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as FormState;
-  } catch {
-    return null;
-  }
-}
-
-function writeDraft(s: FormState) {
-  try {
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(s));
-  } catch {
-    // Quota exceeded / private mode — silently drop, dealer just loses
-    // the autosave benefit, no need to surface an error.
-  }
-}
-
-function clearDraft() {
+function clearLegacyDraft() {
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
@@ -123,16 +123,23 @@ const initial: FormState = {
 
 export function AddListingPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   // /listings/:id/edit reuses the same component as /listings/new — the
   // presence of `:id` switches the wizard into edit mode (hydrate from
   // server, PATCH on submit) while /new stays the create flow (start
-  // empty / from localStorage draft, POST on submit).
+  // empty, POST on submit).
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = Boolean(editId);
 
-  // In edit mode we ignore the localStorage draft (which is keyed to the
-  // create flow); in create mode we hydrate from it as before.
-  const [s, setS] = useState<FormState>(() => (isEditMode ? initial : readDraft() ?? initial));
+  // Always start the create wizard on a clean form. Earlier builds restored
+  // an in-progress draft from localStorage which surprised dealers on the
+  // next visit — clicking Add Listing showed the previous bike's VIN, photos
+  // and description still filled in. We now wipe the legacy key on mount and
+  // mount the form from `initial`.
+  const [s, setS] = useState<FormState>(initial);
+  useEffect(() => {
+    if (!isEditMode) clearLegacyDraft();
+  }, [isEditMode]);
   const update = (patch: Partial<FormState>) => setS((p) => ({ ...p, ...patch }));
 
   // Edit-mode hydration. Fetches the listing once on mount and seeds the
@@ -171,14 +178,6 @@ export function AddListingPage() {
       certificationStatus: e.certificationStatus,
     });
   }, [existing.data]);
-
-  // Mirror state into localStorage on every change in CREATE mode only.
-  // Edit mode hydrates from the server every visit and a stale draft would
-  // overwrite admin-feedback edits — so we keep the draft scoped to /new.
-  useEffect(() => {
-    if (isEditMode) return;
-    writeDraft(s);
-  }, [s, isEditMode]);
 
   // beforeunload guard — only warns when the form is "dirty" (anything
   // beyond the initial empty shape). The browser shows its native confirm
@@ -283,9 +282,29 @@ export function AddListingPage() {
       });
     },
     onSuccess: () => {
-      // Wipe the create-mode draft once the listing was created. In edit
-      // mode there's no draft to clear (we never wrote to localStorage).
-      if (!isEditMode) clearDraft();
+      // Belt-and-braces: drop any legacy draft a previous build may have
+      // left in localStorage so the next "Add Listing" click stays clean.
+      if (!isEditMode) clearLegacyDraft();
+      // Invalidate every consumer of /dealer/listings so the dashboard's
+      // Listings Snapshot tile, the My Listings tab counts, the Leads
+      // form's listing dropdown, and the sidebar badges all reflect the
+      // new row immediately (QA: "Listing Snapshot count not updating").
+      qc.invalidateQueries({ queryKey: ['dealer-listings'] });
+      navigate('/listings');
+    },
+  });
+
+  // Discard Draft — only meaningful in edit mode for a row that's still in
+  // DRAFT (an ACTIVE / SOLD listing follows the table-level Remove flow).
+  // Soft-removes via DELETE /dealer/listings/:id and bounces back to the
+  // table; the listing surfaces under the "Removed" tab if the dealer
+  // ever needs to recover the metadata.
+  const discard = useMutation({
+    mutationFn: () =>
+      api(`/dealer/listings/${editId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      clearLegacyDraft();
+      qc.invalidateQueries({ queryKey: ['dealer-listings'] });
       navigate('/listings');
     },
   });
@@ -301,8 +320,16 @@ export function AddListingPage() {
   const missing: string[] = [];
   if (!s.torque) missing.push('Fetch the VIN from Torque (Step 1)');
   if (!s.price || Number(s.price) <= 0) missing.push('Enter a Selling Price (Step 2)');
+  else if (Number(s.price) > PRICE_MAX)
+    missing.push(
+      `Selling Price cannot exceed ₹${PRICE_MAX.toLocaleString('en-IN')} (₹1 crore) — please double-check the figure (Step 2)`,
+    );
   if (!s.kmsDriven || Number.isNaN(Number(s.kmsDriven)))
     missing.push('Enter KMs Driven (Step 2)');
+  else if (Number(s.kmsDriven) > KMS_MAX)
+    missing.push(
+      `KMs Driven cannot exceed ${KMS_MAX.toLocaleString('en-IN')} km — that's well past any plausible odometer reading (Step 2)`,
+    );
   if (!s.owners || Number(s.owners) < 1) missing.push('Pick the number of Owners (Step 2)');
   if (s.description.length < 20)
     missing.push(`Description needs ${20 - s.description.length} more characters (Step 2)`);
@@ -627,7 +654,31 @@ export function AddListingPage() {
 
         {create.error instanceof ApiError && (
           <div className="text-danger text-sm bg-danger/10 border border-danger px-4 py-3 rounded">
-            {create.error.message}
+            <p className="font-subhead uppercase tracking-subhead text-xs text-danger">
+              {create.error.code === 'VALIDATION_ERROR'
+                ? 'Some fields need attention'
+                : create.error.message}
+            </p>
+            {/* Surface per-field Zod errors verbatim so the dealer sees
+                "Selling price cannot exceed ₹1 crore" instead of the
+                generic "Invalid request payload" headline. */}
+            {create.error.details?.fieldErrors && (
+              <ul className="mt-2 space-y-1 text-xs leading-snug">
+                {Object.entries(create.error.details.fieldErrors).map(
+                  ([field, msgs]) =>
+                    msgs && msgs.length > 0 ? (
+                      <li key={field}>
+                        <span className="font-subhead">{FIELD_LABEL[field] ?? field}:</span>{' '}
+                        {msgs.join(' · ')}
+                      </li>
+                    ) : null,
+                )}
+              </ul>
+            )}
+            {create.error.code === 'VALIDATION_ERROR' &&
+              !create.error.details?.fieldErrors && (
+                <p className="mt-1 text-xs">{create.error.message}</p>
+              )}
           </div>
         )}
 
@@ -652,14 +703,32 @@ export function AddListingPage() {
           </div>
         )}
 
-        {/* Footer actions — Cancel + Submit */}
-        <div className="flex justify-end gap-3 pt-2">
+        {/* Footer actions — Cancel · Discard Draft (edit only) · Submit */}
+        <div className="flex justify-end gap-3 pt-2 flex-wrap">
           <Link
             to="/listings"
             className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
           >
             Cancel
           </Link>
+          {isEditMode && existing.data?.status === 'DRAFT' && (
+            <button
+              type="button"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Discard this draft? The VIN, photos, and inspection PDF will be released and the next Add Listing visit will start fresh. The draft moves to the "Removed" tab and cannot be re-submitted.',
+                  )
+                ) {
+                  discard.mutate();
+                }
+              }}
+              disabled={discard.isPending}
+              className="border border-danger px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-danger hover:bg-danger hover:text-hd-white transition rounded-card disabled:opacity-50"
+            >
+              {discard.isPending ? 'Discarding…' : 'Discard Draft'}
+            </button>
+          )}
           <Button
             onClick={() => create.mutate()}
             disabled={!formValid || create.isPending}
@@ -983,9 +1052,57 @@ const MIN_IMAGES = 5;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
 
-// Slot hints from Figma — first photo is the cover; the next three suggest
-// the standard angles a listing should include. Anything beyond is generic.
-const SLOT_HINTS = ['Front', 'Side', 'Rear', 'Engine', 'Cockpit'];
+// The five canonical angles a listing must cover (per Figma /Dealer/Halrey
+// dealer_page-0002.jpg). Each slot carries:
+//   - `label`     short caption rendered inside the empty tile
+//   - `cover`     true for the hero/cover photo (slot 0) — the first card
+//                 image on the buyer site
+//   - `instruction` one-line composition guidance the dealer sees both as
+//                 a tooltip on the empty tile and in the bullet list above
+//                 the picker. Keep these short and actionable; the goal is
+//                 a quick prompt at upload time, not a photography tutorial.
+interface PhotoSlotDef {
+  label: string;
+  instruction: string;
+  cover?: boolean;
+}
+const PHOTO_SLOTS: PhotoSlotDef[] = [
+  {
+    label: 'Front',
+    instruction:
+      'Straight-on headlight + handlebar shot. Full bike in frame, level horizon, sun behind you.',
+    cover: true,
+  },
+  {
+    label: 'Side',
+    instruction:
+      'Drive-side (right) profile — full length of the bike, fuel tank centered, no clutter behind.',
+  },
+  {
+    label: 'Rear',
+    instruction:
+      'Tail-light + exhaust + number plate, straight-on. Gives the buyer a clean back-end view.',
+  },
+  {
+    label: 'Engine',
+    instruction:
+      'Close-up of the powertrain — cylinders, chrome, model badge. Wipe down before shooting.',
+  },
+  {
+    label: 'Cockpit',
+    instruction:
+      'Rider point of view — speedometer, switchgear, mirrors, grips. Helps buyers picture the ride.',
+  },
+];
+
+// Image specs surfaced in the Photos section so the dealer knows the rules
+// before they open the file picker. Mirrors the validation in addFiles().
+const IMAGE_SPECS = [
+  `Upload at least ${MIN_IMAGES} photos, up to ${MAX_IMAGES} total.`,
+  'Format: JPG, PNG, or WebP. Each file up to 8 MB.',
+  'Landscape orientation looks best — buyers see a 4:3 thumbnail on the search grid.',
+  'First photo becomes the cover; reorder by removing & re-uploading in order.',
+];
 
 function isManagedUploadUrl(url: string) {
   return url.startsWith('/api/v1/uploads/listing-images/');
@@ -1089,20 +1206,15 @@ function ListingImagePicker({
     }
   };
 
-  // Render exactly 4 slot tiles in a row (per Figma). Slots beyond the first 4
-  // collapse into an "extras" row below — keeps the layout neat without
-  // truncating uploads.
-  const slots: { url: string | null; hint: string; index: number }[] = SLOT_HINTS.map(
-    (hint, i) => ({
-      url: images[i] ?? null,
-      hint,
-      index: i,
-    }),
-  );
-  const extras = images.slice(SLOT_HINTS.length);
+  // Render five slot tiles in a row (per Figma — Front · Side · Rear ·
+  // Engine · Cockpit). Anything the dealer adds beyond those falls into
+  // the "extras" row below.
+  const slots: { url: string | null; def: PhotoSlotDef; index: number }[] =
+    PHOTO_SLOTS.map((def, i) => ({ url: images[i] ?? null, def, index: i }));
+  const extras = images.slice(PHOTO_SLOTS.length);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <input
         id="listing-image-input"
         type="file"
@@ -1115,6 +1227,51 @@ function ListingImagePicker({
           e.target.value = '';
         }}
       />
+
+      {/* Spec card — file-format / size / count rules surface BEFORE the
+          dealer opens the file picker so a wrong-format upload doesn't
+          surprise them with a red error after the fact. */}
+      <div className="bg-gray-50 border border-gray-200 rounded p-3 text-[11px] text-gray-700">
+        <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1.5">
+          Photo Requirements
+        </p>
+        <ul className="space-y-0.5 leading-relaxed">
+          {IMAGE_SPECS.map((line) => (
+            <li key={line} className="flex items-start gap-1.5">
+              <span aria-hidden className="text-hd-orange leading-none mt-0.5">
+                ●
+              </span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Per-slot composition guide — "Front: straight-on headlight…",
+          "Side: drive-side profile…" — also rendered as a tooltip on each
+          empty tile via title=. Helps non-photography-trained dealers
+          take usable shots without bouncing back to a separate doc. */}
+      <div className="bg-orange-50/30 border border-hd-orange/30 rounded p-3 text-[11px] text-text-on-light">
+        <p className="font-subhead uppercase tracking-subhead text-[10px] text-hd-orange mb-1.5">
+          Required Angles
+        </p>
+        <ol className="space-y-1 leading-snug">
+          {PHOTO_SLOTS.map((slot, i) => (
+            <li key={slot.label} className="flex gap-2">
+              <span className="font-subhead inline-block min-w-[68px]">
+                {i + 1}. {slot.label}
+                {slot.cover ? (
+                  <span className="text-[9px] text-hd-orange font-subhead uppercase tracking-subhead ml-1">
+                    Cover
+                  </span>
+                ) : null}
+              </span>
+              <span className="text-gray-700">{slot.instruction}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {slots.map((slot) => (
           <PhotoSlot
@@ -1146,7 +1303,7 @@ function ListingImagePicker({
               />
               <button
                 type="button"
-                onClick={() => removeAt(SLOT_HINTS.length + i)}
+                onClick={() => removeAt(PHOTO_SLOTS.length + i)}
                 className="absolute top-1 right-1 bg-danger text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded"
               >
                 Remove
@@ -1177,7 +1334,7 @@ function PhotoSlot({
   disabled,
   onRemove,
 }: {
-  slot: { url: string | null; hint: string; index: number };
+  slot: { url: string | null; def: PhotoSlotDef; index: number };
   /** What goes into <img src=>. Usually blob URL for fresh uploads or
       the server URL for hydrated edits. Null for empty slots. */
   displayUrl: string | null;
@@ -1186,10 +1343,14 @@ function PhotoSlot({
   onRemove: () => void;
 }) {
   const empty = !slot.url;
-  const isCoverSlot = slot.index === 0;
+  const isCoverSlot = !!slot.def.cover;
   return (
     <label
       htmlFor={empty ? 'listing-image-input' : undefined}
+      // Tooltip carries the full one-line composition guidance — visible
+      // on hover even after the slot is filled, so a dealer who wants to
+      // re-shoot can refresh on what the angle was meant to capture.
+      title={`${slot.def.label} — ${slot.def.instruction}`}
       className={`relative aspect-[4/3] flex flex-col items-center justify-center text-center border-2 rounded transition ${
         empty
           ? 'border-dashed border-gray-300 bg-gray-50/40 cursor-pointer hover:border-hd-orange hover:bg-orange-50/30'
@@ -1200,26 +1361,34 @@ function PhotoSlot({
     >
       {empty ? (
         <>
-          {isCoverSlot && (
-            <svg
-              className="w-6 h-6 text-hd-orange mb-1"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-          )}
+          {/* Upload arrow on every empty tile (not just the cover slot) so
+              the affordance is visually consistent across Front · Side ·
+              Rear · Engine · Cockpit. The cover slot still gets a darker
+              label below to flag its primacy. */}
+          <svg
+            className="w-6 h-6 text-hd-orange mb-1"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M12 19V5M5 12l7-7 7 7" />
+          </svg>
           <span
             className={`font-subhead uppercase tracking-subhead text-[10px] leading-tight px-2 ${
-              isCoverSlot ? 'text-text-on-light' : 'text-gray-400'
+              isCoverSlot ? 'text-text-on-light' : 'text-gray-500'
             }`}
           >
-            {slot.hint}
+            {slot.def.label}
+          </span>
+          {/* Two-line abbreviated instruction inside the empty tile so the
+              dealer doesn't have to scroll back up to the bullet list while
+              they're holding a phone over the bike. */}
+          <span className="block text-[9px] text-gray-500 leading-tight mt-1 px-2 line-clamp-2">
+            {slot.def.instruction}
           </span>
         </>
       ) : (

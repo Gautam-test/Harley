@@ -243,12 +243,22 @@ export async function updateLeadStatus(
     throw new HttpError(
       409,
       'INVALID_TRANSITION',
-      `Cannot move a ${kind} lead from ${existing.status} → ${status}. Pipeline is forward-only; only DEAD / LOST can be set from any stage.`,
+      `${status} isn't a valid stage for a ${kind} lead. Pick one of the stages on the ${kind} pipeline (or Dead / Lost as alt-terminals).`,
     );
   }
 
-  if (kind === 'buyer') return prisma.enquiry.update({ where, data: { status } });
-  return prisma.tradeInLead.update({ where, data: { status } });
+  // No-op moves don't generate a new audit row — return the previous
+  // status with `changed: false` so the route handler can skip the audit.
+  if (existing.status === status) {
+    return { fromStatus: existing.status, toStatus: status, changed: false };
+  }
+
+  if (kind === 'buyer') {
+    await prisma.enquiry.update({ where, data: { status } });
+  } else {
+    await prisma.tradeInLead.update({ where, data: { status } });
+  }
+  return { fromStatus: existing.status as LeadStatus, toStatus: status, changed: true };
 }
 
 export async function getLeadDetail(
