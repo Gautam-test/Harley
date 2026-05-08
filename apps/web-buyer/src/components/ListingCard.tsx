@@ -13,6 +13,9 @@ export interface ListingCardData {
   certificationStatus: 'CPO' | 'AS_IS';
   dealerName: string;
   city: string;
+  /** Dealer's 6-digit PIN code — surfaced on the card so buyers can gauge
+   *  proximity without clicking into the detail page. */
+  pincode: string;
   colour: string;
 }
 
@@ -75,7 +78,15 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             italic was borderline against the white card background. */}
         <p className="flex items-center gap-1.5 text-[13px] text-gray-600 mt-2">
           <MapPin />
-          {listing.dealerName}
+          <span className="truncate">
+            {listing.dealerName}
+            {(listing.city || listing.pincode) && (
+              <span className="text-gray-500">
+                {' · '}
+                {[listing.city, listing.pincode].filter(Boolean).join(' ')}
+              </span>
+            )}
+          </span>
         </p>
         <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
           {[stockCode, listing.year, `${listing.kmsDriven.toLocaleString('en-IN')} KM`, listing.colour.toUpperCase()]

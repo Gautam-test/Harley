@@ -16,10 +16,11 @@ export const leadStatus = z.enum([
 ]);
 export type LeadStatus = z.infer<typeof leadStatus>;
 
-// Dealer-facing 7-stage pipeline that the freeze design uses for buyer leads.
-// CONTACTED was missing in the initial cut so any dealer attempt to mark a
-// lead "Contacted" came back with 409 INVALID_TRANSITION even though the
-// status is in the leadStatus enum and the UI offered it.
+// Dealer-facing 6-stage forward pipeline for buyer leads. DEAD lived in this
+// array previously (rendered as the "stage after SUCCESS") which surprised
+// dealers — DEAD is an alt-terminal escape, not a happy-path step. Both
+// DEAD and LOST are now universal alt-terminals (see canTransitionLead and
+// the LeadDetailPage terminal banner) and never appear in the numbered bar.
 export const BUYER_LEAD_PIPELINE = [
   'NEW',
   'CONTACTED',
@@ -27,23 +28,35 @@ export const BUYER_LEAD_PIPELINE = [
   'LOAN_APPROVAL',
   'CLOSED',
   'SUCCESS',
-  'DEAD',
 ] as const satisfies readonly LeadStatus[];
 
-// Seller / trade-in 4-stage pipeline (per Figma Dealer/Halrey dealer_page-0004.jpg).
-//   NEW → CONTACTED (Inspection) → IN_PROGRESS (Approved) → CLOSED, DEAD as alt-terminal.
+// Seller / trade-in 4-stage forward pipeline (per Figma Dealer/Halrey
+// dealer_page-0004.jpg). DEAD removed for the same reason as BUYER above.
 export const SELLER_LEAD_PIPELINE = [
   'NEW',
   'CONTACTED',
   'IN_PROGRESS',
   'CLOSED',
-  'DEAD',
 ] as const satisfies readonly LeadStatus[];
 
-// Allowed transitions: a lead can move forward to any later stage in its
-// pipeline OR jump to the alt-terminal DEAD/LOST at any time. Backwards
-// movement is rejected — mistakes get a comment + a fresh lead, not edits.
-//
+// Friendly labels for both pipelines so the dealer's progress bar, the
+// dropdown, and the buyer-facing track page all show the same words.
+// Keep these in sync with apps/web-buyer/src/pages/TrackPage.tsx → BUYER_STAGES
+// / SELLER_STAGES (those carry buyer-tone copy with extra "note" lines, but
+// the headline label here is the canonical one).
+export const LEAD_STAGE_LABELS: Record<LeadStatus, string> = {
+  NEW: 'Enquiry Received',
+  CONTACTED: 'Dealer Contacted',
+  ON_SITE_VISIT: 'On-Site Visit',
+  LOAN_APPROVAL: 'Loan Approval',
+  IN_PROGRESS: 'In Progress',
+  CONVERTED: 'Converted',
+  CLOSED: 'Booking Closed',
+  SUCCESS: 'Delivered',
+  LOST: 'Lost',
+  DEAD: 'Dead',
+};
+
 // The legacy `general` (info-gate popup) lead kind was removed in May 2026;
 // the buyer journey now goes straight to listing-level enquiries, so only
 // buyer + trade-in remain.
@@ -53,27 +66,32 @@ export const PIPELINE_BY_KIND: Record<LeadKind, readonly LeadStatus[]> = {
   'trade-in': SELLER_LEAD_PIPELINE,
 };
 
-/** Returns true when the dealer is allowed to move from `from` → `to` for this kind. */
+/**
+ * Returns true when the dealer is allowed to move from `from` → `to`.
+ *
+ * Pipeline freely walks in any direction — early builds enforced
+ * forward-only progression, but operations pushed back: real-world flows
+ * include "buyer ghosted, then came back" (LOST → CONTACTED), "marked
+ * Closed but actually still negotiating" (CLOSED → ON_SITE_VISIT), and
+ * "test-ride scheduled before we logged the call" (NEW ↔ ON_SITE_VISIT).
+ * The only invariant is the status must be a value defined in the
+ * leadStatus enum; cross-kind statuses (e.g. IN_PROGRESS on a buyer lead)
+ * are still rejected because they don't render anywhere on that pipeline.
+ */
 export function canTransitionLead(
   kind: LeadKind,
   from: LeadStatus,
   to: LeadStatus,
 ): boolean {
-  const pipe = PIPELINE_BY_KIND[kind];
   if (from === to) return true;
+  const pipe = PIPELINE_BY_KIND[kind];
   // DEAD / LOST are universal alt-terminals — every lead can be marked as
-  // either at any time, regardless of which pipeline it's on. Check this
-  // FIRST so the toIdx === -1 short-circuit below doesn't block LOST
-  // (which is intentionally absent from the per-kind pipelines).
+  // either, and reset back from either, at any time.
   if (to === 'DEAD' || to === 'LOST') return true;
-  // Either status is off-pipeline (legacy data) — allow any move into the
-  // canonical pipeline so dealers can clean up old rows.
-  const fromIdx = pipe.indexOf(from);
-  const toIdx = pipe.indexOf(to);
-  if (fromIdx === -1) return true;
-  if (toIdx === -1) return false;
-  // Forward-only within the pipeline.
-  return toIdx > fromIdx;
+  if (from === 'DEAD' || from === 'LOST') return true;
+  // Both endpoints must be on the lead's own pipeline. Off-pipeline target
+  // (e.g. CONVERTED, or a trade-in stage on a buyer lead) is rejected.
+  return pipe.includes(to);
 }
 
 export const enquiryInput = z.object({

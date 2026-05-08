@@ -4,6 +4,7 @@ import { prisma } from '../../config/prisma.js';
 import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { distanceKm, pincodeCoord } from './pincode-coords.js';
+import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
 
 // Narrow row shapes — make this module typecheck before `prisma generate` runs.
 // The generated client returns structurally-compatible types.
@@ -19,7 +20,7 @@ interface PublicListingRow {
   kmsDriven: number;
   images: string[];
   certificationStatus: 'CPO' | 'AS_IS';
-  dealer: { id?: string; name: string; city: string };
+  dealer: { id?: string; name: string; city: string; pincode: string };
 }
 
 export const listingsRouter = Router();
@@ -98,7 +99,7 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         orderBy,
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,
-        include: { dealer: { select: { name: true, city: true } } },
+        include: { dealer: { select: { name: true, city: true, pincode: true } } },
       }),
       prisma.listing.count({ where }),
     ]);
@@ -119,6 +120,7 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         certificationStatus: l.certificationStatus,
         dealerName: l.dealer.name,
         city: l.dealer.city,
+        pincode: l.dealer.pincode,
       })),
       total,
       page: q.page,
@@ -157,8 +159,12 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       images: listing.images,
       primaryImage: listing.images[0] ?? '',
       certificationStatus: listing.certificationStatus,
-      inspectionReportUrl: listing.inspectionReportUrl,
-      cpoDocs: listing.cpoDocs,
+      // Legacy rows stored CPO-kit URLs against `https://torque.mock` and a
+      // few inspection rows used bare filenames; normalise both shapes so
+      // anchor clicks resolve through the API instead of triggering a DNS
+      // failure or hitting the wrong relative path (QA BUG-19).
+      inspectionReportUrl: normalizeInspectionUrl(listing.inspectionReportUrl),
+      cpoDocs: normalizeCpoDocs(listing.cpoDocs),
       // `owners` joined the Listing model in migration 20260506100000_listing_add_owners.
       // The generated Prisma type is typed-cast here until the next clean
       // regenerate; engine queries already select all columns.

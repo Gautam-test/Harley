@@ -5,6 +5,7 @@ import { Badge, Button } from '@hd-cpo/ui';
 import {
   BUYER_LEAD_PIPELINE,
   SELLER_LEAD_PIPELINE,
+  LEAD_STAGE_LABELS,
   type LeadStatus,
 } from '@hd-cpo/types';
 import { useAuthStore } from '../store/auth';
@@ -120,26 +121,25 @@ export function LeadDetailPage() {
   }
 
   const lead = detail.data;
-  // Pipeline-aware dropdown — show ONLY valid forward moves from the
-  // current status, plus DEAD/LOST as universal alt-terminals. Showing
-  // already-passed stages would look offered then rejected with a 409;
-  // showing other-kind stages (e.g. IN_PROGRESS on a buyer lead) would
-  // be rejected by the API too. Together with LOST always available
-  // this means every option in the dropdown maps to a green-path
-  // transition the dealer can actually make.
+  // Pipeline-aware UI — the progress bar and dropdown are derived from the
+  // SAME `basePipeline` so they can never disagree. DEAD and LOST are
+  // alt-terminals (not pipeline stages); when the lead is in either, we
+  // surface a terminal banner above the bar instead of trying to render
+  // them as numbered steps.
   const basePipeline =
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
-  const currentIdx = basePipeline.indexOf(lead.status as never);
-  const pipelineStatuses: LeadStatus[] = [
-    // Keep the current status as the first option so the select reads
-    // "<current>" by default — a user-cancelled change reverts cleanly.
+  const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST';
+  const currentIdx = isTerminal ? -1 : basePipeline.indexOf(lead.status as never);
+  // Dropdown offers every stage on the pipeline plus DEAD + LOST. Dealers
+  // routinely walk a lead backwards ("buyer ghosted, then came back",
+  // "Closed by mistake, reopen at Loan Approval") so the UI no longer
+  // hides earlier stages — the API allows any transition within the kind's
+  // pipeline. Current status sits first so the select reads "<current>"
+  // by default and a cancelled change reverts cleanly.
+  const dropdownStatuses: LeadStatus[] = [
     lead.status,
-    // Forward stages only.
-    ...basePipeline.slice(currentIdx === -1 ? 0 : currentIdx + 1),
-    // Universal terminals — both can be reached from anywhere.
-    ...(['DEAD', 'LOST'] as LeadStatus[]).filter(
-      (s) => s !== lead.status && !basePipeline.includes(s as never),
-    ),
+    ...basePipeline.filter((s) => s !== lead.status),
+    ...(['DEAD', 'LOST'] as LeadStatus[]).filter((s) => s !== lead.status),
   ];
 
   return (
@@ -222,10 +222,37 @@ export function LeadDetailPage() {
           {/* Pipeline */}
           <section className="bg-hd-white border border-gray-200 rounded-card p-6">
             <h2 className="font-headline tracking-headline uppercase text-lg">Pipeline</h2>
-            <ol className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 relative">
-              {BUYER_LEAD_PIPELINE.map((stage, idx) => {
-                const currIdx = BUYER_LEAD_PIPELINE.indexOf(lead.status as never);
-                const reached = currIdx >= 0 && idx <= currIdx;
+
+            {/* Terminal banner — DEAD / LOST are not pipeline stages, so when
+                the lead is in either we say so explicitly above the bar. The
+                bar itself stays in its un-reached / pre-terminal state so the
+                dealer can still see how far the lead got before being closed,
+                and can reset the status from the dropdown below. */}
+            {isTerminal && (
+              <div className="mt-4 bg-danger/10 border border-danger/40 rounded-card p-4">
+                <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
+                  Lead marked {LEAD_STAGE_LABELS[lead.status]}
+                </p>
+                <p className="text-xs text-gray-700 mt-1">
+                  This lead has been closed off the pipeline. Use{' '}
+                  <span className="font-subhead">Move To</span> below to reopen
+                  it at any stage if needed.
+                </p>
+              </div>
+            )}
+
+            <ol
+              className={`mt-5 grid grid-cols-2 gap-3 relative ${
+                kind === 'buyer'
+                  ? 'sm:grid-cols-3 lg:grid-cols-6'
+                  : 'sm:grid-cols-2 lg:grid-cols-4'
+              }`}
+            >
+              {basePipeline.map((stage, idx) => {
+                // `currentIdx` is computed once at the top of the component
+                // off the shared `basePipeline`, so the bar can't drift from
+                // the dropdown.
+                const reached = currentIdx >= 0 && idx <= currentIdx;
                 const isCurrent = stage === lead.status;
                 return (
                   <li key={stage} className="flex flex-col items-center text-center">
@@ -245,7 +272,7 @@ export function LeadDetailPage() {
                         isCurrent ? 'text-text-on-light' : reached ? 'text-gray-700' : 'text-gray-400'
                       }`}
                     >
-                      {stage.replace(/_/g, ' ')}
+                      {LEAD_STAGE_LABELS[stage]}
                     </span>
                   </li>
                 );
@@ -267,7 +294,7 @@ export function LeadDetailPage() {
                   // (previously the status flipped anyway).
                   if (next === 'LOST' || next === 'DEAD' || next === 'CLOSED') {
                     const why = window.prompt(
-                      `Mark this lead as ${next}? This is a terminal status — write a short reason for the audit log.`,
+                      `Mark this lead as ${LEAD_STAGE_LABELS[next]}? This is a terminal status — write a short reason for the audit log.`,
                       '',
                     );
                     // null = user clicked Cancel; empty = clicked OK with
@@ -296,9 +323,9 @@ export function LeadDetailPage() {
                 disabled={moveStatus.isPending}
                 className="border border-gray-300 rounded px-2 py-1.5 font-subhead uppercase tracking-subhead text-xs"
               >
-                {pipelineStatuses.map((s) => (
+                {dropdownStatuses.map((s) => (
                   <option key={s} value={s}>
-                    {s.replace(/_/g, ' ')}
+                    {LEAD_STAGE_LABELS[s]}
                   </option>
                 ))}
               </select>
@@ -469,7 +496,7 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {status.replace(/_/g, ' ')}
+      {LEAD_STAGE_LABELS[status]}
     </Badge>
   );
 }

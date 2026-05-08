@@ -17,6 +17,11 @@ interface AdminListingRow {
   createdAt: string;
   dealerId: string;
   dealerName: string;
+  /** Dealer's city — surfaced on the row so admins can scan locations
+   *  without opening the preview drawer for every listing. */
+  dealerCity: string;
+  /** Dealer's 6-digit PIN code — paired with the city above. */
+  dealerPincode: string;
 }
 
 const TABS: { id: AdminListingRow['status'] | ''; label: string }[] = [
@@ -207,7 +212,14 @@ export function ListingsPage() {
                     )}
                   </div>
                 </Td>
-                <Td className="text-xs text-gray-700">{l.dealerName}</Td>
+                <Td className="text-xs text-gray-700">
+                  <div className="leading-tight">{l.dealerName}</div>
+                  {(l.dealerCity || l.dealerPincode) && (
+                    <div className="text-[10px] text-gray-500 mt-0.5 font-mono">
+                      {[l.dealerCity, l.dealerPincode].filter(Boolean).join(' · ')}
+                    </div>
+                  )}
+                </Td>
                 <Td>
                   <StatusBadge status={l.status} />
                   <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">

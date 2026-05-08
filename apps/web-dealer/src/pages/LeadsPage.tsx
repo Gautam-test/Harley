@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, Input, Select } from '@hd-cpo/ui';
+import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
 
@@ -571,6 +572,9 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['leads', 'trade-in'] });
+      // Mirror the buyer modal — sidebar count chip on Seller Enquiries
+      // wasn't moving until the next refetch tick (QA BUG-12).
+      qc.invalidateQueries({ queryKey: ['dealer-leads', 'trade-in', 'sidebar'] });
       onClose();
     },
     onError: (e) => setError(e instanceof ApiError ? e.message : 'Failed to add lead'),
@@ -943,7 +947,7 @@ function StatusBadge({ status }: { status: LeadRow['status'] }) {
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {status.replace(/_/g, ' ')}
+      {LEAD_STAGE_LABELS[status]}
     </Badge>
   );
 }

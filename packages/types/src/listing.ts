@@ -46,6 +46,10 @@ export const listingCard = z.object({
   certificationStatus: certStatus,
   dealerName: z.string(),
   city: z.string(),
+  // Surfacing the dealer's pincode on every search result so the buyer can
+  // judge proximity at a glance without having to click into the detail
+  // page. Required (Dealer.pincode is NOT NULL in Prisma schema).
+  pincode: z.string(),
 });
 export type ListingCard = z.infer<typeof listingCard>;
 

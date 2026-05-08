@@ -24,33 +24,16 @@ interface ExistingListing {
   adminFeedback: string | null;
 }
 
-// Wizard form state is held in localStorage between page loads under this
-// key — a tab refresh / accidental close used to wipe the entire VIN +
-// photos + inspection trail. Single-key store is fine because a dealer
-// can only be working on one listing at a time per browser session.
+// Legacy auto-save key — earlier builds persisted in-progress wizard state to
+// localStorage so a tab refresh wouldn't wipe the form. Dealers found this
+// confusing because clicking "Add Listing" after a previous submit silently
+// pre-filled the form with the old VIN / photos / description. We now start
+// every Add Listing visit on a fresh form; this helper clears any draft a
+// returning user might still have in their browser from the older build.
 const DRAFT_STORAGE_KEY = 'hd-cpo:add-listing-draft';
 
-function readDraft(): FormState | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(DRAFT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as FormState;
-  } catch {
-    return null;
-  }
-}
-
-function writeDraft(s: FormState) {
-  try {
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(s));
-  } catch {
-    // Quota exceeded / private mode — silently drop, dealer just loses
-    // the autosave benefit, no need to surface an error.
-  }
-}
-
-function clearDraft() {
+function clearLegacyDraft() {
+  if (typeof window === 'undefined') return;
   try {
     window.localStorage.removeItem(DRAFT_STORAGE_KEY);
   } catch {
@@ -126,13 +109,19 @@ export function AddListingPage() {
   // /listings/:id/edit reuses the same component as /listings/new — the
   // presence of `:id` switches the wizard into edit mode (hydrate from
   // server, PATCH on submit) while /new stays the create flow (start
-  // empty / from localStorage draft, POST on submit).
+  // empty, POST on submit).
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = Boolean(editId);
 
-  // In edit mode we ignore the localStorage draft (which is keyed to the
-  // create flow); in create mode we hydrate from it as before.
-  const [s, setS] = useState<FormState>(() => (isEditMode ? initial : readDraft() ?? initial));
+  // Always start the create wizard on a clean form. Earlier builds restored
+  // an in-progress draft from localStorage which surprised dealers on the
+  // next visit — clicking Add Listing showed the previous bike's VIN, photos
+  // and description still filled in. We now wipe the legacy key on mount and
+  // mount the form from `initial`.
+  const [s, setS] = useState<FormState>(initial);
+  useEffect(() => {
+    if (!isEditMode) clearLegacyDraft();
+  }, [isEditMode]);
   const update = (patch: Partial<FormState>) => setS((p) => ({ ...p, ...patch }));
 
   // Edit-mode hydration. Fetches the listing once on mount and seeds the
@@ -171,14 +160,6 @@ export function AddListingPage() {
       certificationStatus: e.certificationStatus,
     });
   }, [existing.data]);
-
-  // Mirror state into localStorage on every change in CREATE mode only.
-  // Edit mode hydrates from the server every visit and a stale draft would
-  // overwrite admin-feedback edits — so we keep the draft scoped to /new.
-  useEffect(() => {
-    if (isEditMode) return;
-    writeDraft(s);
-  }, [s, isEditMode]);
 
   // beforeunload guard — only warns when the form is "dirty" (anything
   // beyond the initial empty shape). The browser shows its native confirm
@@ -283,9 +264,9 @@ export function AddListingPage() {
       });
     },
     onSuccess: () => {
-      // Wipe the create-mode draft once the listing was created. In edit
-      // mode there's no draft to clear (we never wrote to localStorage).
-      if (!isEditMode) clearDraft();
+      // Belt-and-braces: drop any legacy draft a previous build may have
+      // left in localStorage so the next "Add Listing" click stays clean.
+      if (!isEditMode) clearLegacyDraft();
       navigate('/listings');
     },
   });

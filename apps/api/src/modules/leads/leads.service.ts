@@ -243,7 +243,7 @@ export async function updateLeadStatus(
     throw new HttpError(
       409,
       'INVALID_TRANSITION',
-      `Cannot move a ${kind} lead from ${existing.status} → ${status}. Pipeline is forward-only; only DEAD / LOST can be set from any stage.`,
+      `${status} isn't a valid stage for a ${kind} lead. Pick one of the stages on the ${kind} pipeline (or Dead / Lost as alt-terminals).`,
     );
   }
 
