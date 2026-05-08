@@ -6,6 +6,7 @@ import {
   BUYER_LEAD_PIPELINE,
   SELLER_LEAD_PIPELINE,
   LEAD_STAGE_LABELS,
+  ALT_TERMINAL_STATUS,
   type LeadStatus,
 } from '@hd-cpo/types';
 import { useAuthStore } from '../store/auth';
@@ -48,6 +49,16 @@ interface Comment {
   createdAt: string;
 }
 
+/** One row from the lead's audit history. The synthetic LEAD_CREATED anchor
+ *  the API injects has actorRole='SYSTEM' and metadata=null. */
+interface ActivityEntry {
+  id: string;
+  actorRole: 'DEALER' | 'ADMIN' | 'SYSTEM';
+  action: string;
+  metadata: { from?: LeadStatus; to?: LeadStatus; kind?: string } | null;
+  createdAt: string;
+}
+
 const KIND_LABEL: Record<Kind, string> = {
   buyer: 'Buyer Lead',
   'trade-in': 'Seller Lead',
@@ -72,6 +83,15 @@ export function LeadDetailPage() {
     enabled: Boolean(id),
   });
 
+  // Pipeline activity — every status transition + the implicit Lead Created
+  // anchor. Backed by the API-side AuditLog table; new entries land via the
+  // moveStatus.onSuccess invalidation below.
+  const activity = useQuery({
+    queryKey: ['lead-activity', kind, id],
+    queryFn: () => api<ActivityEntry[]>(`/dealer/leads/${kind}/${id}/activity`),
+    enabled: Boolean(id),
+  });
+
   const moveStatus = useMutation({
     mutationFn: (next: LeadStatus) =>
       api(`/dealer/leads/${kind}/${id}/status`, {
@@ -81,6 +101,8 @@ export function LeadDetailPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lead', kind, id] });
       qc.invalidateQueries({ queryKey: ['leads'] });
+      // Pipeline activity gains a new row on every successful transition.
+      qc.invalidateQueries({ queryKey: ['lead-activity', kind, id] });
       // The DealerShell sidebar uses its own cache key for the badge
       // counts; invalidating just `['leads']` left the sidebar showing
       // stale "N new" pills until manual refresh. Hit both buyer + seller
@@ -130,16 +152,21 @@ export function LeadDetailPage() {
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
   const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST';
   const currentIdx = isTerminal ? -1 : basePipeline.indexOf(lead.status as never);
-  // Dropdown offers every stage on the pipeline plus DEAD + LOST. Dealers
-  // routinely walk a lead backwards ("buyer ghosted, then came back",
-  // "Closed by mistake, reopen at Loan Approval") so the UI no longer
-  // hides earlier stages — the API allows any transition within the kind's
-  // pipeline. Current status sits first so the select reads "<current>"
-  // by default and a cancelled change reverts cleanly.
+  // Dropdown offers every stage on the pipeline plus the single Not
+  // Interested alt-terminal. Dealers routinely walk a lead backwards
+  // ("buyer ghosted, then came back", "Closed by mistake, reopen at Loan
+  // Approval") so earlier stages are no longer hidden — the API allows
+  // any transition within the kind's pipeline. Current status sits first
+  // so the select reads "<current>" by default and a cancelled change
+  // reverts cleanly. Legacy LOST rows still display as "Not Interested"
+  // (via LEAD_STAGE_LABELS) but writing LOST from the UI is no longer
+  // possible — DEAD is the only alt-terminal we offer.
   const dropdownStatuses: LeadStatus[] = [
     lead.status,
     ...basePipeline.filter((s) => s !== lead.status),
-    ...(['DEAD', 'LOST'] as LeadStatus[]).filter((s) => s !== lead.status),
+    ...(lead.status === ALT_TERMINAL_STATUS || lead.status === 'LOST'
+      ? []
+      : [ALT_TERMINAL_STATUS]),
   ];
 
   return (
@@ -329,6 +356,96 @@ export function LeadDetailPage() {
                   </option>
                 ))}
               </select>
+            </div>
+          </section>
+
+          {/* Pipeline Activity — append-only audit trail of status moves */}
+          <section className="bg-hd-white border border-gray-200 rounded-card p-6">
+            <h2 className="font-headline tracking-headline uppercase text-lg">
+              Pipeline Activity
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Every status change on this lead, oldest at the top.
+            </p>
+            <div className="mt-5">
+              {activity.isLoading && (
+                <p className="text-xs text-gray-500">Loading activity…</p>
+              )}
+              {!activity.isLoading &&
+                (activity.data?.length ?? 0) === 0 && (
+                  <p className="text-xs text-gray-500">
+                    No activity yet — the first status move will appear here.
+                  </p>
+                )}
+              {(activity.data?.length ?? 0) > 0 && (
+                <ol className="space-y-3">
+                  {activity.data?.map((entry) => {
+                    const ts = new Date(entry.createdAt);
+                    const isCreated = entry.action.startsWith('LEAD_CREATED');
+                    const isStatus = entry.action === 'LEAD_STATUS_CHANGED';
+                    const from = entry.metadata?.from;
+                    const to = entry.metadata?.to;
+                    return (
+                      <li
+                        key={entry.id}
+                        className="grid grid-cols-[120px_1fr] gap-4 text-sm border-l-2 border-gray-200 pl-4 py-1"
+                      >
+                        <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 leading-tight pt-0.5">
+                          {ts.toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                          <br />
+                          <span className="text-gray-400">
+                            {ts.toLocaleTimeString('en-IN', {
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true,
+                            })}
+                          </span>
+                        </span>
+                        <span className="text-text-on-light leading-snug">
+                          {isCreated && (
+                            <>
+                              <span className="font-subhead">Lead created</span>
+                              {entry.actorRole === 'DEALER' && (
+                                <span className="text-gray-500"> · by dealer</span>
+                              )}
+                              {entry.actorRole === 'SYSTEM' && (
+                                <span className="text-gray-500">
+                                  {' '}· via buyer enquiry
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {isStatus && (
+                            <>
+                              <span className="font-subhead">
+                                {from ? LEAD_STAGE_LABELS[from] : '—'}
+                              </span>
+                              <span className="text-gray-400 mx-1.5">→</span>
+                              <span className="font-subhead text-hd-orange">
+                                {to ? LEAD_STAGE_LABELS[to] : '—'}
+                              </span>
+                              <span className="text-gray-500 text-xs">
+                                {' '}· {entry.actorRole.toLowerCase()}
+                              </span>
+                            </>
+                          )}
+                          {!isCreated && !isStatus && (
+                            <span className="text-gray-600">
+                              {entry.action.replace(/_/g, ' ').toLowerCase()}
+                              <span className="text-gray-500">
+                                {' '}· {entry.actorRole.toLowerCase()}
+                              </span>
+                            </span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
             </div>
           </section>
 

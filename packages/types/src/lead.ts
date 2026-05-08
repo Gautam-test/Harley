@@ -44,6 +44,13 @@ export const SELLER_LEAD_PIPELINE = [
 // Keep these in sync with apps/web-buyer/src/pages/TrackPage.tsx → BUYER_STAGES
 // / SELLER_STAGES (those carry buyer-tone copy with extra "note" lines, but
 // the headline label here is the canonical one).
+//
+// DEAD and LOST both surface as "Not Interested" — the dealer-facing UX
+// folded the two alt-terminals into a single option (operations didn't
+// distinguish between "buyer ghosted" and "lead is dead", they both meant
+// the same thing in practice). Both enum values remain so legacy rows and
+// API consumers that wrote LOST keep working, but the UI only offers DEAD
+// going forward and renders either as "Not Interested".
 export const LEAD_STAGE_LABELS: Record<LeadStatus, string> = {
   NEW: 'Enquiry Received',
   CONTACTED: 'Dealer Contacted',
@@ -53,9 +60,13 @@ export const LEAD_STAGE_LABELS: Record<LeadStatus, string> = {
   CONVERTED: 'Converted',
   CLOSED: 'Booking Closed',
   SUCCESS: 'Delivered',
-  LOST: 'Lost',
-  DEAD: 'Dead',
+  LOST: 'Not Interested',
+  DEAD: 'Not Interested',
 };
+
+/** Single alt-terminal status the UI now offers. Legacy LOST rows are still
+ *  accepted by the API and rendered as "Not Interested" too. */
+export const ALT_TERMINAL_STATUS = 'DEAD' as const satisfies LeadStatus;
 
 // The legacy `general` (info-gate popup) lead kind was removed in May 2026;
 // the buyer journey now goes straight to listing-level enquiries, so only

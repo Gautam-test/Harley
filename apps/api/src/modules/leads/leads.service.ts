@@ -247,8 +247,18 @@ export async function updateLeadStatus(
     );
   }
 
-  if (kind === 'buyer') return prisma.enquiry.update({ where, data: { status } });
-  return prisma.tradeInLead.update({ where, data: { status } });
+  // No-op moves don't generate a new audit row — return the previous
+  // status with `changed: false` so the route handler can skip the audit.
+  if (existing.status === status) {
+    return { fromStatus: existing.status, toStatus: status, changed: false };
+  }
+
+  if (kind === 'buyer') {
+    await prisma.enquiry.update({ where, data: { status } });
+  } else {
+    await prisma.tradeInLead.update({ where, data: { status } });
+  }
+  return { fromStatus: existing.status as LeadStatus, toStatus: status, changed: true };
 }
 
 export async function getLeadDetail(

@@ -1,7 +1,21 @@
 import { useAuthStore } from '../store/auth';
 
+/** Shape of details emitted by Zod's `.flatten()` — surfaced verbatim by
+ *  the API's `errorHandler` for VALIDATION_ERROR responses. The wizard
+ *  reads these to render per-field validation messages instead of the
+ *  generic "Invalid request payload" headline. */
+export interface ApiErrorDetails {
+  formErrors?: string[];
+  fieldErrors?: Record<string, string[] | undefined>;
+}
+
 export class ApiError extends Error {
-  constructor(public status: number, public code: string, message: string) {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+    public details?: ApiErrorDetails,
+  ) {
     super(message);
   }
 }
@@ -72,12 +86,13 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
       if (retry.ok) return (await retry.json()) as T;
       if (retry.status === 401) useAuthStore.getState().clear();
       const body = (await retry.json().catch(() => null)) as
-        | { error?: { code: string; message: string } }
+        | { error?: { code: string; message: string; details?: ApiErrorDetails } }
         | null;
       throw new ApiError(
         retry.status,
         body?.error?.code ?? 'UNKNOWN',
         body?.error?.message ?? `Request failed: ${retry.status}`,
+        body?.error?.details,
       );
     }
     useAuthStore.getState().clear();
@@ -85,12 +100,13 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
 
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as
-      | { error?: { code: string; message: string } }
+      | { error?: { code: string; message: string; details?: ApiErrorDetails } }
       | null;
     throw new ApiError(
       res.status,
       body?.error?.code ?? 'UNKNOWN',
       body?.error?.message ?? `Request failed: ${res.status}`,
+      body?.error?.details,
     );
   }
   return (await res.json()) as T;

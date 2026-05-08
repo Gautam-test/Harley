@@ -75,14 +75,39 @@ export type ListingSearchResponse = z.infer<typeof listingSearchResponse>;
 
 // ─── Dealer-scoped operations ──────────────────────────────────────────────
 
+// Hard caps on numeric inputs. Below the DB column ceilings (price column
+// is Decimal(12,2) → 9.9B; kmsDriven Int → 2.1B) but tight enough that a
+// dealer mis-typing a price or KM gets a clear validation error rather
+// than the listing landing on the buyer site with a nonsense ₹1,111,111,111
+// sticker. Keep the upper bounds in sync with the matching client-side
+// guards in apps/web-dealer/src/pages/AddListingPage.tsx → `missing[]`.
+export const PRICE_MIN = 1;
+export const PRICE_MAX = 10_000_000; // ₹1 crore — top of realistic H-D CPO range
+export const KMS_MIN = 0;
+export const KMS_MAX = 500_000; // 500k km — well past any plausible odometer reading
+
 // Vehicle facts (modelFamily, modelName, colour, year) are intentionally
 // NOT in the create input — the server reads them from Torque DMS via the
 // VIN to prevent client-side spoofing. Year is derived from the VIN's 10th
 // character (industry-standard model-year code).
 export const createListingInput = z.object({
   vin,
-  price: z.number().positive(),
-  kmsDriven: z.number().int().min(0),
+  price: z
+    .number()
+    .positive()
+    .min(PRICE_MIN, `Selling price must be greater than ₹${PRICE_MIN}`)
+    .max(
+      PRICE_MAX,
+      `Selling price cannot exceed ₹${PRICE_MAX.toLocaleString('en-IN')} (₹1 crore).`,
+    ),
+  kmsDriven: z
+    .number()
+    .int()
+    .min(KMS_MIN)
+    .max(
+      KMS_MAX,
+      `KMs Driven cannot exceed ${KMS_MAX.toLocaleString('en-IN')} km.`,
+    ),
   /** Number of previous owners — required by Figma Add-Listing form. */
   owners: z.number().int().min(1).max(20),
   description: z.string().min(20).max(5000),
@@ -108,8 +133,24 @@ export type CreateListingInput = z.infer<typeof createListingInput>;
 // post-creation is editable here. `inspectionReportUrl` accepts null so a
 // dealer flipping CPO → AS_IS can clear the inspection PDF in the same call.
 export const updateListingInput = z.object({
-  price: z.number().positive().optional(),
-  kmsDriven: z.number().int().min(0).optional(),
+  price: z
+    .number()
+    .positive()
+    .min(PRICE_MIN, `Selling price must be greater than ₹${PRICE_MIN}`)
+    .max(
+      PRICE_MAX,
+      `Selling price cannot exceed ₹${PRICE_MAX.toLocaleString('en-IN')} (₹1 crore).`,
+    )
+    .optional(),
+  kmsDriven: z
+    .number()
+    .int()
+    .min(KMS_MIN)
+    .max(
+      KMS_MAX,
+      `KMs Driven cannot exceed ${KMS_MAX.toLocaleString('en-IN')} km.`,
+    )
+    .optional(),
   /** Number of previous owners — same range as create (1..20). */
   owners: z.number().int().min(1).max(20).optional(),
   description: z.string().min(20).max(5000).optional(),

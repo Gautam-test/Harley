@@ -312,13 +312,25 @@ export function MyListingsPage() {
                       actions are valid for the row at once. */}
                   <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
-                      <span
-                        className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
-                        title="An H-D admin will review and publish this listing."
-                      >
-                        <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
-                        Awaiting review
-                      </span>
+                      <>
+                        <span
+                          className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
+                          title="An H-D admin will review and publish this listing."
+                        >
+                          <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
+                          Awaiting review
+                        </span>
+                        {/* Edit link is always available on a DRAFT — the
+                            dealer might spot a typo before admin review or
+                            want to swap a photo. The wizard hydrates from
+                            the saved draft (no localStorage redux). */}
+                        <Link
+                          to={`/listings/${l.id}/edit`}
+                          className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline ml-2"
+                        >
+                          Edit
+                        </Link>
+                      </>
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <Link
