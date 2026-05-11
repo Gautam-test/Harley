@@ -190,6 +190,16 @@ enum LeadStatus {
   LOST
   DEAD              // freeze design — terminal-negative (replaces LOST in new pipeline)
   CLOSED
+  // ── Seller / trade-in 7-stage pipeline (QA round 3 — replaces the old
+  //    NEW → CONTACTED → IN_PROGRESS → CLOSED 4-stage). Existing legacy
+  //    rows on the old stages keep working because canTransitionLead's
+  //    off-pipeline branch lets the dealer move them onto the new path.
+  DOCUMENTATION_VERIFICATION
+  TECHNICAL_INSPECTION
+  VALUATION_OFFER
+  NEGOTIATION_ACCEPTANCE
+  LEGAL_TRANSFER
+  TRADE_IN_FINALIZED
 }
 
 // Free-form thread on any lead (Enquiry / GeneralLead / TradeInLead).

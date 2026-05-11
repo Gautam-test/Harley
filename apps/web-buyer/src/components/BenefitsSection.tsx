@@ -174,9 +174,11 @@ function FeatureSection({
               {feature.cta && (
                 <a
                   href={feature.cta.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-block mt-5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-5 py-2.5 hover:brightness-110 transition rounded-card text-xs"
                 >
-                  {feature.cta.label}
+                  {feature.cta.label} ↗
                 </a>
               )}
             </div>

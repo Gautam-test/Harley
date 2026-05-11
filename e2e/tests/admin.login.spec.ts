@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 // must remain visible on the DRAFT row. Login uses placeholder-free inputs
 // so we target via input[type] selectors.
 async function adminLogin(page: import('@playwright/test').Page) {
-  await page.goto('/login');
+  await page.goto('login');
   await page.locator('input[type="email"]').fill('admin@hd-cpo.local');
   await page.locator('input[type="password"]').fill('Admin@123!');
   await page.getByRole('button', { name: /^sign in$/i }).click();
@@ -14,7 +14,7 @@ async function adminLogin(page: import('@playwright/test').Page) {
 
 test.describe('Admin — Authentication + DRAFT moderation surface', () => {
   test('login page renders both inputs', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('login');
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
   });
@@ -27,7 +27,7 @@ test.describe('Admin — Authentication + DRAFT moderation surface', () => {
 
   test('Listings page shows Drafts tab + Publish/Return-to-Dealer actions', async ({ page }) => {
     await adminLogin(page);
-    await page.goto('/listings');
+    await page.goto('listings');
     await page.waitForSelector('table', { timeout: 15_000 });
 
     // Switch to Drafts tab — Return-to-Dealer button only appears there.

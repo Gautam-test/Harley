@@ -12,8 +12,18 @@ export function SiteFooter() {
             Approved Used Bikes, exclusively from authorised Harley-Davidson dealers.
           </p>
         </div>
+        {/* Each section header is itself a Link to the canonical landing
+            page for that subtype — clicking "Marketplace" opens the search
+            grid, "Information" opens About, "Legal" opens Terms. Earlier
+            the headers were plain <h3> labels (QA Bug 4 — "Clicking
+            Marketplace/Info/Legal links should open the main landing page
+            for that subtype"). */}
         <div>
-          <h3 className="font-subhead text-text-primary mb-3">Marketplace</h3>
+          <h3 className="font-subhead text-text-primary mb-3">
+            <Link to="/search" className="hover:text-hd-orange transition">
+              Marketplace
+            </Link>
+          </h3>
           <ul className="space-y-2 text-text-secondary">
             <li><Link to="/search" className="hover:text-hd-orange">Search Stock</Link></li>
             <li><Link to="/sell-bike" className="hover:text-hd-orange">Sell Your Bike</Link></li>
@@ -21,7 +31,11 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <h3 className="font-subhead text-text-primary mb-3">Information</h3>
+          <h3 className="font-subhead text-text-primary mb-3">
+            <Link to="/about" className="hover:text-hd-orange transition">
+              Information
+            </Link>
+          </h3>
           <ul className="space-y-2 text-text-secondary">
             <li><Link to="/about" className="hover:text-hd-orange">About</Link></li>
             <li><Link to="/faq" className="hover:text-hd-orange">FAQ</Link></li>
@@ -29,7 +43,11 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <h3 className="font-subhead text-text-primary mb-3">Legal</h3>
+          <h3 className="font-subhead text-text-primary mb-3">
+            <Link to="/terms" className="hover:text-hd-orange transition">
+              Legal
+            </Link>
+          </h3>
           <ul className="space-y-2 text-text-secondary">
             <li><Link to="/terms" className="hover:text-hd-orange">Terms &amp; Conditions</Link></li>
             <li><Link to="/privacy" className="hover:text-hd-orange">Privacy Policy</Link></li>

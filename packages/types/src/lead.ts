@@ -13,6 +13,15 @@ export const leadStatus = z.enum([
   'LOST',
   'DEAD',
   'CLOSED',
+  // Seller / trade-in 7-stage pipeline (QA round 3). Each maps to a
+  // distinct phase of the trade-in workflow: docs → inspection →
+  // valuation → negotiation → legal transfer → finalized.
+  'DOCUMENTATION_VERIFICATION',
+  'TECHNICAL_INSPECTION',
+  'VALUATION_OFFER',
+  'NEGOTIATION_ACCEPTANCE',
+  'LEGAL_TRANSFER',
+  'TRADE_IN_FINALIZED',
 ]);
 export type LeadStatus = z.infer<typeof leadStatus>;
 
@@ -30,13 +39,22 @@ export const BUYER_LEAD_PIPELINE = [
   'SUCCESS',
 ] as const satisfies readonly LeadStatus[];
 
-// Seller / trade-in 4-stage forward pipeline (per Figma Dealer/Halrey
-// dealer_page-0004.jpg). DEAD removed for the same reason as BUYER above.
+// Seller / trade-in 7-stage forward pipeline (QA round 3 — expanded
+// from the earlier 4-stage version). Walks a trade-in lead from initial
+// enquiry through documentation, inspection, valuation, negotiation,
+// legal transfer, and final close-out. The old 4-stage statuses
+// (CONTACTED, IN_PROGRESS, CLOSED) stay in the leadStatus enum so
+// legacy rows still parse, but the dealer dropdown only offers the new
+// stages — canTransitionLead's off-pipeline branch lets a legacy lead
+// move onto the new pipeline at any point.
 export const SELLER_LEAD_PIPELINE = [
   'NEW',
-  'CONTACTED',
-  'IN_PROGRESS',
-  'CLOSED',
+  'DOCUMENTATION_VERIFICATION',
+  'TECHNICAL_INSPECTION',
+  'VALUATION_OFFER',
+  'NEGOTIATION_ACCEPTANCE',
+  'LEGAL_TRANSFER',
+  'TRADE_IN_FINALIZED',
 ] as const satisfies readonly LeadStatus[];
 
 // Friendly labels for both pipelines so the dealer's progress bar, the
@@ -62,6 +80,13 @@ export const LEAD_STAGE_LABELS: Record<LeadStatus, string> = {
   SUCCESS: 'Delivered',
   LOST: 'Not Interested',
   DEAD: 'Not Interested',
+  // Seller / trade-in 7-stage pipeline labels (QA round 3).
+  DOCUMENTATION_VERIFICATION: 'Documentation Verification',
+  TECHNICAL_INSPECTION: 'Technical Inspection',
+  VALUATION_OFFER: 'Valuation & Offer',
+  NEGOTIATION_ACCEPTANCE: 'Negotiation & Acceptance',
+  LEGAL_TRANSFER: 'Legal Transfer & Documentation',
+  TRADE_IN_FINALIZED: 'Trade-In Finalized',
 };
 
 /** Single alt-terminal status the UI now offers. Legacy LOST rows are still

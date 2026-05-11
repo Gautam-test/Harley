@@ -43,7 +43,15 @@ export function DealerLocator() {
           Every certified bike is sold through an authorised H-D dealer.
           {data && data.length > 0 && (
             <>
-              {' '}Showing the <span className="font-subhead text-text-on-light">3 closest</span> of {data.length} dealerships.
+              {' '}Showing the{' '}
+              <span className="font-subhead text-text-on-light whitespace-nowrap">
+                3 closest
+              </span>{' '}
+              {/* whitespace-nowrap on the count + dealerships keeps the
+                  trailing word on the same line as the number "of N";
+                  earlier the word wrapped to its own line on narrower
+                  viewports (QA Bug 3 — text-wrap container issue). */}
+              <span className="whitespace-nowrap">of {data.length} dealerships.</span>
             </>
           )}
         </p>

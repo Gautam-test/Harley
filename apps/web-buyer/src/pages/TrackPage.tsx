@@ -39,7 +39,13 @@ interface LeadTrackResult {
     | 'SUCCESS'
     | 'LOST'
     | 'DEAD'
-    | 'CLOSED';
+    | 'CLOSED'
+    | 'DOCUMENTATION_VERIFICATION'
+    | 'TECHNICAL_INSPECTION'
+    | 'VALUATION_OFFER'
+    | 'NEGOTIATION_ACCEPTANCE'
+    | 'LEGAL_TRANSFER'
+    | 'TRADE_IN_FINALIZED';
   createdAt: string;
   updatedAt: string;
   context: string;
@@ -60,11 +66,18 @@ const BUYER_STAGES: { status: LeadTrackResult['status']; label: string; note: st
   { status: 'CLOSED', label: 'Booking Closed', note: 'Booking finalised — paperwork next.' },
   { status: 'SUCCESS', label: 'Delivered', note: 'Bike handed over — ride safe.' },
 ];
+// Seller / trade-in 7-stage pipeline (QA round 3 — expanded from
+// 4 stages). Buyer-tone copy on each note line; the canonical short
+// label here matches LEAD_STAGE_LABELS in @hd-cpo/types so the dealer
+// dropdown + pipeline bar + this buyer-side timeline read identical.
 const SELLER_STAGES: { status: LeadTrackResult['status']; label: string; note: string }[] = [
   { status: 'NEW', label: 'Enquiry Received', note: 'Dealer notified about your bike.' },
-  { status: 'CONTACTED', label: 'Inspection Scheduled', note: 'Dealer is arranging a 110-point inspection.' },
-  { status: 'IN_PROGRESS', label: 'Approved for Trade-in', note: 'Inspection passed — quote on the way.' },
-  { status: 'CLOSED', label: 'Trade-in Closed', note: 'Final paperwork complete.' },
+  { status: 'DOCUMENTATION_VERIFICATION', label: 'Documentation Verification', note: 'Dealer reviewing your RC, insurance, and service history.' },
+  { status: 'TECHNICAL_INSPECTION', label: 'Technical Inspection', note: 'Authorised technician running the 110-point check.' },
+  { status: 'VALUATION_OFFER', label: 'Valuation & Offer', note: 'Quote on the way based on inspection + market.' },
+  { status: 'NEGOTIATION_ACCEPTANCE', label: 'Negotiation & Acceptance', note: 'Final price under discussion.' },
+  { status: 'LEGAL_TRANSFER', label: 'Legal Transfer & Documentation', note: 'RC transfer + paperwork in progress.' },
+  { status: 'TRADE_IN_FINALIZED', label: 'Trade-In Finalized', note: 'Trade-in complete — payment released.' },
 ];
 const GENERAL_STAGES: { status: LeadTrackResult['status']; label: string; note: string }[] = [
   { status: 'NEW', label: 'Enquiry Received', note: 'Routed to your nearest dealer.' },

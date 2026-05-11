@@ -279,9 +279,13 @@ export function LeadDetailPage() {
 
             <ol
               className={`mt-5 grid grid-cols-2 gap-3 relative ${
+                // Buyer = 6 stages, seller = 7 stages (QA round 3 expanded
+                // the trade-in flow). Grid cols match stage counts so the
+                // numbered bar lays out one row deep on desktop and never
+                // wraps to a second row at the lg breakpoint.
                 kind === 'buyer'
                   ? 'sm:grid-cols-3 lg:grid-cols-6'
-                  : 'sm:grid-cols-2 lg:grid-cols-4'
+                  : 'sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7'
               }`}
             >
               {basePipeline.map((stage, idx) => {

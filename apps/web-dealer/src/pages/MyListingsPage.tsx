@@ -120,7 +120,17 @@ export function MyListingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
   });
 
-  const returnedDrafts = (all ?? []).filter((l) => l.status === 'DRAFT' && l.adminFeedback);
+  // Admin-feedback-needs-attention banner: surfaces both DRAFT-returned
+  // rows AND REMOVED-by-admin rows so the dealer can see *why* the admin
+  // returned/removed each listing. Earlier this filter was DRAFT-only,
+  // which meant a dealer whose listing was Removed by admin saw an empty
+  // "Removed" tab with no reason copy (QA Bug 16 — cross-role data
+  // visibility error).
+  const flaggedListings = (all ?? []).filter(
+    (l) => l.adminFeedback && (l.status === 'DRAFT' || l.status === 'REMOVED'),
+  );
+  const returnedDrafts = flaggedListings.filter((l) => l.status === 'DRAFT');
+  const removedWithReason = flaggedListings.filter((l) => l.status === 'REMOVED');
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -166,6 +176,36 @@ export function MyListingsPage() {
               >
                 Resume Edit →
               </Link>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Admin-removed banner — when the admin removes a listing the
+          adminFeedback column carries the removal reason. Surface those
+          rows in their own banner so the dealer learns why the bike was
+          taken down (was previously hidden — QA Bug 16). */}
+      {removedWithReason.length > 0 && (
+        <div className="mb-6 bg-warning/10 border border-warning/40 rounded-card p-4 space-y-3">
+          <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
+            {removedWithReason.length} listing{removedWithReason.length === 1 ? '' : 's'}{' '}
+            removed by admin
+          </p>
+          {removedWithReason.map((l) => (
+            <div
+              key={l.id}
+              className="text-sm bg-hd-white border border-warning/30 rounded p-3"
+            >
+              <p className="font-subhead text-text-on-light">
+                {l.year} {l.modelName} ·{' '}
+                <span className="font-mono text-xs text-gray-600">{l.vin}</span>
+              </p>
+              <p className="text-gray-700 mt-1">
+                <span className="font-subhead uppercase tracking-subhead text-[11px] text-warning">
+                  Removal reason:
+                </span>{' '}
+                {l.adminFeedback}
+              </p>
             </div>
           ))}
         </div>
@@ -275,6 +315,18 @@ export function MyListingsPage() {
                       <div className="font-mono text-[10px] text-gray-400 leading-tight mt-1">
                         HD-{l.id.slice(-6).toUpperCase()} · VIN&hellip;{l.vin.slice(-7)}
                       </div>
+                      {/* Inline removal reason on REMOVED rows so the
+                          dealer sees admin's note even when scrolling
+                          straight to the Removed tab without seeing the
+                          banner above (QA Bug 16). */}
+                      {l.status === 'REMOVED' && l.adminFeedback && (
+                        <div className="mt-1.5 text-[10px] text-warning leading-tight max-w-[260px]">
+                          <span className="font-subhead uppercase tracking-subhead">
+                            Reason:
+                          </span>{' '}
+                          {l.adminFeedback}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Td>

@@ -2,9 +2,20 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Tests run against the dev stack, on whichever ports it actually came up on.
 // Override via `BUYER_BASE_URL=...` etc. in CI / staging.
-const BUYER = process.env.BUYER_BASE_URL ?? 'http://localhost:5180';
-const DEALER = process.env.DEALER_BASE_URL ?? 'http://localhost:5181';
-const ADMIN = process.env.ADMIN_BASE_URL ?? 'http://localhost:5182';
+//
+// Buyer SPA lives at root; dealer + admin SPAs are mounted under /dealer/
+// and /admin/ respectively (Vite `base` config). The baseURLs include a
+// trailing slash so tests can navigate via relative paths like
+// page.goto('login') and the URL composes correctly to /dealer/login.
+const BUYER = process.env.BUYER_BASE_URL ?? 'http://localhost:5180/';
+const DEALER = process.env.DEALER_BASE_URL ?? 'http://localhost:5181/dealer/';
+const ADMIN = process.env.ADMIN_BASE_URL ?? 'http://localhost:5182/admin/';
+
+// Cross-browser matrix is opt-in: default runs are Chromium-only to keep
+// the developer-loop fast. Set CROSS_BROWSER=1 (or pass --project=
+// buyer-firefox / buyer-webkit) to exercise Firefox + WebKit on the buyer
+// smoke flows.
+const CROSS_BROWSER = process.env.CROSS_BROWSER === '1';
 
 export default defineConfig({
   testDir: './tests',
@@ -39,5 +50,23 @@ export default defineConfig({
       testMatch: /admin\..*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: ADMIN },
     },
+    // Cross-browser smoke — run buyer.home + buyer.tracking on Firefox
+    // and WebKit so we catch engine-specific layout / CSS regressions
+    // without tripling the full suite's runtime. Opt-in via
+    // CROSS_BROWSER=1 or with explicit --project filters.
+    ...(CROSS_BROWSER
+      ? [
+          {
+            name: 'buyer-firefox',
+            testMatch: /buyer\.(home|tracking)\.spec\.ts/,
+            use: { ...devices['Desktop Firefox'], baseURL: BUYER },
+          },
+          {
+            name: 'buyer-webkit',
+            testMatch: /buyer\.(home|tracking)\.spec\.ts/,
+            use: { ...devices['Desktop Safari'], baseURL: BUYER },
+          },
+        ]
+      : []),
   ],
 });
