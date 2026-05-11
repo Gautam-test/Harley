@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 export interface ListingCardData {
@@ -38,14 +39,28 @@ export interface ListingCardData {
 export function ListingCardItem({ listing }: { listing: ListingCardData }) {
   const stockCode = listing.vin?.slice(-5).toUpperCase() || '';
   const isSold = listing.status === 'SOLD';
+  // SOLD cards stay in the grid for the 1-hour visibility window so a
+  // buyer who was tracking this bike sees what happened, but the link is
+  // blocked — the detail page now hard-404s for non-ACTIVE statuses, so
+  // routing to it would only land on NotFound. Instead, clicking a SOLD
+  // card pops a small "This Bike Is Sold" modal explaining the state.
+  const [showSoldModal, setShowSoldModal] = useState(false);
+  const Tag = (isSold ? 'button' : Link) as React.ElementType;
+  const linkProps = isSold
+    ? {
+        type: 'button' as const,
+        'aria-haspopup': 'dialog' as const,
+        onClick: () => setShowSoldModal(true),
+      }
+    : { to: `/listings/${listing.slug}` };
   return (
-    <Link
-      to={`/listings/${listing.slug}`}
-      // Click-through still works for SOLD rows so buyers can see the
-      // watermark + dealer info on the detail page; after the 1h window
-      // the detail will 404, mirroring the search grid hiding the row.
-      className={`group block bg-hd-white border border-gray-200 rounded-card overflow-hidden hover:border-hd-orange transition ${
-        isSold ? 'opacity-90' : ''
+    <>
+    <Tag
+      {...linkProps}
+      data-testid="listing-card"
+      data-listing-status={listing.status}
+      className={`group block text-left w-full bg-hd-white border border-gray-200 rounded-card overflow-hidden transition ${
+        isSold ? 'opacity-90 cursor-pointer' : 'hover:border-hd-orange'
       }`}
     >
       <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
@@ -133,12 +148,72 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
               Indicative ex-showroom
             </span>
           </div>
-          <span className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange group-hover:underline">
-            View Details ›
-          </span>
+          {!isSold && (
+            <span className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange group-hover:underline">
+              View Details ›
+            </span>
+          )}
         </div>
       </div>
-    </Link>
+    </Tag>
+
+    {/* "This bike is sold" modal — surfaces when a buyer clicks a SOLD
+        card on the search grid. The detail page hard-404s for non-ACTIVE
+        rows so click-through doesn't help; this gives a clear explanation
+        instead of a silent dead-click. */}
+    {isSold && showSoldModal && (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`sold-modal-${listing.id}`}
+        className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto"
+        onClick={() => setShowSoldModal(false)}
+      >
+        <div
+          className="bg-hd-white border-t-4 border-hd-orange max-w-sm w-full p-5 sm:p-6 rounded-card shadow-xl my-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-baseline justify-between">
+            <h2
+              id={`sold-modal-${listing.id}`}
+              className="font-subhead uppercase tracking-subhead text-text-on-light text-base"
+            >
+              This Bike Is Sold
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowSoldModal(false)}
+              aria-label="Close"
+              className="text-gray-500 hover:text-text-on-light text-sm"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-sm text-gray-700 mt-3 leading-relaxed">
+            The {listing.year} {listing.modelName} has been sold and is no
+            longer available. Browse the rest of our approved used stock to
+            find another ride.
+          </p>
+          <div className="flex justify-end gap-3 mt-5">
+            <button
+              type="button"
+              onClick={() => setShowSoldModal(false)}
+              className="border border-gray-300 px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+            >
+              OK
+            </button>
+            <Link
+              to="/search"
+              onClick={() => setShowSoldModal(false)}
+              className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
+            >
+              Browse Stock →
+            </Link>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
 

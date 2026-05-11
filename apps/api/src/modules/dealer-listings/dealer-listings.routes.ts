@@ -91,7 +91,7 @@ dealerListingsRouter.patch(
       void logDealer(req, 'LISTING_UPDATED', id, {
         fields: Object.keys(req.body as Record<string, unknown>),
       });
-      res.json({ id: updated.id });
+      res.json({ id: updated.id, status: updated.status });
     } catch (e) {
       next(e);
     }

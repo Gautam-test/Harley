@@ -64,11 +64,15 @@ test.describe('Buyer — QA visual sweep', () => {
 
   test('L2-04 · pincode + distance filter narrows the result count', async ({ page }) => {
     await page.goto('/search');
-    // Wait for the initial result grid to render — count it.
-    await page.waitForSelector('text=/\\d+ result/i, [class*="ListingCard"], a[href*="/listings/"]', {
-      timeout: 10_000,
-    }).catch(() => {});
-    const countCardsBefore = await page.locator('a[href*="/listings/"]').count();
+    // Wait for the initial result grid to render — count cards by the
+    // stable data-testid (covers ACTIVE <a> and SOLD <button> variants
+    // both, since SOLD cards no longer render an anchor element).
+    await page
+      .waitForSelector('[data-testid="listing-card"]', { timeout: 10_000 })
+      .catch(() => {});
+    const countCardsBefore = await page
+      .locator('[data-testid="listing-card"]')
+      .count();
 
     // Apply pincode 122001 + Within 50 km. The custom <Field label> wrapper
     // doesn't bind a <label for=> so we target the select by react-hook-
@@ -77,7 +81,9 @@ test.describe('Buyer — QA visual sweep', () => {
     await page.locator('select[name="distance"]').selectOption({ label: 'Within 50 km' });
     // Auto-apply has a 250–400 ms debounce; wait a bit then re-count.
     await page.waitForTimeout(1200);
-    const countCardsAfter = await page.locator('a[href*="/listings/"]').count();
+    const countCardsAfter = await page
+      .locator('[data-testid="listing-card"]')
+      .count();
 
     // Result set MUST shrink (Gurgaon-area dealers are a strict subset).
     expect(countCardsAfter).toBeLessThan(countCardsBefore);

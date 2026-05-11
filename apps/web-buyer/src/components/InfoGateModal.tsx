@@ -124,6 +124,50 @@ export function InfoGateModal({
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
+  // Timestamp of the most recent successful /otp/send so the client can
+  // throttle Resend clicks without hitting the server's 30-second rate
+  // limit (which would surface as the red "Wait 30s before resending"
+  // error on the verify step). Survives the verify step's lifetime but
+  // not modal remount.
+  const [lastSentAt, setLastSentAt] = useState<number | null>(null);
+
+  // When the server says we're out of OTP attempts for this phone (per-
+  // hour cap, daily cap, or lockout after too many failed verifications),
+  // there's no otpId to verify against and clicking Resend will just trip
+  // the same limit. Track the blocking error separately so the UI can
+  // swap the verify input + Resend button for a clear "come back later /
+  // try a different number" message instead of leaving a non-functional
+  // Verify form on screen.
+  const [sendBlocked, setSendBlocked] = useState<{ title: string; body: string } | null>(
+    null,
+  );
+
+  // Friendly copy for each server-side OTP rate-limit code. Anything we
+  // don't recognise falls through to the raw server message.
+  function blockingMessage(code: string, raw: string):
+    | { title: string; body: string }
+    | null {
+    switch (code) {
+      case 'OTP_RESEND_LIMIT':
+        return {
+          title: 'OTP limit reached for this hour',
+          body: 'We\'ve sent the maximum number of codes to this number in the last hour. Please try again later or use a different mobile number.',
+        };
+      case 'OTP_DAILY_LIMIT':
+        return {
+          title: 'Daily OTP limit reached',
+          body: 'You\'ve reached the daily limit for OTPs on this number. Please try again tomorrow or use a different mobile number.',
+        };
+      case 'OTP_LOCKED':
+        return {
+          title: 'Too many failed attempts',
+          body: 'This number is temporarily locked after too many incorrect codes. Please try again in 30 minutes.',
+        };
+      default:
+        return raw ? { title: 'Could not send OTP', body: raw } : null;
+    }
+  }
+
   // When prefilled, fire the OTP send as soon as the modal opens. Done in a
   // useEffect (not during render) so React doesn't tear-render and lose the
   // resulting otpId — that's why the previous in-render version sometimes
@@ -149,13 +193,48 @@ export function InfoGateModal({
       .then((res) => {
         if (!cancelled) {
           setOtpId(res.otpId);
+          setLastSentAt(Date.now());
           setError(null);
         }
       })
       .catch((e) => {
-        if (!cancelled) {
-          setError(e instanceof ApiError ? e.message : 'Could not send OTP');
+        if (cancelled) return;
+        // Server-side 30s rate limit — happens when the modal remounts
+        // (e.g. Edit details → resubmit) within the window. The previous
+        // OTP we sent is still valid on the server (5-min TTL), but we
+        // lost the otpId when the modal unmounted; surface a friendlier
+        // hint rather than the raw "Wait 30s before resending" so the
+        // buyer knows to wait and try again rather than thinking it's an
+        // error in the form. Arm the visible cooldown so the Resend
+        // button shows the remaining seconds.
+        if (e instanceof ApiError && e.code === 'OTP_RESEND_TOO_SOON') {
+          // Only show the cooldown countdown when the user explicitly clicked
+          // Resend (lastSentAt is set from a prior successful send this session).
+          // On the initial auto-send the modal opens clean — no countdown.
+          if (lastSentAt !== null) {
+            setResendCooldown(30);
+          }
+          setError(null);
+          return;
         }
+        // Hard rate-limit / lockout: there's no otpId to verify against,
+        // and Resend will just trip the same limit. Show a blocking
+        // message instead of leaving the verify form visible with an
+        // unactionable red error band.
+        if (
+          e instanceof ApiError &&
+          (e.code === 'OTP_RESEND_LIMIT' ||
+            e.code === 'OTP_DAILY_LIMIT' ||
+            e.code === 'OTP_LOCKED')
+        ) {
+          const msg = blockingMessage(e.code, e.message);
+          if (msg) {
+            setSendBlocked(msg);
+            setError(null);
+            return;
+          }
+        }
+        setError(e instanceof ApiError ? e.message : 'Could not send OTP');
       })
       .finally(() => {
         if (!cancelled) setBusy(false);
@@ -166,23 +245,43 @@ export function InfoGateModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefilled?.phone, profile?.phone, purpose, otpId]);
 
-  // 30-second resend cooldown so a buyer who didn't get the SMS within ~30s
-  // has a clear "send it again" path instead of refreshing the page (and
-  // losing the modal). Resets every time a new otpId is issued.
-  const [resendCooldown, setResendCooldown] = useState(30);
+  // Visible "Resend in Ns" countdown. NOT armed on the initial OTP send
+  // (a buyer who just landed on the verify step shouldn't see a "wait
+  // 30s" timer for an SMS they haven't checked yet — that was the
+  // original QA complaint). Only set when the user actually clicks
+  // Resend within the server's 30-second window — we show the remaining
+  // seconds and intentionally skip the /otp/send call so the server's
+  // rate-limit error never surfaces.
+  const [resendCooldown, setResendCooldown] = useState(0);
   useEffect(() => {
-    if (!otpId) return;
-    setResendCooldown(30);
-    const timer = window.setInterval(() => {
-      setResendCooldown((n) => (n > 0 ? n - 1 : 0));
+    if (resendCooldown <= 0) return;
+    // setTimeout (not setInterval) so we schedule exactly one tick per
+    // render — when the effect re-runs after each decrement, the old
+    // timeout is cleared and the next one is scheduled fresh.
+    const t = window.setTimeout(() => {
+      setResendCooldown((n) => Math.max(0, n - 1));
     }, 1000);
-    return () => window.clearInterval(timer);
-  }, [otpId]);
+    return () => window.clearTimeout(t);
+  }, [resendCooldown]);
 
   const resendOtp = () => {
     if (busy || resendCooldown > 0) return;
-    // Clearing otpId + error makes the existing send-effect above re-fire
-    // with the same prefilled phone (or whichever phone the buyer entered
+    // If the previous send was within the server's 30s window, surface
+    // a visible countdown and skip the network call entirely — the user
+    // already has the OTP from the first send. They can still enter it
+    // and verify; this just blocks a duplicate /otp/send that would
+    // 429 with "Wait 30s before resending" and clutter the UI with an
+    // error message.
+    if (lastSentAt) {
+      const elapsedSec = (Date.now() - lastSentAt) / 1000;
+      if (elapsedSec < 30) {
+        setResendCooldown(Math.max(1, Math.ceil(30 - elapsedSec)));
+        return;
+      }
+    }
+    // Cooldown elapsed (or no prior send recorded — e.g. remount).
+    // Clearing otpId + error makes the send-effect above re-fire with
+    // the same prefilled phone (or whichever phone the buyer entered
     // in step 1).
     setOtpId(null);
     setError(null);
@@ -243,8 +342,26 @@ export function InfoGateModal({
       });
       setProfile({ ...values, phone: cleanPhone });
       setOtpId(res.otpId);
+      setLastSentAt(Date.now());
       setStep('verify');
     } catch (e) {
+      if (
+        e instanceof ApiError &&
+        (e.code === 'OTP_RESEND_LIMIT' ||
+          e.code === 'OTP_DAILY_LIMIT' ||
+          e.code === 'OTP_LOCKED')
+      ) {
+        const msg = blockingMessage(e.code, e.message);
+        if (msg) {
+          // Persist the entered profile + flip to verify so the user lands
+          // on the blocking-message panel rather than an unactionable red
+          // band over the collect form.
+          setProfile({ ...values, phone: normalisePhone(values.phone) });
+          setSendBlocked(msg);
+          setStep('verify');
+          return;
+        }
+      }
       setError(e instanceof ApiError ? e.message : 'Could not send OTP');
     } finally {
       setBusy(false);
@@ -639,7 +756,39 @@ export function InfoGateModal({
           </form>
         )}
 
-        {step === 'verify' && (
+        {step === 'verify' && sendBlocked && (
+          // Hard rate-limit (per-hour cap, daily cap, or temporary lockout
+          // after too many failed OTPs). No otpId to verify against and
+          // Resend would just trip the same limit — swap the input + verify
+          // form for a clear blocking-message panel and keep only the
+          // Edit details / Close affordance so the user has a way out.
+          <div className="mt-6 space-y-4">
+            <div className="bg-warning/10 border border-warning/40 rounded-card p-4">
+              <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
+                {sendBlocked.title}
+              </p>
+              <p className="text-sm text-gray-700 mt-2 leading-relaxed">
+                {sendBlocked.body}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSendBlocked(null);
+                if (prefilled) {
+                  onClose?.();
+                } else {
+                  setStep('collect');
+                }
+              }}
+              className="text-xs text-gray-600 hover:text-hd-orange w-full"
+            >
+              ← Edit details
+            </button>
+          </div>
+        )}
+
+        {step === 'verify' && !sendBlocked && (
           <div className="mt-6 space-y-3">
             <Input
               placeholder="6-digit code"
@@ -679,7 +828,21 @@ export function InfoGateModal({
             </button>
             <button
               type="button"
-              onClick={() => setStep('collect')}
+              onClick={() => {
+                // Prefilled flows (e.g. SellBikeModal) collected details in
+                // the caller's own form. Routing to this modal's internal
+                // collect step would show a DIFFERENT form than the one
+                // the user originally filled, dropping their bike-model /
+                // VIN / location fields. Close instead — the parent's
+                // form is still mounted underneath with the user's data
+                // intact and becomes interactive again as soon as the
+                // OTP overlay dismisses.
+                if (prefilled) {
+                  onClose?.();
+                } else {
+                  setStep('collect');
+                }
+              }}
               className="text-xs text-gray-600 hover:text-hd-orange w-full"
             >
               ← Edit details

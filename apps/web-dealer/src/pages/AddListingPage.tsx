@@ -177,6 +177,18 @@ export function AddListingPage() {
       inspectionMeta: null,
       certificationStatus: e.certificationStatus,
     });
+    // Re-fetch from Torque so Engine, Customer Name and Date of Invoice
+    // populate in the read-only "Fetched from Torque DMS" card — the
+    // dealer listing row only persists the four Torque facts the
+    // marketplace cares about (model, family, year, colour), so without
+    // this the other three render as blank when a dealer opens an edit
+    // (e.g. View / Restore on a Removed listing). `idempotent` guard:
+    // fetchVin.mutate uses the same query key each call, and onSuccess
+    // is description-preserving, so re-running is safe.
+    if (e.vin && !fetchVin.isPending) {
+      fetchVin.mutate(e.vin);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [existing.data]);
 
   // beforeunload guard — only warns when the form is "dirty" (anything

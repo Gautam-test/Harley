@@ -27,29 +27,30 @@ export async function createListing(dealerId: string, input: CreateListingInput)
     throw new HttpError(403, 'VIN_NOT_ASSIGNED', 'VIN is not assigned to this dealer in Torque');
   }
 
-  // PRD §6.2.3 AC2 — duplicate VIN check, exclude REMOVED.
+  // PRD §6.2.3 AC2 — duplicate VIN check, exclude REMOVED and SOLD.
   //
-  // The DB-level `vin` unique constraint covers REMOVED listings too, so a
-  // dealer who tries to re-list a previously-removed bike would have hit
-  // a 500 (P2002 on `vin`). We free up the constraint by retiring the old
-  // REMOVED row's vin + slug to a sentinel value before the create — the
-  // history row stays for audit, but its identifying keys are released.
+  // The DB-level `vin` unique constraint covers all rows, so a dealer who
+  // tries to re-list a previously-removed or sold bike would hit a 500
+  // (P2002 on `vin`). We free up the constraint by retiring the old row's
+  // vin + slug to a sentinel value before the create — the history row
+  // stays for audit, but its identifying keys are released.
   const existing = await prisma.listing.findUnique({ where: { vin: input.vin } });
-  if (existing && existing.status !== 'REMOVED') {
+  if (existing && existing.status !== 'REMOVED' && existing.status !== 'SOLD') {
     throw new HttpError(
       409,
       'VIN_DUPLICATE',
       'A listing for this VIN is already live or pending. Mark the previous one Sold or Removed before re-listing.',
     );
   }
-  if (existing && existing.status === 'REMOVED') {
+  if (existing) {
     // Suffix with the row id so the historical record stays unique among
-    // any number of past REMOVED listings for the same VIN.
+    // any number of past retired listings for the same VIN.
+    const prefix = existing.status.toLowerCase();
     await prisma.listing.update({
       where: { id: existing.id },
       data: {
-        vin: `removed:${existing.id}:${existing.vin}`,
-        slug: `removed-${existing.id}-${existing.slug}`,
+        vin: `${prefix}:${existing.id}:${existing.vin}`,
+        slug: `${prefix}-${existing.id}-${existing.slug}`,
       },
     });
   }
@@ -196,13 +197,21 @@ export async function updateListing(
   // untouched on null. Same for inspectionReportUrl: the column itself is
   // nullable in the DB so passing null is fine, but the spread keeps the
   // explicit-null intent intact.
+  //
+  // Restore + Resubmit (QA: My Listings → Removed/Sold → View → Submit):
+  // when the dealer edits a REMOVED or SOLD listing they own, treat the
+  // submit as "re-queuing for admin review", so flip status back to DRAFT
+  // (renders as Pending on the dealer's tab) and clear soldAt. Without
+  // this, the row stays REMOVED/SOLD and silently disappears from Pending.
   const { cpoDocs, ...rest } = input;
+  const restoreToDraft = listing.status === 'REMOVED' || listing.status === 'SOLD';
   return prisma.listing.update({
     where: { id: listingId },
     data: {
       ...rest,
       ...(cpoDocs === undefined ? {} : { cpoDocs: cpoDocs ?? undefined }),
       adminFeedback: null,
+      ...(restoreToDraft ? { status: 'DRAFT' as const, soldAt: null } : {}),
     },
   });
 }

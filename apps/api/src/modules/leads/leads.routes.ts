@@ -13,6 +13,8 @@ import { requireAuth } from '../../middleware/auth.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { audit } from '../audit/audit.service.js';
 import { consumeVerifiedToken } from '../otp/otp.service.js';
+import { decryptPii } from '../../utils/crypto.js';
+import { prisma } from '../../config/prisma.js';
 import {
   createBuyerEnquiry,
   createTradeInLead,
@@ -69,6 +71,59 @@ publicLeadsRouter.post(
     try {
       const out = await createTradeInLead(req.body);
       res.status(201).json(out);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// "Have I already enquired about this listing?" — used by the buyer detail
+// page to decide whether to show the "Buyer enquiry form already submitted"
+// popup when a returning verified buyer clicks Visit Dealer. The check is
+// scoped to one listing's enquiries (typically a handful of rows), so the
+// per-row decryptPii call to match against the supplied phone is cheap.
+// Phones are stored AES-GCM with a per-record random IV, so we can't query
+// by ciphertext directly. Only non-terminal leads count — once the dealer
+// flips the lead to DEAD ("Not Interested") the buyer is free to enquire
+// again.
+publicLeadsRouter.get(
+  '/listings/:slug/my-status',
+  validate(z.object({ slug: z.string().min(1) }), 'params'),
+  validate(
+    z.object({ phone: z.string().regex(/^\+91[0-9]{10}$/, 'phone must be +91 + 10 digits') }),
+    'query',
+  ),
+  async (req, res, next) => {
+    try {
+      const { slug } = req.params as { slug: string };
+      const { phone } = req.query as { phone: string };
+      const listing = await prisma.listing.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+      if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+      const rows = await prisma.enquiry.findMany({
+        where: {
+          listingId: listing.id,
+          // DEAD / LOST = "Not Interested" — the buyer can enquire afresh
+          // once the dealer marks the lead that way.
+          status: { notIn: ['DEAD', 'LOST'] },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, status: true, phoneEnc: true },
+      });
+      const mine = rows.find((r) => {
+        try {
+          return decryptPii(r.phoneEnc) === phone;
+        } catch {
+          return false;
+        }
+      });
+      res.json(
+        mine
+          ? { enquired: true, leadId: mine.id, status: mine.status }
+          : { enquired: false },
+      );
     } catch (e) {
       next(e);
     }

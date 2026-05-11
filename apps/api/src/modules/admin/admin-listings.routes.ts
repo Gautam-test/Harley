@@ -179,6 +179,7 @@ adminListingsRouter.post(
         select: {
           id: true,
           dealerId: true,
+          status: true,
           images: true,
           inspectionReportUrl: true,
         },
@@ -186,6 +187,7 @@ adminListingsRouter.post(
         | {
             id: string;
             dealerId: string;
+            status: ListingStatus;
             images: string[];
             inspectionReportUrl: string | null;
           }
@@ -264,7 +266,17 @@ adminListingsRouter.post(
         }
       };
 
-      await Promise.all([emailNotify(), fileCleanup()]);
+      // Only nuke disk files for listings that were ACTIVE (or just-SOLD)
+      // — those rows were publicly visible, so a removal is a permanent
+      // takedown. For DRAFT / DEACTIVATED removes the dealer can restore
+      // the row + re-submit, and the photos / inspection PDF they
+      // already uploaded must survive so the wizard hydrates them.
+      const filesArePublic =
+        before.status === 'ACTIVE' || before.status === 'SOLD';
+      await Promise.all([
+        emailNotify(),
+        ...(filesArePublic ? [fileCleanup()] : []),
+      ]);
 
       await audit({
         actorId: req.auth!.sub,

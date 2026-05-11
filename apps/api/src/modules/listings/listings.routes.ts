@@ -156,10 +156,14 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
   }
 });
 
-// PRD §6.1.3 — public listing detail by slug. 404 on REMOVED / DRAFT /
-// DEACTIVATED. SOLD listings stay reachable for 1 hour after the dealer
-// marked them sold, with a "SOLD" watermark on the gallery; after the
-// window they 404 like REMOVED.
+// PRD §6.1.3 — public listing detail by slug. 404 on every non-ACTIVE
+// status. SOLD intentionally drops the 1-hour grace window here (QA: the
+// detail page must be fully blocked once a bike is sold). The search grid
+// still surfaces the SOLD row for the 1-hour visibility window so buyers
+// browsing /search see a watermarked card and understand why the bike
+// they were tracking has vanished, but clicking it on the grid now lands
+// on the NotFound page rather than a fully-interactive detail with a
+// purely visual overlay.
 listingsRouter.get('/:slug', async (req, res, next) => {
   try {
     const listing = await prisma.listing.findUnique({
@@ -171,11 +175,7 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       },
     });
     if (!listing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
-    const soldVisible =
-      listing.status === 'SOLD' &&
-      listing.soldAt &&
-      Date.now() - listing.soldAt.getTime() < SOLD_VISIBILITY_MS;
-    if (listing.status !== 'ACTIVE' && !soldVisible) {
+    if (listing.status !== 'ACTIVE') {
       throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
     }
     res.json({

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api';
 import { useOtpStore } from '../store/otp';
 import { InfoGateModal } from './InfoGateModal';
@@ -51,6 +52,26 @@ export function ListingSidebarCard({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [alreadyPopupOpen, setAlreadyPopupOpen] = useState(false);
+
+  // Server-side "has this verified buyer already enquired about this exact
+  // listing AND is the lead still active?" — drives the "Buyer enquiry form
+  // already submitted" popup on Visit Dealer click. Only fires when we
+  // have a verified phone in the OTP store; the unverified path falls
+  // straight through to the InfoGateModal so a first-time buyer never
+  // sees a phantom warning.
+  const myStatusQuery = useQuery({
+    enabled: Boolean(storedPhone),
+    queryKey: ['my-listing-status', slug, storedPhone],
+    queryFn: () =>
+      api<{ enquired: boolean; leadId?: string; status?: string }>(
+        `/leads/listings/${slug}/my-status?phone=${encodeURIComponent(storedPhone!)}`,
+      ),
+    staleTime: 30 * 1000,
+  });
+  const existingLead = myStatusQuery.data?.enquired
+    ? { id: myStatusQuery.data.leadId!, status: myStatusQuery.data.status! }
+    : null;
 
   // When the buyer has a fresh verifiedToken and remembered identity from a
   // previous enquiry this session, the second click goes straight through
@@ -193,7 +214,21 @@ export function ListingSidebarCard({
                   buyer-enquiry InfoGateModal. */}
               <button
                 type="button"
-                onClick={() => (alreadyVerified ? submitDirectly() : setModalOpen(true))}
+                onClick={() => {
+                  // The "already enquired" check runs server-side against
+                  // the buyer's verified phone. If the lead is in a non-
+                  // terminal state we block the click and surface the
+                  // existing reference ID + Track link instead of opening
+                  // a second enquiry. Once the dealer marks the lead
+                  // "Not Interested" (DEAD/LOST), the lookup returns
+                  // enquired=false and this button behaves normally again.
+                  if (existingLead) {
+                    setAlreadyPopupOpen(true);
+                    return;
+                  }
+                  if (alreadyVerified) submitDirectly();
+                  else setModalOpen(true);
+                }}
                 disabled={submitting}
                 className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:brightness-110 transition disabled:opacity-60"
               >
@@ -263,6 +298,71 @@ export function ListingSidebarCard({
         onVerified={handleVerified}
         onClose={() => setModalOpen(false)}
       />
+
+      {/* "Already submitted" popup — surfaces when a returning verified
+          buyer clicks Visit Dealer on a listing they've already enquired
+          about (and the dealer hasn't marked the lead Not Interested).
+          Shows the reference ID + a Track Enquiry shortcut so the buyer
+          can follow up instead of bouncing into a dead-end OK button. */}
+      {alreadyPopupOpen && existingLead && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="already-enquired-title"
+          className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto"
+          onClick={() => setAlreadyPopupOpen(false)}
+        >
+          <div
+            className="bg-hd-white border-t-4 border-hd-orange max-w-md w-full p-5 sm:p-6 rounded-card shadow-xl my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-baseline justify-between">
+              <h2
+                id="already-enquired-title"
+                className="font-subhead uppercase tracking-subhead text-text-on-light text-base"
+              >
+                Enquiry Already Submitted
+              </h2>
+              <button
+                type="button"
+                onClick={() => setAlreadyPopupOpen(false)}
+                aria-label="Close"
+                className="text-gray-500 hover:text-text-on-light text-sm"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-gray-700 mt-3 leading-relaxed">
+              Buyer enquiry form already submitted. {dealerName} will reach
+              out within 48 hours.
+            </p>
+            <div className="mt-4 border-t border-gray-200 pt-3">
+              <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
+                Reference ID
+              </p>
+              <code className="block font-mono text-xs break-all mt-1">
+                {existingLead.id}
+              </code>
+            </div>
+            <div className="flex justify-end gap-3 mt-5">
+              <button
+                type="button"
+                onClick={() => setAlreadyPopupOpen(false)}
+                className="border border-gray-300 px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+              >
+                OK
+              </button>
+              <Link
+                to={`/track?id=${existingLead.id}`}
+                onClick={() => setAlreadyPopupOpen(false)}
+                className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
+              >
+                Track Enquiry →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
