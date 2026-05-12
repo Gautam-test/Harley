@@ -140,6 +140,26 @@ export function InfoGateModal({
     }, 15_000);
     return () => window.clearTimeout(t);
   }, [busy]);
+
+  // Lock body scroll while the modal is open. Critical for the SellBikeModal
+  // -> InfoGateModal stacked-modal case on mobile: with body scroll free,
+  // Android Chrome's touch event allocation can hand a tap on this OTP
+  // modal's button to the underlying SellBikeModal's `overflow-y-auto`
+  // overlay (interpreted as a scroll-start gesture). Locking body overflow
+  // forces every touch to resolve against the topmost element only.
+  useEffect(() => {
+    if (!open) return;
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, [open]);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
@@ -425,7 +445,17 @@ export function InfoGateModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
+    // z-[60] (one level above the standard z-50 used by every other modal
+    // in the buyer SPA) is critical for the prefilled flow where this OTP
+    // modal stacks ON TOP of a caller modal — e.g. SellBikeModal opens its
+    // own `fixed inset-0 z-50` sheet, then mounts this component as a
+    // sibling. With both at z-50, Android Chrome's touch-event allocation
+    // routes taps to the EARLIER fixed scroll container (the underlying
+    // SellBikeModal's overflow-y-auto) instead of the visually-on-top OTP
+    // modal — Verify and Resend look unresponsive on mobile. Bumping to
+    // z-60 puts OTP unambiguously on top for both paint AND hit-testing.
+    // QA: "Verify+Resend not working on Sell Your Motorcycle (works on Buy)".
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
       <div
         className={`bg-hd-white border-t-4 border-hd-orange ${
           isBuyerEnquiry && step === 'collect' ? 'max-w-xl' : 'max-w-md'
