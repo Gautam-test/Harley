@@ -321,7 +321,7 @@ export function SearchFilters() {
 
         {searchBy === 'cash' ? (
           <SliderField
-            label="Max Price"
+            label="Monthly Budget"
             value={maxPrice}
             min={PRICE_MIN}
             max={PRICE_MAX}
@@ -335,7 +335,7 @@ export function SearchFilters() {
           />
         ) : (
           <SliderField
-            label="Max Monthly Payment"
+            label="Monthly Budget"
             value={maxMonthly}
             min={MONTHLY_MIN}
             max={MONTHLY_MAX}
@@ -359,15 +359,21 @@ export function SearchFilters() {
           displayValue={
             Number(maxKms) >= KMS_MAX
               ? 'Any'
-              : `Up to ${Number(maxKms).toLocaleString('en-IN')} km`
+              : `${Number(maxKms).toLocaleString('en-IN')} KM`
           }
           showRange
           rangeLabels={[`${KMS_MIN} KM`, `${KMS_MAX.toLocaleString('en-IN')} KM`]}
         />
 
-        {/* Filters now auto-apply on change, so the explicit Apply button is
-            gone. Clear All remains so the user can wipe everything in one go. */}
-        <div className="pt-2">
+        {/* Figma /Customer/Bike Listing.png shows APPLY FILTERS (orange) + CLEAR ALL
+            (outlined) stacked. Filters still auto-apply on change for fast feedback;
+            the Apply button is now a no-op visual confirmation that mirrors the
+            design and gives a clear "I'm done" affordance for keyboard / screen-
+            reader users. */}
+        <div className="pt-2 space-y-2">
+          <Button type="submit" className="w-full">
+            Apply Filters
+          </Button>
           <Button type="button" variant="secondary" onClick={onReset} className="w-full">
             Clear All
           </Button>

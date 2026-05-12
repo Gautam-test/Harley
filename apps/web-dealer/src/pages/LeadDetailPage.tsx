@@ -569,7 +569,7 @@ export function LeadDetailPage() {
 
           {(lead.message || lead.bikeModel) && (
             <Panel title={kind === 'trade-in' ? 'Seller Profile' : 'Buyer Profile'}>
-              {lead.bikeModel && <Field label="Bike">{lead.bikeModel}</Field>}
+              {lead.bikeModel && <Field label="Motorcycle">{lead.bikeModel}</Field>}
               {lead.vin && (
                 <Field label="VIN">
                   <span className="font-mono text-xs">{lead.vin}</span>

@@ -172,7 +172,7 @@ export function EmiCalculator({ price, bikeLabel }: { price: number; bikeLabel?:
           onClick={() => {
             const subject = `H-D Certified — EMI estimate${bikeLabel ? ` for ${bikeLabel}` : ''}`;
             const lines = [
-              bikeLabel ? `Bike: ${bikeLabel}` : null,
+              bikeLabel ? `Motorcycle: ${bikeLabel}` : null,
               `On-road price: ${inr(price)}`,
               `Down payment (${downPct}%): ${inr(downPayment)}`,
               `Loan amount: ${inr(loan)}`,
@@ -184,7 +184,7 @@ export function EmiCalculator({ price, bikeLabel }: { price: number; bikeLabel?:
               `Total payable (including down payment): ${inr(totalWithDown)}`,
               ``,
               `Indicative only. Actual rates and approval determined by lender.`,
-              `Generated from H-D Certified — Approved Used Bikes.`,
+              `Generated from H-D Certified — Approved Used Motorcycles.`,
             ].filter(Boolean);
             const body = lines.join('\n');
             window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;

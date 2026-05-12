@@ -370,7 +370,7 @@ function NotFound() {
     <div className="max-w-container mx-auto px-6 py-24 text-center">
       <h1 className="font-headline text-5xl tracking-headline text-text-on-light">Listing Not Available</h1>
       <p className="text-gray-600 mt-4">
-        This bike has been sold or removed. Browse other approved used bikes.
+        This motorcycle has been sold or removed. Browse other approved used motorcycles.
       </p>
       <Link to="/search" className="inline-block mt-8">
         <Button>Search Stock</Button>

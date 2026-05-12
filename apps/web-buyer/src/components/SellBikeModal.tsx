@@ -134,7 +134,7 @@ export function SellBikeModal() {
         <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 rounded-card shadow-xl my-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
-              Tell Us About Your Bike
+              Tell Us About Your Motorcycle
             </h2>
             <button
               onClick={handleClose}
@@ -198,9 +198,9 @@ export function SellBikeModal() {
               </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Bike Model" required>
+                <Labelled label="Motorcycle Model" required>
                   <Select {...register('bikeModel', { required: true })}>
-                    <option value="">Choose bike model</option>
+                    <option value="">Choose motorcycle model</option>
                     {HD_MODEL_CATALOG.map((g) => (
                       <optgroup key={g.family} label={g.family}>
                         {g.models.map((m) => (

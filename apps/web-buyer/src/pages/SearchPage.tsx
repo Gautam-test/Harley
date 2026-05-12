@@ -21,12 +21,6 @@ interface SearchResponse {
 
 const PAGE_SIZE = 12;
 
-const TABS: { id: '' | 'CPO' | 'AS_IS'; label: string }[] = [
-  { id: '', label: 'All Pre-Owned Motorcycles' },
-  { id: 'CPO', label: 'Certified Pre-Owned' },
-  { id: 'AS_IS', label: 'As-Is Pre-Owned Motorcycles' },
-];
-
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'newest', label: 'Newest' },
   { value: 'priceAsc', label: 'Price: low → high' },
@@ -38,7 +32,6 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const queryString = params.toString();
   const currentPage = Number(params.get('page') ?? '1');
-  const activeTab = (params.get('cert') as '' | 'CPO' | 'AS_IS') || '';
   const sort = params.get('sort') ?? 'newest';
 
   // Surface a "Filters" floating button once the user has scrolled past the
@@ -102,7 +95,7 @@ export function SearchPage() {
               the user back to the top of this column when they've scrolled
               past it on long result pages. */}
           <aside id="search-filters" className="h-fit">
-            <p className="font-subhead uppercase tracking-subhead text-xs text-text-on-light mb-3 lg:hidden">
+            <p className="font-subhead uppercase tracking-subhead text-xs text-text-on-light mb-3">
               Search By:
             </p>
             <SearchFilters />
@@ -110,8 +103,8 @@ export function SearchPage() {
 
           <section>
             <div className="flex items-baseline justify-between mb-2 flex-wrap gap-3">
-              <h2 className="font-headline text-2xl md:text-3xl tracking-headline uppercase text-text-on-light">
-                H-D Certified&trade; Used Bike <span className="text-hd-orange">Stocklist</span>
+              <h2 className="font-subhead text-2xl md:text-3xl text-text-on-light">
+                H-D Certified Used Motorcycle Stocklist
               </h2>
               <div className="flex items-center gap-3">
                 <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
@@ -130,28 +123,10 @@ export function SearchPage() {
                 </Select>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-5">
-              Please use the filters on the left to refine the H-D Certified&trade; stock and find your
+            <p className="text-sm text-gray-600 mb-6">
+              Please use the filters on the left to refine the H-D Certified CPO stock and find your
               next Harley-Davidson.
             </p>
-
-            {/* Tabs — All / CPO / As-Is */}
-            <nav className="flex flex-wrap gap-2 mb-6">
-              {TABS.map((t) => (
-                <button
-                  key={t.id || 'all'}
-                  type="button"
-                  onClick={() => setParam('cert', t.id)}
-                  className={`px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
-                    activeTab === t.id
-                      ? 'bg-hd-orange text-hd-black'
-                      : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </nav>
 
             {isError && (
               <div className="text-danger bg-danger/10 border border-danger px-4 py-3 rounded-card">
@@ -168,7 +143,7 @@ export function SearchPage() {
             ) : data?.results.length === 0 ? (
               <div className="bg-hd-white border border-gray-200 p-10 text-center rounded-card">
                 <p className="font-subhead text-lg text-text-on-light">
-                  No bikes match your search.
+                  No motorcycles match your search.
                 </p>
                 <p className="text-sm text-gray-600 mt-2">Try widening the radius or clearing filters.</p>
                 <button

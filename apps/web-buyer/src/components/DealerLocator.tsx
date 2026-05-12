@@ -36,26 +36,52 @@ export function DealerLocator() {
   return (
     <section className="bg-surface-light py-20 border-t border-gray-200" aria-labelledby="dealer-locator-heading">
       <div className="max-w-container mx-auto px-6">
-        <h2 id="dealer-locator-heading" className="font-headline text-3xl md:text-5xl tracking-headline text-text-on-light">
-          Find Your <span className="text-hd-orange">Nearest Dealer</span>
-        </h2>
-        <p className="font-body text-gray-600 mt-4 max-w-2xl">
-          Every certified bike is sold through an authorised H-D dealer.
-          {data && data.length > 0 && (
-            <>
-              {' '}Showing the{' '}
-              <span className="font-subhead text-text-on-light whitespace-nowrap">
-                3 closest
-              </span>{' '}
-              {/* whitespace-nowrap on the count + dealerships keeps the
-                  trailing word on the same line as the number "of N";
-                  earlier the word wrapped to its own line on narrower
-                  viewports (QA Bug 3 — text-wrap container issue). */}
-              <span className="whitespace-nowrap">of {data.length} dealerships.</span>
-            </>
-          )}
+        {/* Figma /Customer/Home.png — preheader "THE DEALER NETWORK" sits
+            above the h2 "FIND YOUR DEALER" (DEALER in orange). */}
+        <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+          The Dealer Network
         </p>
+        <h2
+          id="dealer-locator-heading"
+          className="font-headline text-3xl md:text-5xl tracking-headline uppercase text-text-on-light mt-2"
+        >
+          Find Your <span className="text-hd-orange">Dealer</span>
+        </h2>
+        <p className="font-body text-gray-600 mt-4 max-w-2xl text-sm leading-relaxed">
+          Every certified motorcycle is backed by an authorised Harley-Davidson&trade;
+          dealer. Use the map below to find one near you.
+        </p>
+        {/* List LEFT, map RIGHT per Figma — opposite of the previous arrangement. */}
         <div className="mt-10 grid lg:grid-cols-2 gap-8 items-stretch">
+          <div className="bg-hd-white border border-gray-200 p-6 max-h-[28rem] overflow-y-auto">
+            {isLoading && <p className="text-gray-600 text-sm">Loading…</p>}
+            {data?.length === 0 && (
+              <p className="text-gray-600 text-sm">No dealers added yet.</p>
+            )}
+            <ul className="space-y-4">
+              {visible.map((d) => (
+                <li
+                  key={d.id}
+                  className="border border-gray-200 p-4 hover:border-hd-orange transition"
+                >
+                  <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+                    {d.name} — {d.city.toUpperCase()}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-1.5 leading-snug">
+                    {d.city} · {d.pincode}
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps?q=${encodeURIComponent(d.name + ' ' + d.city)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 text-[11px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
+                  >
+                    View Details →
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="bg-hd-white border border-gray-200 min-h-80 overflow-hidden">
             <iframe
               title="Dealer locator map"
@@ -65,25 +91,6 @@ export function DealerLocator() {
               className="w-full h-full min-h-80 border-0"
               allowFullScreen
             />
-          </div>
-          <div className="bg-hd-white border border-gray-200 p-6 max-h-[28rem] overflow-y-auto">
-            <h3 className="font-subhead uppercase tracking-subhead text-text-on-light">
-              Authorised Dealers
-            </h3>
-            {isLoading && <p className="text-gray-600 mt-6 text-sm">Loading…</p>}
-            {data?.length === 0 && (
-              <p className="text-gray-600 mt-6 text-sm">No dealers added yet.</p>
-            )}
-            <ul className="mt-6 space-y-4">
-              {visible.map((d) => (
-                <li key={d.id} className="border border-gray-200 p-4 hover:border-hd-orange transition">
-                  <div className="font-subhead text-text-on-light">{d.name}</div>
-                  <div className="text-sm text-gray-600 mt-1">
-                    {d.city} &middot; {d.pincode}
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </div>

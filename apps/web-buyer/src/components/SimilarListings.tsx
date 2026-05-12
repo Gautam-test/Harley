@@ -31,7 +31,7 @@ export function SimilarListings({ modelFamily, excludeSlug }: Props) {
       <div className="flex items-baseline justify-between flex-wrap gap-3">
         <div>
           <span className="font-subhead uppercase tracking-subhead text-xs text-hd-orange">
-            Similar bikes
+            Similar motorcycles
           </span>
           <h3 className="font-headline text-2xl tracking-headline text-text-on-light mt-1">
             More from the {modelFamily} family

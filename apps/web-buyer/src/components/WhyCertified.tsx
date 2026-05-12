@@ -19,10 +19,10 @@ export function WhyCertified() {
           <span className="text-gray-500 text-xs">Sold only through authorised dealers</span>
         </div>
         <h3 className="font-subhead uppercase tracking-subhead text-text-on-light mt-2">
-          Buy with the same confidence as a new bike
+          Buy with the same confidence as a new motorcycle
         </h3>
         <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-          This bike has passed H-D&rsquo;s 110-point pre-delivery inspection, has a verified
+          This motorcycle has passed H-D&rsquo;s 110-point pre-delivery inspection, has a verified
           kilometre history, and ships with a 12-month mechanical &amp; electrical guarantee.
         </p>
         <ul className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">

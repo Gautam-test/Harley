@@ -24,8 +24,8 @@ const ABOUT_FAQ: { q: string; a: string }[] = [
     a: 'No — the EMI calculator is indicative only. Final loan rates and approval are at the partner lender\'s discretion. H-D Certified does not directly provide loans.',
   },
   {
-    q: 'How do I sell my bike?',
-    a: 'Use the Sell Your Bike form. An authorised Harley-Davidson dealer will reach out within 48 hours to walk through inspection, paperwork, and a no-obligation valuation.',
+    q: 'How do I sell my motorcycle?',
+    a: 'Use the Sell Your Motorcycle form. An authorised Harley-Davidson dealer will reach out within 48 hours to walk through inspection, paperwork, and a no-obligation valuation.',
   },
   {
     q: 'How long is the warranty?',

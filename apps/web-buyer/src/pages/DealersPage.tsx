@@ -41,7 +41,7 @@ export function DealersPage() {
       <PageHero
         title="Authorised"
         emphasis="Dealers"
-        subtitle="Every H-D Certified bike is sold through one of these authorised dealers."
+        subtitle="Every H-D Certified motorcycle is sold through one of these authorised dealers."
         image={HERO.lowRider}
       />
       <div className="max-w-container mx-auto px-6 py-10 md:py-12">

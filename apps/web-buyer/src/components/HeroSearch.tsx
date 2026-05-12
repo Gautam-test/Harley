@@ -22,9 +22,19 @@ type FormValues = {
   pinCode: string;
   distance: string;
   family: string;
+  minYear: string;
   maxPrice: string; // store the slider value (₹) as string so URL params stay simple
   maxMonthly: string; // store the EMI-cap slider value (₹/month) as string
 };
+
+// Year options for the hero search Year dropdown — matches /search filter
+// sidebar so the buyer's hero-pick survives the jump to /search.
+const YEAR_OPTIONS = (() => {
+  const now = new Date().getFullYear();
+  const out: { value: string; label: string }[] = [{ value: '', label: 'Year (All)' }];
+  for (let y = now; y >= now - 8; y--) out.push({ value: String(y), label: `${y} or newer` });
+  return out;
+})();
 
 const HERO_IMG = '/heros/home.jpg';
 
@@ -59,6 +69,7 @@ export function HeroSearch() {
       pinCode: '',
       distance: '',
       family: '',
+      minYear: '',
       maxPrice: String(PRICE_MAX),
       maxMonthly: String(MONTHLY_MAX),
     },
@@ -69,6 +80,7 @@ export function HeroSearch() {
   const onSubmit = (v: FormValues) => {
     const params = new URLSearchParams();
     if (v.family) params.set('modelFamily', v.family);
+    if (v.minYear) params.set('minYear', v.minYear);
 
     if (searchBy === 'cash' && Number(v.maxPrice) < PRICE_MAX) {
       params.set('maxPrice', v.maxPrice);
@@ -129,55 +141,27 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        {/* Decorative orange side band — sized down (was 80×192 px,
-            overlapping the headline on tablet widths; now 56×128 px and
-            sits flush in the top-left corner). Hidden below md so the
-            phone hero stays uncluttered. */}
-        <div
-          aria-hidden
-          className="hidden md:block absolute top-0 left-0 z-[1]"
-        >
-          <div className="relative w-14 bg-hd-orange overflow-hidden h-32">
-            {/* Diagonal cut at the bottom so the band reads as a banner,
-                matching the freeze design. */}
-            <div
-              className="absolute -bottom-4 inset-x-0 h-8 bg-hd-black"
-              style={{ clipPath: 'polygon(0 100%, 100% 100%, 100% 50%, 0 0)' }}
-            />
-            <div className="absolute inset-0 flex items-start justify-center pt-5">
-              <BarAndShield />
-            </div>
-          </div>
-        </div>
-
-        {/*
-          md+ adds 80px left padding so the headline never sits under the
-          decorative band on tablet widths (where max-w-container can
-          extend below the viewport edge). lg keeps the standard rhythm
-          since the centred container already clears the band.
-        */}
-        <div className="relative max-w-container mx-auto px-6 md:pl-24 lg:pl-6 py-24 md:py-32 lg:py-40">
-          <div className="max-w-3xl">
+        <div className="relative max-w-container mx-auto px-6 py-24 md:py-32 lg:py-40">
+          <div className="max-w-5xl">
             {/* Single-line headline + ™ — replaces the previous stacked
                 "H-D CERTIFIED / APPROVED USED BIKES". Figma uses one
                 continuous heading for tighter rhythm. */}
-            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
               H-D Certified
-              <span className="text-hd-orange align-super text-base ml-1">&trade;</span>
-              {' '}Approved Used Bikes
+              <span className="text-hd-orange align-super text-lg ml-1">&trade;</span>
+              {' '}Approved Used Motorcycles
             </h1>
-            {/* Mixed-case tagline in white — was uppercase orange previously.
-                Figma deliberately drops the brand orange here so the headline
-                ™ stays the only orange highlight in the hero copy block. */}
-            <p className="text-base md:text-lg text-hd-white/90 mt-5 font-subhead">
+            <p className="text-3xl md:text-4xl text-hd-orange mt-5 font-subhead">
               Ride With Confidence
             </p>
           </div>
         </div>
       </section>
 
-      {/* Search band — sits below the hero photo. */}
-      <section className="bg-hd-black border-y border-surface-2">
+      {/* Search band — sits below the hero photo. Figma /Customer/Home.png
+          uses a charcoal grey (not pure black) so the white input fields
+          contrast clearly against the band without the inputs disappearing. */}
+      <section className="bg-surface-2 border-y border-surface-1">
         <div className="max-w-container mx-auto px-6 py-5">
           {/* Cash / Monthly tab toggle — Figma puts these directly above
               the input row as text-with-chevron toggles. The active label
@@ -192,7 +176,7 @@ export function HeroSearch() {
                   : 'text-text-secondary hover:text-hd-white'
               }`}
             >
-              Search by Cash Price
+              Search by Price
               <Chevron open={searchBy === 'cash'} />
             </button>
             <button
@@ -211,7 +195,7 @@ export function HeroSearch() {
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end"
+            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end"
           >
             <FieldLabel label="Pin Code">
               <Input
@@ -231,12 +215,21 @@ export function HeroSearch() {
                 ))}
               </Select>
             </FieldLabel>
-            <FieldLabel label="Family">
+            <FieldLabel label="Models">
               <Select {...register('family')}>
                 <option value="">Category (All)</option>
                 {HD_FAMILIES.map((f) => (
                   <option key={f} value={f}>
                     {f}
+                  </option>
+                ))}
+              </Select>
+            </FieldLabel>
+            <FieldLabel label="Year">
+              <Select {...register('minYear')}>
+                {YEAR_OPTIONS.map((y) => (
+                  <option key={y.value || 'any'} value={y.value}>
+                    {y.label}
                   </option>
                 ))}
               </Select>
@@ -353,28 +346,3 @@ function Chevron({ open }: { open: boolean }) {
   );
 }
 
-// Inline H-D bar-and-shield placeholder mark. Stylised, not the official
-// trademarked logo — the licensed PNG drops in via a public/brand asset
-// later if H-D India approves it for the marketplace. White on the
-// orange decorative band.
-function BarAndShield() {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-12 h-12"
-      aria-hidden
-    >
-      <path
-        d="M8 24 L32 8 L56 24 L56 40 L32 56 L8 40 Z"
-        stroke="#FFFFFF"
-        strokeWidth="3"
-        fill="none"
-      />
-      <rect x="16" y="28" width="32" height="8" fill="#FFFFFF" />
-      <rect x="22" y="22" width="20" height="6" fill="#0F0F0F" />
-      <rect x="22" y="36" width="20" height="6" fill="#0F0F0F" />
-    </svg>
-  );
-}

@@ -81,7 +81,7 @@ export function SiteHeader() {
             onClick={openSellBike}
             className={navButtonClasses}
           >
-            Sell Your Bike
+            Sell Your Motorcycle
           </button>
           <NavLink to="/track" className={navLinkClasses}>
             Track Enquiry
@@ -150,7 +150,7 @@ export function SiteHeader() {
               }}
               className="block w-full text-left px-6 py-4 font-subhead font-normal uppercase tracking-subhead text-base border-l-4 border-transparent text-text-primary hover:text-hd-orange hover:bg-surface-2/40 transition"
             >
-              Sell Your Bike
+              Sell Your Motorcycle
             </button>
             <NavLink to="/track" className={drawerLinkClasses}>
               Track Enquiry

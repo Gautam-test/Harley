@@ -9,7 +9,7 @@ export function SiteFooter() {
             H-D <span className="text-hd-orange">CERTIFIED</span>
           </div>
           <p className="text-text-secondary leading-relaxed">
-            Approved Used Bikes, exclusively from authorised Harley-Davidson dealers.
+            Approved Used Motorcycles, exclusively from authorised Harley-Davidson dealers.
           </p>
         </div>
         {/* Each section header is itself a Link to the canonical landing
@@ -26,7 +26,7 @@ export function SiteFooter() {
           </h3>
           <ul className="space-y-2 text-text-secondary">
             <li><Link to="/search" className="hover:text-hd-orange">Search Stock</Link></li>
-            <li><Link to="/sell-bike" className="hover:text-hd-orange">Sell Your Bike</Link></li>
+            <li><Link to="/sell-bike" className="hover:text-hd-orange">Sell Your Motorcycle</Link></li>
             <li><Link to="/track" className="hover:text-hd-orange">Track Enquiry</Link></li>
           </ul>
         </div>

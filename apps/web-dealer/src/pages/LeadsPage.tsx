@@ -39,14 +39,14 @@ const KIND_META: Record<Kind, { title: string; subtitle: string; orangeWord: str
   buyer: {
     title: 'Buyer Enquiries',
     subtitle:
-      "Buyers who've submitted enquiries against your listed bikes. Click + Add Enquiry to log a phone call or walk-in.",
+      "Buyers who've submitted enquiries against your listed motorcycles. Click + Add Enquiry to log a phone call or walk-in.",
     orangeWord: 'Enquiries',
     addLabel: '+ Add Buyer Enquiry',
   },
   'trade-in': {
     title: 'Seller Enquiries',
     subtitle:
-      'H-D owners looking to sell. Walk through inspection, docs, and admin approval to make the bike live.',
+      'H-D owners looking to sell. Walk through inspection, docs, and admin approval to make the motorcycle live.',
     orangeWord: 'Enquiries',
     addLabel: '+ Add Seller Enquiry',
   },
@@ -94,7 +94,7 @@ export function LeadsPage() {
             <tr>
               <Th>Lead</Th>
               <Th>Contact</Th>
-              <Th>{kind === 'buyer' ? 'Bike Enquired' : 'Bike Offered'}</Th>
+              <Th>{kind === 'buyer' ? 'Motorcycle Enquired' : 'Motorcycle Offered'}</Th>
               <Th>Status</Th>
               <Th className="text-right pr-4">
                 <span className="sr-only">Open</span>
@@ -337,14 +337,14 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         }}
         className="space-y-5"
       >
-        <FormSection kicker="1" label="Bike of Interest">
+        <FormSection kicker="1" label="Motorcycle of Interest">
           <Field label="Listing">
             <Select
               value={form.listingId}
               onChange={(e) => setForm((f) => ({ ...f, listingId: e.target.value }))}
               required
             >
-              <option value="">Select a bike…</option>
+              <option value="">Select a motorcycle…</option>
               {listings.data?.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.year} {l.modelName} · {l.vin.slice(-5)}
@@ -476,7 +476,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <CheckboxField
               checked={form.tradeInInterest}
               onChange={(v) => setForm((f) => ({ ...f, tradeInInterest: v }))}
-              label="Has a bike to trade in"
+              label="Has a motorcycle to trade in"
             />
           </div>
         </FormSection>
@@ -652,7 +652,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
           </div>
         </FormSection>
 
-        <FormSection kicker="2" label="Bike Details">
+        <FormSection kicker="2" label="Motorcycle Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Model / Year line">
               <Input
@@ -768,7 +768,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
           </Field>
         </FormSection>
 
-        <FormSection kicker="4" label="Bike Condition & Notes">
+        <FormSection kicker="4" label="Motorcycle Condition & Notes">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Insurance valid until (optional)">
               <Input
@@ -780,7 +780,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <CheckboxField
               checked={form.loanOutstanding}
               onChange={(v) => setForm((f) => ({ ...f, loanOutstanding: v }))}
-              label="Loan outstanding on the bike"
+              label="Loan outstanding on the motorcycle"
             />
           </div>
           <Field label="Accessories / modifications (optional)">

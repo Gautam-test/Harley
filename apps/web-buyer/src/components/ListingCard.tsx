@@ -178,7 +178,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
               id={`sold-modal-${listing.id}`}
               className="font-subhead uppercase tracking-subhead text-text-on-light text-base"
             >
-              This Bike Is Sold
+              This Motorcycle Is Sold
             </h2>
             <button
               type="button"

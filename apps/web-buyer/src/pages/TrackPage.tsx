@@ -60,18 +60,18 @@ interface LeadTrackResult {
 // enum value the dealer moves the lead through.
 const BUYER_STAGES: { status: LeadTrackResult['status']; label: string; note: string }[] = [
   { status: 'NEW', label: 'Enquiry Received', note: 'We have your details and notified the dealer.' },
-  { status: 'CONTACTED', label: 'Dealer Contacted You', note: 'A dealer rep has reached out about this bike.' },
+  { status: 'CONTACTED', label: 'Dealer Contacted You', note: 'A dealer rep has reached out about this motorcycle.' },
   { status: 'ON_SITE_VISIT', label: 'On-Site Visit', note: 'Dealer scheduled an in-store visit.' },
   { status: 'LOAN_APPROVAL', label: 'Loan Approval', note: 'Finance assessment in progress.' },
   { status: 'CLOSED', label: 'Booking Closed', note: 'Booking finalised — paperwork next.' },
-  { status: 'SUCCESS', label: 'Delivered', note: 'Bike handed over — ride safe.' },
+  { status: 'SUCCESS', label: 'Delivered', note: 'Motorcycle handed over — ride safe.' },
 ];
 // Seller / trade-in 7-stage pipeline (QA round 3 — expanded from
 // 4 stages). Buyer-tone copy on each note line; the canonical short
 // label here matches LEAD_STAGE_LABELS in @hd-cpo/types so the dealer
 // dropdown + pipeline bar + this buyer-side timeline read identical.
 const SELLER_STAGES: { status: LeadTrackResult['status']; label: string; note: string }[] = [
-  { status: 'NEW', label: 'Enquiry Received', note: 'Dealer notified about your bike.' },
+  { status: 'NEW', label: 'Enquiry Received', note: 'Dealer notified about your motorcycle.' },
   { status: 'DOCUMENTATION_VERIFICATION', label: 'Documentation Verification', note: 'Dealer reviewing your RC, insurance, and service history.' },
   { status: 'TECHNICAL_INSPECTION', label: 'Technical Inspection', note: 'Authorised technician running the 110-point check.' },
   { status: 'VALUATION_OFFER', label: 'Valuation & Offer', note: 'Quote on the way based on inspection + market.' },
@@ -97,7 +97,7 @@ const HOW_TO_STEPS = [
   },
   {
     title: 'Check Status',
-    body: "View real-time updates of your bike's journey to you.",
+    body: "View real-time updates of your motorcycle's journey to you.",
   },
 ];
 
@@ -187,12 +187,12 @@ export function TrackPage() {
         </form>
       </PageHero>
 
-      {/* "How to Track Your Bike" — only show when no result yet */}
+      {/* "How to Track Your Motorcycle" — only show when no result yet */}
       {!result && !errorMsg && (
         <section className="bg-hd-white py-16">
           <div className="max-w-5xl mx-auto px-6">
             <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
-              How to Track Your Bike
+              How to Track Your Motorcycle
             </h2>
             <div className="mt-10 grid md:grid-cols-3 gap-8">
               {HOW_TO_STEPS.map((s, i) => (
@@ -311,7 +311,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
       ? stages.length - 1
       : 0;
 
-  const headingType = lead.type === 'BUYER' ? 'Enquiry' : lead.type === 'TRADE_IN' ? 'Sell Bike' : 'Enquiry';
+  const headingType = lead.type === 'BUYER' ? 'Enquiry' : lead.type === 'TRADE_IN' ? 'Sell Motorcycle' : 'Enquiry';
   const updatedAt = new Date(lead.updatedAt);
 
   return (
@@ -367,7 +367,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
             </p>
             <p className="text-sm text-gray-700 mt-1">
               The dealer has closed this enquiry. If this was unexpected, get in touch with the
-              dealer directly or raise a new enquiry on the bike you&rsquo;re interested in.
+              dealer directly or raise a new enquiry on the motorcycle you&rsquo;re interested in.
             </p>
           </div>
         ) : (
