@@ -123,6 +123,10 @@ export function LeadDetailPage() {
   });
 
   const [draft, setDraft] = useState('');
+  // Pipeline Activity collapse state (QA #1). Default to expanded so the
+  // first view of a lead surfaces the full audit trail; collapse persists
+  // for the lifetime of this mount only.
+  const [activityExpanded, setActivityExpanded] = useState(true);
   const addComment = useMutation({
     mutationFn: () =>
       api(`/dealer/leads/${kind}/${id}/comments`, {
@@ -372,15 +376,52 @@ export function LeadDetailPage() {
             </div>
           </section>
 
-          {/* Pipeline Activity — append-only audit trail of status moves */}
+          {/* Pipeline Activity — append-only audit trail of status moves.
+              Collapsible per QA #1: long activity logs were eating screen
+              real-estate on the lead-detail page; the dealer mostly cares
+              about the current stage + comments. Default to expanded so
+              first-time viewers see the full trail; clicking the chevron
+              collapses to just the count. */}
           <section className="bg-hd-white border border-gray-200 rounded-card p-6">
-            <h2 className="font-headline tracking-headline uppercase text-lg">
-              Pipeline Activity
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Every status change on this lead, oldest at the top.
-            </p>
-            <div className="mt-5">
+            <button
+              type="button"
+              onClick={() => setActivityExpanded((v) => !v)}
+              aria-expanded={activityExpanded}
+              aria-controls="pipeline-activity-body"
+              className="w-full flex items-start justify-between gap-3 text-left group"
+            >
+              <span>
+                <span className="block font-headline tracking-headline uppercase text-lg">
+                  Pipeline Activity
+                  {(activity.data?.length ?? 0) > 0 && (
+                    <span className="ml-2 text-xs font-subhead tracking-subhead text-gray-500">
+                      ({activity.data?.length})
+                    </span>
+                  )}
+                </span>
+                <span className="block text-xs text-gray-500 mt-1">
+                  Every status change on this lead, oldest at the top.
+                </span>
+              </span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className={`w-5 h-5 mt-1 shrink-0 text-gray-400 group-hover:text-text-on-light transition-transform ${activityExpanded ? 'rotate-180' : ''}`}
+                aria-hidden
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div
+              id="pipeline-activity-body"
+              hidden={!activityExpanded}
+              className="mt-5"
+            >
               {activity.isLoading && (
                 <p className="text-xs text-gray-500">Loading activity…</p>
               )}

@@ -143,24 +143,23 @@ inspectionRouter.get('/files/:filename', optionalAuth, async (req, res, next) =>
       select: { dealerId: true, status: true },
     })) as { dealerId: string; status: string } | null;
 
-    if (listing) {
-      // Soft-gate: ACTIVE / DRAFT / DEACTIVATED listings serve their
-      // inspection PDF publicly because admin links open in a new tab
-      // (no auth header on plain `<a target="_blank">`), and the URL
-      // is an unguessable UUID. Hard-gate kicks in for SOLD/REMOVED
-      // where the listing is explicitly off-market — those still
-      // require dealer-owner or admin credentials.
-      const softTier = listing.status === 'ACTIVE' || listing.status === 'DRAFT' || listing.status === 'DEACTIVATED';
-      if (!softTier) {
-        const auth = req.auth;
-        const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;
-        const isAdmin = auth?.role === 'ADMIN';
-        if (!isOwner && !isAdmin) {
-          throw new HttpError(404, 'NOT_FOUND', 'File not found');
-        }
-      }
+    // All listing statuses serve the inspection PDF behind the unguessable
+    // UUID filename. The hard-gate previously applied to SOLD/REMOVED broke
+    // the dealer wizard's "Preview / replace file" link (a plain
+    // <a target="_blank">) which can't send an Authorization header — clicks
+    // landed on a "File not found" page (QA #2). The UUID + listing-row
+    // existence are the practical gate; we explicitly DON'T require auth
+    // here so the wizard, the buyer detail page, and admin previews all
+    // resolve correctly without bespoke fetch-as-blob plumbing.
+    //
+    // If we ever need stricter gating for SOLD/REMOVED, switch the wizard
+    // link to a fetch-with-auth -> blob URL pattern; until then, the URL
+    // unguessability matches the same trade-off already in place for
+    // ACTIVE/DRAFT/DEACTIVATED listings and for orphan wizard uploads.
+    if (!listing) {
+      // Orphan file (wizard-in-progress, listing.create hasn't run yet).
+      // Same fall-through as the listing-image route — UUID is the gate.
     }
-    // else: orphan file, wizard-in-progress; UUID is the gate.
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);

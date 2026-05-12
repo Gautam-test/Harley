@@ -260,6 +260,7 @@ interface DealerListingOption {
   vin: string;
   modelName: string;
   year: number;
+  status?: string;
 }
 
 function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
@@ -283,15 +284,25 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   // Pull this dealer's own listings so the rep can attach the lead to a bike.
-  // Restricting to ACTIVE / DRAFT / DEACTIVATED keeps SOLD/REMOVED out of the
-  // dropdown — you can't log a new lead against a bike that's already gone.
+  // Include EVERY listing the dealer has except permanently-removed rows —
+  // QA #10: dropdown was previously incomplete, missing SOLD bikes that the
+  // rep needed to log post-sale follow-up leads against. Including
+  // ACTIVE/DRAFT/DEACTIVATED/SOLD covers every "stock" the dealer can
+  // legitimately reference. REMOVED stays excluded (those rows are
+  // soft-deleted and shouldn't surface in any forward-looking flow).
   const listings = useQuery({
     queryKey: ['dealer-listings', 'enquiry-form'],
     queryFn: () => api<Array<DealerListingOption & { status: string }>>('/dealer/listings'),
     select: (rows) =>
       rows
-        .filter((r) => ['ACTIVE', 'DRAFT', 'DEACTIVATED'].includes(r.status))
-        .map((r) => ({ id: r.id, vin: r.vin, modelName: r.modelName, year: r.year })),
+        .filter((r) => r.status !== 'REMOVED')
+        .map((r) => ({
+          id: r.id,
+          vin: r.vin,
+          modelName: r.modelName,
+          year: r.year,
+          status: r.status,
+        })),
   });
 
   const submit = useMutation({
@@ -348,6 +359,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               {listings.data?.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.year} {l.modelName} · {l.vin.slice(-5)}
+                  {l.status && l.status !== 'ACTIVE' ? ` · ${l.status}` : ''}
                 </option>
               ))}
             </Select>

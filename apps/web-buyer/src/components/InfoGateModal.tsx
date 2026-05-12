@@ -216,17 +216,30 @@ export function InfoGateModal({
     }
   }
 
-  // Synchronous lock against React Strict Mode's dev double-invoke of
-  // useEffect (+ any other re-render race). Without this, the auto-send
-  // effect fired /otp/send TWICE on Sell-flow modal open: the first
-  // succeeded and (because Strict Mode tore down the first effect) had
-  // its `cancelled` flipped, so its setOtpId never ran. The second hit
-  // the API's per-IP rate limiter (5/min in production NODE_ENV) and
-  // 429'd. Net effect: modal stuck on verify step with otpId=null,
-  // every Verify click was a silent no-op (QA: "Sell flow buttons
-  // unclickable on demo, fine on local"). A ref-based guard is the
-  // standard React fix because state writes don't propagate to the
-  // re-running effect closure in time.
+  // ⚠️  CRITICAL — DO NOT REMOVE THIS REF OR RE-ADD A `cancelled` FLAG.
+  //
+  // Two QA regressions (commits 3741f2a, c92a531) were caused by this code
+  // path. Combined defence:
+  //
+  //   1. `sendInFlight` ref blocks React Strict Mode's dev double-invoke
+  //      of useEffect from firing /otp/send twice. Without it, the second
+  //      call hits the API's per-IP 5/min limiter (NODE_ENV=production)
+  //      with 429 — first request's success state was getting masked by
+  //      a `cancelled` flag flipped during Strict Mode tear-down.
+  //
+  //   2. `.then`/`.catch`/`.finally` MUST NOT be gated on a cancelled
+  //      flag. With dedupe in place, only ONE request fires per
+  //      (phone, purpose) — its result MUST land. Adding back a
+  //      cancelled flag will make `.finally` skip `setBusy(false)` →
+  //      modal stuck on "Verifying…" forever (QA screenshot proof).
+  //
+  // The component instance survives Strict Mode's fake unmount/remount,
+  // so state writes always reach the right component. There is NO
+  // legitimate reason to re-introduce the cancelled pattern here.
+  //
+  // Regression test: `e2e/info-gate-modal-strictmode.mjs` replays this
+  // exact lifecycle and asserts `busy=false` + `otpId` is set after
+  // the request completes. Run before any change to this effect.
   //
   // Key shape captures phone+purpose so a legitimate change (Edit
   // details → resubmit with new phone) re-arms the send.

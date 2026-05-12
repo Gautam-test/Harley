@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useMatch } from 'react-router-dom';
 import { useSellBikeStore } from '../store/sellBike';
 
 // Top-nav link weight: H-D 2026 guidelines reserve 1903 Bold (700) for
@@ -32,6 +32,18 @@ export function SiteHeader() {
   const openSellBike = useSellBikeStore((s) => s.openSellBike);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+
+  // Listing-detail pages live at /listings/:slug (NOT under /search/), so
+  // NavLink's default isActive check loses the "Search Stock" highlight
+  // when a buyer drills into a listing from the search results (QA #3).
+  // Treat /listings/* as a sub-page of Search Stock so the active state
+  // persists through View Details. Using useMatch keeps this declarative
+  // (no manual className munging in JSX).
+  const onListingDetail = Boolean(useMatch('/listings/:slug'));
+  const searchActive = ({ isActive }: { isActive: boolean }) =>
+    navLinkClasses({ isActive: isActive || onListingDetail });
+  const searchActiveDrawer = ({ isActive }: { isActive: boolean }) =>
+    drawerLinkClasses({ isActive: isActive || onListingDetail });
 
   // Auto-close the drawer whenever the route changes (so a tap on "Search
   // Stock" closes the drawer along with navigating). Also close when the
@@ -70,7 +82,7 @@ export function SiteHeader() {
           <NavLink to="/" className={navLinkClasses} end>
             Home
           </NavLink>
-          <NavLink to="/search" className={navLinkClasses}>
+          <NavLink to="/search" className={searchActive}>
             Search Stock
           </NavLink>
           {/* Sell Your Bike opens a modal globally rather than navigating to a
@@ -139,7 +151,7 @@ export function SiteHeader() {
             <NavLink to="/" className={drawerLinkClasses} end>
               Home
             </NavLink>
-            <NavLink to="/search" className={drawerLinkClasses}>
+            <NavLink to="/search" className={searchActiveDrawer}>
               Search Stock
             </NavLink>
             <button
