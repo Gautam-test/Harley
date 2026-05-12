@@ -178,6 +178,14 @@ export async function markSold(dealerId: string, listingId: string) {
   return updated;
 }
 
+// Strip the `removed:<cmid>:` / `sold:<cmid>:` retire-prefix that
+// createListing applies when a new listing reuses the VIN of a SOLD or
+// REMOVED row. The DB-stored VIN preserves history; this gives us back
+// the original 17-character VIN for cross-listing duplicate checks.
+function rootVin(storedVin: string): string {
+  return storedVin.replace(/^(removed|sold|deactivated):[^:]+:/, '');
+}
+
 export async function updateListing(
   dealerId: string,
   listingId: string,
@@ -205,6 +213,33 @@ export async function updateListing(
   // this, the row stays REMOVED/SOLD and silently disappears from Pending.
   const { cpoDocs, ...rest } = input;
   const restoreToDraft = listing.status === 'REMOVED' || listing.status === 'SOLD';
+
+  // VIN-collision guard for restore: if the dealer is restoring a SOLD/
+  // REMOVED listing and the original VIN is now owned by another active/
+  // pending listing (which received the clean VIN when this one's was
+  // retired with a prefix), the restore would silently produce two
+  // approvable listings sharing the same root VIN. QA #3: "Live bike
+  // with VIN X is approved; another bike from Removed/Sold with same
+  // root VIN gets edited and admin still approves it."
+  if (restoreToDraft) {
+    const originalVin = rootVin(listing.vin);
+    const conflict = await prisma.listing.findFirst({
+      where: {
+        OR: [{ vin: originalVin }, { vin: listing.vin }],
+        id: { not: listingId },
+        status: { in: ['DRAFT', 'ACTIVE', 'DEACTIVATED'] },
+      },
+      select: { id: true, status: true, vin: true },
+    });
+    if (conflict) {
+      throw new HttpError(
+        409,
+        'VIN_IN_USE',
+        `Cannot resubmit: VIN ${originalVin} is already registered to another listing (status: ${conflict.status}).`,
+      );
+    }
+  }
+
   return prisma.listing.update({
     where: { id: listingId },
     data: {

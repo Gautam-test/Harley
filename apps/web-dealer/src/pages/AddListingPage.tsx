@@ -302,6 +302,15 @@ export function AddListingPage() {
       // form's listing dropdown, and the sidebar badges all reflect the
       // new row immediately (QA: "Listing Snapshot count not updating").
       qc.invalidateQueries({ queryKey: ['dealer-listings'] });
+      // Critical: invalidate the SINGLE-listing edit-hydrate query too
+      // (key: ['dealer-listing-edit', editId]). Without this, re-opening
+      // a just-edited listing renders the wizard from cached pre-edit
+      // data — QA #1 "updated price/description/cert not reflected on
+      // dealer side". The list-key invalidation above doesn't cover
+      // single-listing keys because they're not prefix-matched.
+      if (isEditMode && editId) {
+        qc.invalidateQueries({ queryKey: ['dealer-listing-edit', editId] });
+      }
       navigate('/listings');
     },
   });

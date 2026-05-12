@@ -311,6 +311,31 @@ adminListingsRouter.post(
       if (existing.status !== 'DRAFT') {
         throw new HttpError(409, 'INVALID_STATE', `Only DRAFT listings can be published (current: ${existing.status})`);
       }
+      // Belt-and-braces VIN duplicate guard. The dealer createListing path
+      // already rejects VIN reuse against non-terminal statuses (line 38
+      // in dealer-listings.service.ts), and updateListing now rejects
+      // restore-collisions too. This catch-all at the publish gate prevents
+      // any race-condition or import-path that left two DRAFTs sharing a
+      // root VIN from both going live. QA #2: "two pending bikes with same
+      // VIN both got approved." Compares both the stored VIN (which may
+      // carry a `removed:cmid:` retire-prefix) and the root VIN against
+      // every other ACTIVE/DEACTIVATED listing.
+      const rootVin = existing.vin.replace(/^(removed|sold|deactivated):[^:]+:/, '');
+      const conflict = (await prisma.listing.findFirst({
+        where: {
+          OR: [{ vin: existing.vin }, { vin: rootVin }],
+          id: { not: id },
+          status: { in: ['ACTIVE', 'DEACTIVATED'] },
+        },
+        select: { id: true, status: true, vin: true },
+      })) as { id: string; status: ListingStatus; vin: string } | null;
+      if (conflict) {
+        throw new HttpError(
+          409,
+          'VIN_ALREADY_PUBLISHED',
+          `VIN ${rootVin} is already in use by another live listing (status: ${conflict.status}). Mark the existing one Sold or Removed before publishing this one.`,
+        );
+      }
       const listing = await prisma.listing.update({
         where: { id },
         data: { status: 'ACTIVE', publishedAt: new Date() },

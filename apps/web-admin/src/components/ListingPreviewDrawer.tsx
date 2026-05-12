@@ -62,6 +62,15 @@ export function ListingPreviewDrawer({
     enabled: open,
     queryKey: ['admin-listing-detail', listingId],
     queryFn: () => api<AdminListingDetail>(`/admin/listings/${listingId}`),
+    // Force fresh-from-server on every drawer open. The dealer can edit
+    // the listing between the admin opening this drawer the first time
+    // and reopening it after asking for changes — without this, the
+    // global staleTime: 30_000 served stale price/description/cert from
+    // before the dealer's PATCH (QA #1 "updates not reflected on admin
+    // side"). The cost is one extra GET per drawer open, which is
+    // acceptable for a low-traffic admin review surface.
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   return (

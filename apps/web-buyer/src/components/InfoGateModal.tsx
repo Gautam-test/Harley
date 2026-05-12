@@ -364,6 +364,14 @@ export function InfoGateModal({
   }, [resendCooldown]);
 
   const resendOtp = () => {
+    // Diagnostic trace — same rationale as submitVerify above (QA #4).
+    // eslint-disable-next-line no-console
+    console.log('[OTP] Resend clicked', {
+      busy,
+      resendCooldown,
+      lastSentAt,
+      hasOtpId: !!otpId,
+    });
     if (busy || resendCooldown > 0) return;
     // If the previous send was within the server's 30s window, surface
     // a visible countdown and skip the network call entirely — the user
@@ -468,7 +476,29 @@ export function InfoGateModal({
   };
 
   const submitVerify = async () => {
-    if (!otpId || !profile) return;
+    // Diagnostic trace so QA can see in the Console exactly why a Verify
+    // tap that "did nothing" actually exited (QA #5 was reported multiple
+    // times across rounds — the silent early-return below was the cause).
+    // eslint-disable-next-line no-console
+    console.log('[OTP] Verify clicked', {
+      hasOtpId: !!otpId,
+      hasProfile: !!profile,
+      codeLength: code.length,
+      busy,
+    });
+    if (!otpId || !profile) {
+      // Was: silent return — left the user staring at an unresponsive button.
+      // Now: surface a concrete error so they know to use Resend Code or
+      // re-open the modal. Most common cause: /otp/send failed silently
+      // (rate-limited, network blip) so otpId never got set even though
+      // the modal landed on the verify step.
+      setError(
+        !otpId
+          ? 'OTP not yet sent — tap "Resend code" to request a new one.'
+          : 'Session lost. Please close and re-open this dialog.',
+      );
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
