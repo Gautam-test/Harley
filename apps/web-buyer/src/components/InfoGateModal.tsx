@@ -254,21 +254,26 @@ export function InfoGateModal({
     const sendKey = `${phone}|${purpose}`;
     if (sendInFlight.current === sendKey) return;
     sendInFlight.current = sendKey;
-    let cancelled = false;
     setBusy(true);
+    // NOTE: we deliberately do NOT gate the .then/.catch/.finally on a
+    // `cancelled` flag any more. With the StrictMode-dedupe ref above,
+    // only ONE /otp/send fires per (phone, purpose) — its result MUST
+    // land regardless of which Strict-Mode effect run "owns" the
+    // closure. Previously the cancelled-gate skipped setOtpId AND
+    // setBusy(false) when Strict Mode tore down the first run, leaving
+    // the modal stuck on "Verifying..." with no otpId. The component
+    // instance is the same across Strict-Mode tear-down/remount, so
+    // these state writes always go to the right component.
     api<{ otpId: string }>('/otp/send', {
       method: 'POST',
       body: JSON.stringify({ phone, purpose }),
     })
       .then((res) => {
-        if (!cancelled) {
-          setOtpId(res.otpId);
-          setLastSentAt(Date.now());
-          setError(null);
-        }
+        setOtpId(res.otpId);
+        setLastSentAt(Date.now());
+        setError(null);
       })
       .catch((e) => {
-        if (cancelled) return;
         // Server-side 30s rate limit — happens when the modal remounts
         // (e.g. Edit details → resubmit) within the window. The previous
         // OTP we sent is still valid on the server (5-min TTL), but we
@@ -308,16 +313,21 @@ export function InfoGateModal({
         setError(e instanceof ApiError ? e.message : 'Could not send OTP');
       })
       .finally(() => {
-        if (!cancelled) setBusy(false);
+        // ALWAYS reset busy — see the note above the api() call. Without
+        // this unconditional reset, Strict Mode's tear-down between the
+        // two effect runs flipped the (now-removed) cancelled flag and
+        // the modal stuck on "Verifying..." forever (QA: "without
+        // typing OTP it's showing Verifying…").
+        setBusy(false);
         // Clear the in-flight ref so legitimate retries (Resend Code,
         // modal re-open after close, Edit details with new phone) can
         // re-arm. Doing it in finally (not after success) keeps the
         // dedupe window open until the request actually returns.
         sendInFlight.current = null;
       });
-    return () => {
-      cancelled = true;
-    };
+    // No cleanup function — the StrictMode dedupe ref above handles the
+    // dev-mode double-invoke, and the request is fire-and-forget within
+    // the same component instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, prefilled?.phone, profile?.phone, purpose, otpId]);
 
