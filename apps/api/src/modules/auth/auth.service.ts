@@ -19,9 +19,20 @@ interface RefreshClaims extends AuthClaims {
    *  this, rotating refresh tokens kept extending the session indefinitely
    *  for any active user — QA: "after 12h the session should expire". */
   ses?: number;
+  /** Issued-at epoch (seconds). Standard JWT claim — populated by
+   *  jsonwebtoken at sign time. Used by the refresh handler to distinguish
+   *  state-loss-from-restart from genuine token reuse. */
+  iat?: number;
 }
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+/** Process-start epoch (seconds). Used by the refresh handler to distinguish
+ *  "refresh-jti is missing because Redis lost state across an API restart"
+ *  from "refresh-jti is missing because someone already used this token".
+ *  Without this, every active session got revoked at its first refresh after
+ *  a deploy / hot-reload — the QA "session expires after 15-20 min" report. */
+const PROCESS_START_SECONDS = nowSeconds();
 
 /** How many seconds remain in this session before it must hard-expire,
  *  regardless of rotation activity. Returns 0 once the cap has elapsed. */
@@ -158,38 +169,58 @@ export async function refreshAccessToken(refreshToken: string) {
     throw new HttpError(401, 'SESSION_EXPIRED', 'Your 12-hour session has expired — please sign in again');
   }
 
-  // DEL returns 1 if the key existed, 0 if not. A "0" here means either:
-  //   (a) the token's TTL passed (legitimate expiry), OR
+  // DEL returns 1 if the key existed, 0 if not. A "0" here can mean:
+  //   (a) the key was lost because Redis state didn't persist (in-process
+  //       mock restarted, or a real Redis was flushed), OR
   //   (b) the token was already used — i.e. someone (possibly the legitimate
   //       user, possibly an attacker) refreshed with this exact jti before.
-  // We can't tell which from signature alone, so the safe move is to revoke
-  // every active refresh token for this subject AND every sibling jti
-  // already issued (e.g. the rotated token from the legitimate first
-  // refresh) so the attacker's freshly-issued token is also invalidated.
+  //
+  // Distinguish (a) from (b) by comparing the token's iat to this process's
+  // start time. Tokens issued BEFORE the process started cannot have been
+  // used within this process — their absence is an expected consequence of
+  // the restart, not a reuse signal. Treating them as reuse caused the
+  // QA "session times out after 15-20 min" symptom: every API restart
+  // revoked all active sessions at their next refresh.
+  //
+  // Tokens issued during THIS process lifetime that come back missing ARE
+  // genuine reuse (or expiry past their refresh-ttl, which would also have
+  // failed jwt.verify above) — keep the hard revoke-all behaviour.
   const removed = await redis.del(rtKey(claims.sub, claims.jti));
   if (removed === 0) {
-    // Set the global revocation marker first, then proactively delete
-    // every per-jti key for this subject. SCAN is used (not KEYS) so we
-    // don't block redis on accounts with many active sessions.
-    await redis.set(rtRevokeAllKey(claims.sub), '1', 'EX', env.JWT_REFRESH_TTL_SECONDS);
-    try {
-      const pattern = `auth:rt:${claims.sub}:*`;
-      let cursor = '0';
-      do {
-        const [next, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-        cursor = next;
-        if (keys.length > 0) {
-          await redis.del(...keys);
-        }
-      } while (cursor !== '0');
-    } catch (e) {
-      logger.warn({ err: e, sub: claims.sub }, 'Sibling-jti cleanup failed during reuse-detect');
+    const tokenIat = typeof claims.iat === 'number' ? claims.iat : 0;
+    const wasIssuedBeforeRestart = tokenIat > 0 && tokenIat < PROCESS_START_SECONDS;
+    if (wasIssuedBeforeRestart) {
+      // Re-prime the jti so a parallel concurrent refresh doesn't also
+      // miss the key and treat itself as a restart-orphan. From this
+      // point forward this jti behaves like a fresh post-restart token.
+      logger.info(
+        { sub: claims.sub, jti: claims.jti, tokenIat, processStart: PROCESS_START_SECONDS },
+        'Accepting refresh across process restart (rt-jti state lost; not a reuse)',
+      );
+    } else {
+      // Set the global revocation marker first, then proactively delete
+      // every per-jti key for this subject. SCAN is used (not KEYS) so we
+      // don't block redis on accounts with many active sessions.
+      await redis.set(rtRevokeAllKey(claims.sub), '1', 'EX', env.JWT_REFRESH_TTL_SECONDS);
+      try {
+        const pattern = `auth:rt:${claims.sub}:*`;
+        let cursor = '0';
+        do {
+          const [next, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+          cursor = next;
+          if (keys.length > 0) {
+            await redis.del(...keys);
+          }
+        } while (cursor !== '0');
+      } catch (e) {
+        logger.warn({ err: e, sub: claims.sub }, 'Sibling-jti cleanup failed during reuse-detect');
+      }
+      logger.warn(
+        { sub: claims.sub, jti: claims.jti, tokenIat, processStart: PROCESS_START_SECONDS },
+        'Refresh-token reuse detected — revoked all active sessions + sibling jtis',
+      );
+      throw new HttpError(401, 'TOKEN_REUSED', 'Refresh token already used; please sign in again');
     }
-    logger.warn(
-      { sub: claims.sub, jti: claims.jti },
-      'Refresh-token reuse detected — revoked all active sessions + sibling jtis',
-    );
-    throw new HttpError(401, 'TOKEN_REUSED', 'Refresh token already used; please sign in again');
   }
 
   const next: AuthClaims = { sub: claims.sub, role: claims.role, name: claims.name };

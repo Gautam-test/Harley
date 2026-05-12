@@ -79,11 +79,8 @@ export function LoginPage() {
             />
           </div>
           {sessionExpired && !error && (
-            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card">
-              <strong className="font-subhead uppercase tracking-subhead text-xs block mb-0.5">
-                Session timed out
-              </strong>
-              Your 12-hour admin session has expired. Please sign in again to continue.
+            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card font-subhead uppercase tracking-subhead text-xs">
+              Session timed out
             </div>
           )}
           {error && <div className="text-danger text-sm">{error}</div>}

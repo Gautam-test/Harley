@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Input, Select } from '@hd-cpo/ui';
@@ -202,10 +202,35 @@ export function InfoGateModal({
           title: 'Too many failed attempts',
           body: 'This number is temporarily locked after too many incorrect codes. Please try again in 30 minutes.',
         };
+      case 'RATE_LIMITED':
+        // Per-IP rate limit on /otp/send (5/min in production NODE_ENV).
+        // Without surfacing this, a tripped limit left the user on the
+        // verify form with otpId=null, where every Verify click was a
+        // silent no-op (QA: "Sell flow Verify button does nothing on demo").
+        return {
+          title: 'Too many requests',
+          body: 'You\'ve hit the per-minute send limit. Please wait a minute and try again.',
+        };
       default:
         return raw ? { title: 'Could not send OTP', body: raw } : null;
     }
   }
+
+  // Synchronous lock against React Strict Mode's dev double-invoke of
+  // useEffect (+ any other re-render race). Without this, the auto-send
+  // effect fired /otp/send TWICE on Sell-flow modal open: the first
+  // succeeded and (because Strict Mode tore down the first effect) had
+  // its `cancelled` flipped, so its setOtpId never ran. The second hit
+  // the API's per-IP rate limiter (5/min in production NODE_ENV) and
+  // 429'd. Net effect: modal stuck on verify step with otpId=null,
+  // every Verify click was a silent no-op (QA: "Sell flow buttons
+  // unclickable on demo, fine on local"). A ref-based guard is the
+  // standard React fix because state writes don't propagate to the
+  // re-running effect closure in time.
+  //
+  // Key shape captures phone+purpose so a legitimate change (Edit
+  // details → resubmit with new phone) re-arms the send.
+  const sendInFlight = useRef<string | null>(null);
 
   // When prefilled, fire the OTP send as soon as the modal opens. Done in a
   // useEffect (not during render) so React doesn't tear-render and lose the
@@ -223,6 +248,12 @@ export function InfoGateModal({
     // collect→verify flow.
     const phone = prefilled?.phone ?? profile?.phone;
     if (!open || !phone || otpId || busy) return;
+    // Strict-Mode-safe dedupe: if a /otp/send for this exact (phone, purpose)
+    // pair is already in flight from a sibling effect run, skip. Cleared in
+    // .finally so a legitimate retry (Resend Code, modal re-open) re-arms.
+    const sendKey = `${phone}|${purpose}`;
+    if (sendInFlight.current === sendKey) return;
+    sendInFlight.current = sendKey;
     let cancelled = false;
     setBusy(true);
     api<{ otpId: string }>('/otp/send', {
@@ -264,7 +295,8 @@ export function InfoGateModal({
           e instanceof ApiError &&
           (e.code === 'OTP_RESEND_LIMIT' ||
             e.code === 'OTP_DAILY_LIMIT' ||
-            e.code === 'OTP_LOCKED')
+            e.code === 'OTP_LOCKED' ||
+            e.code === 'RATE_LIMITED')
         ) {
           const msg = blockingMessage(e.code, e.message);
           if (msg) {
@@ -277,6 +309,11 @@ export function InfoGateModal({
       })
       .finally(() => {
         if (!cancelled) setBusy(false);
+        // Clear the in-flight ref so legitimate retries (Resend Code,
+        // modal re-open after close, Edit details with new phone) can
+        // re-arm. Doing it in finally (not after success) keeps the
+        // dedupe window open until the request actually returns.
+        sendInFlight.current = null;
       });
     return () => {
       cancelled = true;
