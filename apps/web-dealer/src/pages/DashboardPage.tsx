@@ -18,18 +18,33 @@ interface LeadRow {
 const STALE_DAYS = 60;
 
 // PRD §6.2.2 — dealer dashboard tiles. PRD §6.2.8 — optional 60-day stale flag.
+//
+// Cache-key unification (QA: "Listings Snapshot count not updating"):
+// Dashboard tiles MUST share queryKeys with the pages that mutate the data,
+// otherwise both pages keep separate cache entries and the snapshot serves
+// the pre-mutation copy until staleTime expires. We mirror MyListingsPage
+// (['dealer-listings', 'all']) and LeadsPage (['leads', 'buyer'|'trade-in'])
+// exactly. refetchOnMount: 'always' is a belt-and-braces guarantee that
+// navigating back to /dashboard pulls fresh data even if some new mutation
+// path forgets to invalidate.
 export function DashboardPage() {
   const { data: listings } = useQuery({
-    queryKey: ['dealer-listings'],
+    queryKey: ['dealer-listings', 'all'],
     queryFn: () => api<DealerListingRow[]>('/dealer/listings'),
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
   const { data: buyer } = useQuery({
-    queryKey: ['dealer-leads-buyer'],
+    queryKey: ['leads', 'buyer'],
     queryFn: () => api<LeadRow[]>('/dealer/leads/buyer'),
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
   const { data: tradeIn } = useQuery({
-    queryKey: ['dealer-leads-tradein'],
+    queryKey: ['leads', 'trade-in'],
     queryFn: () => api<LeadRow[]>('/dealer/leads/trade-in'),
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;

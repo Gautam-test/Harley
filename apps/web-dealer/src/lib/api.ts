@@ -28,11 +28,35 @@ interface ApiOptions extends RequestInit {
   _retried?: boolean;
 }
 
-// API base URL — production deploys set VITE_API_URL to the Render service URL.
-// Local dev leaves it empty so paths stay relative and Vite's proxy handles it.
+// API base URL — production deploys set VITE_API_URL to the API service URL,
+// or leave it empty when a reverse-proxy (Apache/nginx) forwards /api/* to
+// the API host. Local dev leaves it empty so Vite's proxy handles it.
 const API_BASE =
   ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') +
   '/api/v1';
+
+// Hard cap on how long any single API call can hang before we abort and
+// surface a readable error. Without this, callers (forms, dashboards)
+// would sit with a busy spinner until the upstream's own timeout fired
+// (60s+ on Apache reverse-proxy to an unresponsive backend).
+const FETCH_TIMEOUT_MS = 10_000;
+
+/** fetch wrapper with abort-on-timeout. Throws ApiError(504, TIMEOUT) on
+ *  cap exceeded, ApiError(0, NETWORK_ERROR) on raw network failure. */
+async function fetchWithTimeout(input: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: init?.signal ?? controller.signal });
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') {
+      throw new ApiError(504, 'TIMEOUT', `API did not respond within ${FETCH_TIMEOUT_MS / 1000}s — backend may be down`);
+    }
+    throw new ApiError(0, 'NETWORK_ERROR', 'Could not reach the API. Check your connection.');
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 // Single in-flight refresh promise shared across concurrent 401s. Without this,
 // five parallel requests that all expire together would each fire their own
@@ -45,15 +69,24 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
   if (!refreshToken) return null;
   refreshInFlight = (async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetchWithTimeout(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) return null;
-      const body = (await res.json()) as { accessToken?: string };
-      if (!body.accessToken) return null;
-      useAuthStore.getState().setAccessToken(body.accessToken);
+      const body = (await res.json()) as {
+        accessToken?: string;
+        refreshToken?: string;
+      };
+      if (!body.accessToken || !body.refreshToken) return null;
+      // Store both — the server rotates the refresh token on every call,
+      // so re-using the old one would trigger reuse-detect on the next
+      // refresh and revoke every session for this account.
+      useAuthStore.getState().setRefreshedTokens({
+        accessToken: body.accessToken,
+        refreshToken: body.refreshToken,
+      });
       return body.accessToken;
     } catch {
       return null;
@@ -74,12 +107,15 @@ function buildHeaders(init: ApiOptions | undefined, token: string | null): Recor
 
 export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
   const token = useAuthStore.getState().accessToken;
-  const res = await fetch(`${API_BASE}${path}`, { ...init, headers: buildHeaders(init, token) });
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+    ...init,
+    headers: buildHeaders(init, token),
+  });
 
   if (res.status === 401 && !init?._retried) {
     const newToken = await refreshAccessTokenOnce();
     if (newToken) {
-      const retry = await fetch(`${API_BASE}${path}`, {
+      const retry = await fetchWithTimeout(`${API_BASE}${path}`, {
         ...init,
         headers: buildHeaders(init, newToken),
       });
@@ -114,6 +150,18 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
       body?.error?.code ?? 'UNKNOWN',
       body?.error?.message ?? `Request failed: ${res.status}`,
       body?.error?.details,
+    );
+  }
+  // Guard against the demo / mis-deployed case where the reverse-proxy
+  // serves the SPA's index.html for /api/* (HTTP 200 with HTML body) —
+  // `await res.json()` would otherwise throw a confusing SyntaxError that
+  // surfaces as "Could not load…" with no actionable detail.
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.includes('json')) {
+    throw new ApiError(
+      502,
+      'BAD_RESPONSE',
+      'API returned non-JSON. Check the reverse-proxy is forwarding /api/* to the API host.',
     );
   }
   return (await res.json()) as T;

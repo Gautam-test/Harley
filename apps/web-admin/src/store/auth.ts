@@ -11,8 +11,17 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: AuthUser | null;
-  setSession: (s: { accessToken: string; refreshToken: string; user: AuthUser }) => void;
+  /** Wall-clock session ceiling (epoch ms) — see web-dealer/store/auth.ts. */
+  sessionExpiresAt: number | null;
+  setSession: (s: {
+    accessToken: string;
+    refreshToken: string;
+    user: AuthUser;
+    sessionExpiresAt: number;
+  }) => void;
   setAccessToken: (token: string) => void;
+  /** Replace tokens after rotation; sessionExpiresAt is unchanged. */
+  setRefreshedTokens: (s: { accessToken: string; refreshToken: string }) => void;
   clear: () => void;
 }
 
@@ -22,10 +31,19 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
+      sessionExpiresAt: null,
       setSession: (s) =>
-        set({ accessToken: s.accessToken, refreshToken: s.refreshToken, user: s.user }),
+        set({
+          accessToken: s.accessToken,
+          refreshToken: s.refreshToken,
+          user: s.user,
+          sessionExpiresAt: s.sessionExpiresAt,
+        }),
       setAccessToken: (token) => set({ accessToken: token }),
-      clear: () => set({ accessToken: null, refreshToken: null, user: null }),
+      setRefreshedTokens: (s) =>
+        set({ accessToken: s.accessToken, refreshToken: s.refreshToken }),
+      clear: () =>
+        set({ accessToken: null, refreshToken: null, user: null, sessionExpiresAt: null }),
     }),
     { name: 'hd-cpo-admin-auth' },
   ),

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -12,6 +13,23 @@ import { useAuthStore } from './store/auth';
 
 export function App() {
   const isAuthed = useAuthStore((s) => Boolean(s.accessToken));
+  const sessionExpiresAt = useAuthStore((s) => s.sessionExpiresAt);
+
+  // Proactive 12h auto-logout — see web-dealer/App.tsx for the rationale.
+  useEffect(() => {
+    if (!isAuthed || !sessionExpiresAt) return;
+    const ms = sessionExpiresAt - Date.now();
+    if (ms <= 0) {
+      try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
+      useAuthStore.getState().clear();
+      return;
+    }
+    const t = window.setTimeout(() => {
+      try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
+      useAuthStore.getState().clear();
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [isAuthed, sessionExpiresAt]);
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

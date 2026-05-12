@@ -121,6 +121,25 @@ export function InfoGateModal({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Failsafe: if `busy` ever stays true for >15s the user gets stuck with
+  // both Verify and Resend disabled (QA "buttons unclickable, network tab
+  // blank" reported on the demo env). Causes include a hung request, a
+  // CORS preflight that never returns, or — in earlier builds — a HTML-
+  // shaped response throwing SyntaxError that escaped the catch chain.
+  // Force-reset busy + surface a readable error so the buttons re-enable.
+  useEffect(() => {
+    if (!busy) return;
+    const t = window.setTimeout(() => {
+      setBusy(false);
+      setError(
+        (prev) =>
+          prev ??
+          'Request timed out. Please check your connection and try again.',
+      );
+    }, 15_000);
+    return () => window.clearTimeout(t);
+  }, [busy]);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 

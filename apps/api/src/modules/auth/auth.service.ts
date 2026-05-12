@@ -13,6 +13,20 @@ const env = getEnv();
 interface RefreshClaims extends AuthClaims {
   /** Unique per refresh token; consumed once on /auth/refresh and rotated. */
   jti: string;
+  /** Session-start epoch (seconds). Set once at password-login and carried
+   *  forward through every rotation so the 12-h session ceiling is a fixed
+   *  wall-clock cap from initial sign-in (not a sliding window). Without
+   *  this, rotating refresh tokens kept extending the session indefinitely
+   *  for any active user — QA: "after 12h the session should expire". */
+  ses?: number;
+}
+
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+/** How many seconds remain in this session before it must hard-expire,
+ *  regardless of rotation activity. Returns 0 once the cap has elapsed. */
+function sessionRemainingSeconds(ses: number): number {
+  return Math.max(0, ses + env.JWT_REFRESH_TTL_SECONDS - nowSeconds());
 }
 
 // Refresh-token rotation lives in Redis. Each freshly-issued refresh token's
@@ -27,26 +41,39 @@ interface RefreshClaims extends AuthClaims {
 const rtKey = (sub: string, jti: string) => `auth:rt:${sub}:${jti}`;
 const rtRevokeAllKey = (sub: string) => `auth:rt-revoked:${sub}`;
 
-async function persistRefreshJti(sub: string, jti: string) {
+async function persistRefreshJti(sub: string, jti: string, ttlSeconds: number) {
   // SETNX so a collision (vanishingly unlikely with v4 UUID) doesn't
-  // silently overwrite an unrelated token.
-  await redis.set(rtKey(sub, jti), '1', 'EX', env.JWT_REFRESH_TTL_SECONDS, 'NX');
+  // silently overwrite an unrelated token. TTL is the session-remaining,
+  // not the env default — a token issued 11h into the session lives only
+  // 1h, never beyond the ceiling.
+  await redis.set(rtKey(sub, jti), '1', 'EX', ttlSeconds, 'NX');
 }
 
-function signAccess(claims: AuthClaims): string {
-  return jwt.sign(claims, env.JWT_ACCESS_SECRET, { expiresIn: env.JWT_ACCESS_TTL_SECONDS });
+function signAccess(claims: AuthClaims, ttlSeconds: number): string {
+  return jwt.sign(claims, env.JWT_ACCESS_SECRET, { expiresIn: ttlSeconds });
 }
 
-function signRefresh(claims: AuthClaims, jti: string): string {
-  return jwt.sign({ ...claims, jti }, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_TTL_SECONDS,
+function signRefresh(claims: AuthClaims, jti: string, ses: number, ttlSeconds: number): string {
+  return jwt.sign({ ...claims, jti, ses }, env.JWT_REFRESH_SECRET, {
+    expiresIn: ttlSeconds,
   });
 }
 
-async function issueTokens(claims: AuthClaims) {
+async function issueTokens(claims: AuthClaims, ses: number) {
+  const remaining = sessionRemainingSeconds(ses);
+  // Cap the access TTL at the session-remaining so the access token can
+  // never outlast the session (otherwise a token minted 14m before the
+  // ceiling would be valid for 1m past it).
+  const accessTtl = Math.min(env.JWT_ACCESS_TTL_SECONDS, remaining);
   const jti = randomUUID();
-  await persistRefreshJti(claims.sub, jti);
-  return { accessToken: signAccess(claims), refreshToken: signRefresh(claims, jti) };
+  await persistRefreshJti(claims.sub, jti, remaining);
+  return {
+    accessToken: signAccess(claims, accessTtl),
+    refreshToken: signRefresh(claims, jti, ses, remaining),
+    /** Absolute session expiry in epoch milliseconds — sent to the SPA so
+     *  it can schedule a proactive auto-logout timer at the right moment. */
+    sessionExpiresAt: (ses + env.JWT_REFRESH_TTL_SECONDS) * 1000,
+  };
 }
 
 export async function dealerLogin(username: string, password: string) {
@@ -84,8 +111,9 @@ export async function dealerLogin(username: string, password: string) {
   // Lifting any stale revocation marker from a prior compromise — a fresh
   // password-based login is the explicit recovery action.
   await redis.del(rtRevokeAllKey(dealer.id));
+  const ses = nowSeconds();
   return {
-    ...(await issueTokens(claims)),
+    ...(await issueTokens(claims, ses)),
     user: { id: dealer.id, role: 'DEALER' as const, name: dealer.name },
   };
 }
@@ -98,8 +126,9 @@ export async function adminLogin(email: string, password: string) {
 
   const claims: AuthClaims = { sub: admin.id, role: 'ADMIN', name: admin.name };
   await redis.del(rtRevokeAllKey(admin.id));
+  const ses = nowSeconds();
   return {
-    ...(await issueTokens(claims)),
+    ...(await issueTokens(claims, ses)),
     user: { id: admin.id, role: 'ADMIN' as const, name: admin.name },
   };
 }
@@ -118,6 +147,15 @@ export async function refreshAccessToken(refreshToken: string) {
   }
   if (await redis.get(rtRevokeAllKey(claims.sub))) {
     throw new HttpError(401, 'TOKEN_REVOKED', 'All sessions for this account have been revoked');
+  }
+  // Session-ceiling check — refresh tokens minted before this rollout
+  // lack `ses`, so accept them once and pin their session to NOW (they
+  // get the full 12h from this moment as a one-time grace). Tokens
+  // minted post-rollout always carry `ses` and we honour the original
+  // login time.
+  const ses = typeof claims.ses === 'number' ? claims.ses : nowSeconds();
+  if (sessionRemainingSeconds(ses) <= 0) {
+    throw new HttpError(401, 'SESSION_EXPIRED', 'Your 12-hour session has expired — please sign in again');
   }
 
   // DEL returns 1 if the key existed, 0 if not. A "0" here means either:
@@ -155,5 +193,8 @@ export async function refreshAccessToken(refreshToken: string) {
   }
 
   const next: AuthClaims = { sub: claims.sub, role: claims.role, name: claims.name };
-  return await issueTokens(next);
+  // Carry the original session-start through so the wall-clock ceiling
+  // is preserved. New access + refresh tokens are auto-capped by
+  // issueTokens to whatever's left of the session.
+  return await issueTokens(next, ses);
 }

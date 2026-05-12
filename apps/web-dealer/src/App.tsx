@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -11,6 +12,33 @@ import { useAuthStore } from './store/auth';
 
 export function App() {
   const isAuthed = useAuthStore((s) => Boolean(s.accessToken));
+  const sessionExpiresAt = useAuthStore((s) => s.sessionExpiresAt);
+
+  // Proactive 12h auto-logout (QA: "after 12h the session should expire").
+  // Server enforces the cap on /auth/refresh, but an idle user who never
+  // makes a request would otherwise sit with a stale UI past the cap. We
+  // schedule a single timeout for the exact session-expiry moment; on
+  // fire, clear auth + raise the session-expired flag. The accessToken
+  // turning null re-renders the route tree, which routes the user to
+  // /login, where the LoginPage reads the flag and shows the timeout
+  // banner.
+  useEffect(() => {
+    if (!isAuthed || !sessionExpiresAt) return;
+    const ms = sessionExpiresAt - Date.now();
+    if (ms <= 0) {
+      // Already expired (e.g. tab restored from sleep past the ceiling).
+      try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
+      useAuthStore.getState().clear();
+      return;
+    }
+    // setTimeout is capped at ~24.8 days (2^31 ms) — well above the 12h
+    // session, so a direct schedule is safe.
+    const t = window.setTimeout(() => {
+      try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
+      useAuthStore.getState().clear();
+    }, ms);
+    return () => window.clearTimeout(t);
+  }, [isAuthed, sessionExpiresAt]);
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

@@ -43,6 +43,7 @@ export function LoginPage() {
     const data = (await res.json()) as {
       accessToken: string;
       refreshToken: string;
+      sessionExpiresAt: number;
       user: { id: string; role: 'ADMIN'; name: string };
     };
     setSession(data);

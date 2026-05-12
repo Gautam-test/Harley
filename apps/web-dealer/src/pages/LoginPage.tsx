@@ -27,6 +27,25 @@ export function LoginPage() {
       }
     } catch { /* ignore */ }
   }, []);
+
+  // QA: login must be a single fixed view, never scrolls. Tailwind's
+  // h-screen + overflow-hidden on a layout div alone wasn't enough on
+  // some viewports (mobile address bar / DevTools docked) — body itself
+  // would still scroll when form + footer text exceeded available px.
+  // Lock html/body overflow on mount and restore on unmount so other
+  // pages keep their normal scroll behaviour.
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtml = html.style.overflow;
+    const prevBody = body.style.overflow;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = prevHtml;
+      body.style.overflow = prevBody;
+    };
+  }, []);
   const { register, handleSubmit, formState } = useForm<FormValues>({
     defaultValues: { remember: true },
   });
@@ -47,6 +66,7 @@ export function LoginPage() {
     const data = (await res.json()) as {
       accessToken: string;
       refreshToken: string;
+      sessionExpiresAt: number;
       user: { id: string; role: 'DEALER'; name: string };
     };
     setSession(data);
@@ -54,13 +74,13 @@ export function LoginPage() {
   };
 
   return (
-    // h-screen + overflow-hidden caps the layout to one viewport so the
-    // login page can never scroll (QA: should be a fixed single-view).
-    // The marketing aside + form section are constrained vertically and
-    // their inner content uses overflow-y-auto only if absolutely needed
-    // on tiny phones — desktop never produces overflow because both
-    // columns are sized to the viewport height.
-    <div className="h-screen overflow-hidden grid lg:grid-cols-2 bg-hd-white">
+    // fixed inset-0 pins the layout to the viewport so it cannot push
+    // body height beyond 100vh — combined with the html/body overflow
+    // lock above, this guarantees the login page is a single fixed view
+    // on every device (QA fix). The form column has overflow-y-auto as
+    // a last-resort safety net for sub-600px-tall viewports (landscape
+    // phones); desktop and tablet never reach it.
+    <div className="fixed inset-0 grid lg:grid-cols-2 bg-hd-white">
       {/* Left — orange marketing panel */}
       <aside className="relative hidden lg:flex flex-col justify-between bg-hd-orange text-hd-black p-12 overflow-hidden">
         <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(0,0,0,0.6),_transparent_60%)]" />
@@ -81,20 +101,23 @@ export function LoginPage() {
         </p>
       </aside>
 
-      {/* Right — sign-in form */}
-      <section className="flex items-center justify-center px-6 py-16 lg:py-0">
+      {/* Right — sign-in form. overflow-y-auto here is a safety net only:
+          if the column's content ever exceeds its viewport-height cell
+          (extremely short landscape phone), the form scrolls inside the
+          column instead of the whole page. Desktop/tablet never trigger it. */}
+      <section className="flex items-center justify-center px-6 py-8 lg:py-6 overflow-y-auto">
         <div className="w-full max-w-md">
           <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">Dealer Portal</p>
           <p className="font-subhead uppercase tracking-subhead text-[11px] text-text-on-light/60 mt-1">Harley-Davidson</p>
 
-          <h2 className="font-headline text-4xl tracking-headline mt-8 uppercase">
+          <h2 className="font-headline text-4xl tracking-headline mt-6 uppercase">
             Sign <span className="text-hd-orange">In</span>
           </h2>
           <p className="text-gray-600 text-sm mt-2 leading-relaxed">
             Authorized dealer access only. Contact H-D Admin if your credentials are not active.
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             <div>
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
                 Registered Email
@@ -164,7 +187,7 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center font-subhead uppercase tracking-subhead text-[11px] text-gray-500 mt-8">
+          <p className="text-center font-subhead uppercase tracking-subhead text-[11px] text-gray-500 mt-6">
             Need Help? · +91 98188 00000
           </p>
 
@@ -175,7 +198,7 @@ export function LoginPage() {
               of the production bundle entirely (tree-shaken, not just
               hidden). */}
           {import.meta.env.DEV && (
-            <p className="text-xs text-gray-500 mt-10 text-center">
+            <p className="text-xs text-gray-500 mt-6 text-center">
               Demo: <code className="text-hd-orange">gurgaon-hd</code> / <code className="text-hd-orange">Dealer@123!</code>
             </p>
           )}

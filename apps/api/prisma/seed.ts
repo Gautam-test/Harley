@@ -268,7 +268,7 @@ async function main() {
       key: 'faq',
       title: 'Frequently Asked Questions',
       bodyHtml:
-        '<h2>What is H-D Certified?</h2><p>It is the official Harley-Davidson programme for pre-owned motorcycles. Every bike has been inspected, verified and warranted by an authorised dealer.</p><h2>Can I trade in my existing bike?</h2><p>Yes. Use the Sell Your Bike form and an authorised dealer will reach out within 48 hours.</p><h2>How is my data handled?</h2><p>Your phone and email are encrypted at rest and only revealed to the dealer you enquire with. See our privacy policy for details.</p>',
+        '<h2>What is H-D Certified?</h2><p>It is the official Harley-Davidson programme for pre-owned motorcycles. Every motorcycle has been inspected, verified and warranted by an authorised dealer.</p><h2>Can I trade in my existing motorcycle?</h2><p>Yes. Use the Sell Your Motorcycle form and an authorised dealer will reach out within 48 hours.</p><h2>How is my data handled?</h2><p>Your phone and email are encrypted at rest and only revealed to the dealer you enquire with. See our privacy policy for details.</p>',
     },
     {
       key: 'privacy',
