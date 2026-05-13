@@ -200,11 +200,13 @@ export async function updateListing(
   // the dealer has acted on it; the next admin review starts from a clean slate.
   //
   // The Zod schema accepts `cpoDocs: null` (used when a dealer flips a CPO
-  // listing back to AS_IS), but Prisma's typed JSON column rejects raw null
-  // — mirror createListing's `?? undefined` shim so the column is left
-  // untouched on null. Same for inspectionReportUrl: the column itself is
-  // nullable in the DB so passing null is fine, but the spread keeps the
-  // explicit-null intent intact.
+  // listing back to AS_IS). For Prisma's typed JSON column we map that to
+  // Prisma.DbNull so the column actually clears — the previous shim
+  // (`cpoDocs ?? undefined`) silently dropped null edits, leaving the old
+  // CPO kit attached to a now-AS_IS bike (QA #3: "AS_IS flip not
+  // reflected" — admin saw cpoDocs lingering even though cert flipped).
+  // inspectionReportUrl is plain nullable text and accepts raw null, so
+  // it stays in `rest`.
   //
   // Restore + Resubmit (QA: My Listings → Removed/Sold → View → Submit):
   // when the dealer edits a REMOVED or SOLD listing they own, treat the
@@ -240,11 +242,18 @@ export async function updateListing(
     }
   }
 
+  // cpoDocs handling for Prisma JSON column:
+  //   undefined  → no change (field omitted from PATCH)
+  //   null       → set column to SQL NULL via Prisma.DbNull (clears old kit)
+  //   object     → write the object verbatim
+  const cpoDocsWrite =
+    cpoDocs === undefined ? undefined : cpoDocs === null ? Prisma.DbNull : cpoDocs;
+
   return prisma.listing.update({
     where: { id: listingId },
     data: {
       ...rest,
-      ...(cpoDocs === undefined ? {} : { cpoDocs: cpoDocs ?? undefined }),
+      ...(cpoDocsWrite === undefined ? {} : { cpoDocs: cpoDocsWrite }),
       adminFeedback: null,
       ...(restoreToDraft ? { status: 'DRAFT' as const, soldAt: null } : {}),
     },
