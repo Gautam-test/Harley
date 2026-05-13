@@ -181,8 +181,19 @@ export async function markSold(dealerId: string, listingId: string) {
 // Strip the `removed:<cmid>:` / `sold:<cmid>:` retire-prefix that
 // createListing applies when a new listing reuses the VIN of a SOLD or
 // REMOVED row. The DB-stored VIN preserves history; this gives us back
-// the original 17-character VIN for cross-listing duplicate checks.
-function rootVin(storedVin: string): string {
+// the original 17-character VIN.
+//
+// Why this matters at the API surface: when a dealer opens a SOLD
+// listing in the My-Listings → SOLD tab, the edit-wizard hydrates from
+// GET /dealer/listings/:id and immediately fires GET /torque/vehicles/
+// {vin} to repopulate the read-only Torque card. /torque/vehicles/:vin
+// validates the URL path against z.string().length(17).regex(/^[A-HJ-NPR-
+// Z0-9]{17}$/), and a prefixed VIN like 'sold:cm123abc:1HD1KHM18MB...'
+// is 32+ chars with colons — Zod rejects it with VALIDATION_ERROR
+// "Invalid request payload" and the wizard fails to open the listing.
+// Stripping the prefix in the API response keeps the wizard happy
+// without changing the DB-stored value the unique constraint depends on.
+export function rootVin(storedVin: string): string {
   return storedVin.replace(/^(removed|sold|deactivated):[^:]+:/, '');
 }
 
@@ -326,6 +337,10 @@ export async function getDealerListing(dealerId: string, listingId: string) {
   if (!row) return null;
   return {
     ...row,
+    // Strip the retire-prefix so the wizard's Torque-fetch call sees the
+    // clean 17-char VIN (see rootVin's docstring above for the full
+    // failure mode this avoids).
+    vin: rootVin(row.vin),
     price: Number(row.price),
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -339,7 +354,10 @@ export async function listForDealer(dealerId: string, status?: string) {
   })) as unknown as DealerListingDbRow[];
   return rows.map((l) => ({
     id: l.id,
-    vin: l.vin,
+    // Strip the retire-prefix so the dealer's My-Listings table never
+    // shows mangled "sold:cmid:..." VIN strings, and the stock-code
+    // (last-5 of VIN) derived in the SPA stays the original suffix.
+    vin: rootVin(l.vin),
     slug: l.slug,
     modelName: l.modelName,
     year: l.year,
