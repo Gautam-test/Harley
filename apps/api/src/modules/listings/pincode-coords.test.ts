@@ -64,6 +64,17 @@ describe('pincodeCoord — invalid input', () => {
   it('returns invalid for empty string', () => {
     expect(pincodeCoord('')).toEqual({ coord: null, match: 'invalid' });
   });
+
+  it('returns invalid for 000000 — Indian PINs never start with 0', () => {
+    expect(pincodeCoord('000000')).toEqual({ coord: null, match: 'invalid' });
+  });
+
+  it('returns invalid for any pincode starting with 0', () => {
+    // Region 0 doesn't exist in India's postal system; we have entries
+    // for digits 1-9 only. A '0' prefix should never resolve.
+    expect(pincodeCoord('012345').match).toBe('invalid');
+    expect(pincodeCoord('099999').match).toBe('invalid');
+  });
 });
 
 describe('distanceKm — sanity', () => {

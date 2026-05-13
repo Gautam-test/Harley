@@ -45,10 +45,13 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
     //
     // Lookup is layered: an exact 3-digit prefix returns match='exact';
     // an unmapped prefix in a known region returns match='region' with
-    // the regional metro centroid (so the filter still fires); a malformed
-    // pincode returns match='invalid' and the filter is skipped entirely.
-    // pincodeMatch surfaces in the response so the SPA can tell the buyer
-    // when results are an approximation.
+    // the regional metro centroid (so the filter still fires); a 6-digit
+    // string that doesn't map to any region (e.g. '000000' — Indian PINs
+    // start with 1-9) returns match='invalid'. When the buyer explicitly
+    // supplied pincode + distance and we can't resolve it, return zero
+    // results rather than silently showing every listing — the buyer
+    // typed a location filter, so falling back to "everything" looks
+    // broken and hides the bad input from them.
     let dealerIdFilter: { in: string[] } | undefined;
     let pincodeMatch: 'exact' | 'region' | 'invalid' | null = null;
     if (q.pincode && q.distance) {
@@ -71,6 +74,11 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         // No dealers in range → return an empty result set explicitly so the
         // total reflects the actual filtered count instead of "everything".
         dealerIdFilter = { in: withinRange.length > 0 ? withinRange : ['__none__'] };
+      } else {
+        // Unresolvable pincode (e.g. '000000') — empty result so the
+        // SPA can render an "invalid pincode" notice instead of showing
+        // unfiltered stock that masks the bad input.
+        dealerIdFilter = { in: ['__none__'] };
       }
     }
 

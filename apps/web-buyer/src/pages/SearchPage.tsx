@@ -154,6 +154,18 @@ export function SearchPage() {
               </div>
             )}
 
+            {/* Invalid-pincode notice — Indian PINs always start with a
+                digit 1-9, so '000000' or other unmapped 6-digit strings
+                can't be resolved to a location. The API returns zero
+                results in this case (so the buyer sees their bad filter
+                rather than unfiltered stock) and we explain why. */}
+            {data?.meta?.pincodeMatch === 'invalid' && (
+              <div className="mb-4 px-3 py-2 bg-danger/10 border border-danger text-danger text-[13px] rounded-card">
+                Pincode {params.get('pincode')} isn&apos;t a recognised Indian PIN code. Please check
+                the digits — Indian PINs start with 1-9.
+              </div>
+            )}
+
             {isLoading ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {Array.from({ length: 6 }).map((_, i) => (
