@@ -24,11 +24,16 @@ interface AdminListingRow {
   dealerPincode: string;
 }
 
+// QA: the Removed tab was hidden from the admin UI per ops request — the
+// REMOVED status itself stays in the system (admins still soft-remove via
+// the row action and the REMOVED state is still a valid filter value on
+// the API), it's just not surfaced as a dedicated tab. Removed listings
+// remain reachable from the "All" tab. Reordered so Drafts (the queue
+// admins actually work from) sits second.
 const TABS: { id: AdminListingRow['status'] | ''; label: string }[] = [
   { id: 'ACTIVE', label: 'Ongoing' },
-  { id: 'SOLD', label: 'Sold' },
-  { id: 'REMOVED', label: 'Removed' },
   { id: 'DRAFT', label: 'Drafts' },
+  { id: 'SOLD', label: 'Sold' },
   { id: 'DEACTIVATED', label: 'Deactivated' },
   { id: '', label: 'All' },
 ];

@@ -196,11 +196,25 @@ uploadsRouter.get('/listing-images/:filename', optionalAuth, async (req, res, ne
     })) as { dealerId: string; status: string } | null;
 
     if (listing) {
-      // Soft-gate matches inspection PDFs: ACTIVE / DRAFT / DEACTIVATED
-      // listings serve their photos publicly so admin preview drawers
-      // (which use plain <img src=> without auth headers) can render
-      // them. SOLD/REMOVED stay auth-only since those are off-market.
-      const softTier = listing.status === 'ACTIVE' || listing.status === 'DRAFT' || listing.status === 'DEACTIVATED';
+      // Soft-gate: ACTIVE / DRAFT / DEACTIVATED / SOLD listings serve
+      // their photos publicly so plain <img src=> tags render without
+      // a bearer token. The dealer's edit wizard, the admin preview
+      // drawer, and the buyer's 1-hour SOLD watermark grid all rely
+      // on this. SOLD photos in particular were the source of QA
+      // ticket #4 — "When opening a SOLD listing's details from the
+      // dealer portal, the Step 2 Photos Upload section was blank"
+      // because the gate previously required an auth header that an
+      // <img> can't send.
+      //
+      // REMOVED stays auth-only: a removed listing is intentionally
+      // off the public surface and the dealer/admin can still see
+      // its images by virtue of being authenticated when they open
+      // the Removed tab from their own panel.
+      const softTier =
+        listing.status === 'ACTIVE' ||
+        listing.status === 'DRAFT' ||
+        listing.status === 'DEACTIVATED' ||
+        listing.status === 'SOLD';
       if (!softTier) {
         const auth = req.auth;
         const isOwner = auth?.role === 'DEALER' && auth.sub === listing.dealerId;

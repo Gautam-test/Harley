@@ -104,6 +104,12 @@ export function ListingSidebarCard({
       // collect a fresh OTP. The modal also handles other API errors.
       if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
         setModalOpen(true);
+      } else if (e instanceof ApiError && e.code === 'ENQUIRY_ALREADY_OPEN') {
+        // Server-side duplicate-by-mobile gate fired. Refetch my-status
+        // to populate existingLead with the reference, then surface the
+        // friendly popup with Track-Enquiry shortcut.
+        await myStatusQuery.refetch();
+        setAlreadyPopupOpen(true);
       } else {
         setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
       }
@@ -153,7 +159,15 @@ export function ListingSidebarCard({
       });
       setSubmitted({ id: res.id });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
+      // Surface the duplicate-by-mobile gate via the friendly popup with
+      // a Track-Enquiry shortcut; everything else falls through to the
+      // generic error message.
+      if (e instanceof ApiError && e.code === 'ENQUIRY_ALREADY_OPEN') {
+        await myStatusQuery.refetch();
+        setAlreadyPopupOpen(true);
+      } else {
+        setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -215,17 +229,19 @@ export function ListingSidebarCard({
               <button
                 type="button"
                 onClick={() => {
-                  // The "already enquired" check runs server-side against
-                  // the buyer's verified phone. If the lead is in a non-
-                  // terminal state we block the click and surface the
-                  // existing reference ID + Track link instead of opening
-                  // a second enquiry. Once the dealer marks the lead
-                  // "Not Interested" (DEAD/LOST), the lookup returns
-                  // enquired=false and this button behaves normally again.
-                  if (existingLead) {
-                    setAlreadyPopupOpen(true);
-                    return;
-                  }
+                  // QA: the form should always open on click. The previous
+                  // pre-block (immediate "already submitted" popup before
+                  // the modal even opened) confused buyers who'd just
+                  // refreshed the page or were checking the form layout.
+                  // The duplicate-by-mobile rule is now enforced at the
+                  // API on actual submit — if a non-terminal enquiry
+                  // exists for this phone, the POST returns 409
+                  // ENQUIRY_ALREADY_OPEN and the modal surfaces the
+                  // message at that point. Until the dealer marks the
+                  // previous lead Not Interested, submit fails; until
+                  // then the buyer can still review the form contents
+                  // and the existingLead reference (rendered as a small
+                  // banner above when present).
                   if (alreadyVerified) submitDirectly();
                   else setModalOpen(true);
                 }}
@@ -234,6 +250,21 @@ export function ListingSidebarCard({
               >
                 {submitting ? 'Sending…' : 'Visit Dealer'}
               </button>
+              {/* Small heads-up banner when an existing open enquiry exists
+                  for the verified phone — gives the buyer a Track shortcut
+                  without forcing them through the popup. The submit flow
+                  itself enforces the rule via the 409. */}
+              {existingLead && (
+                <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] rounded-card">
+                  You&rsquo;ve already enquired about this bike. Reference:{' '}
+                  <Link
+                    to={`/track?id=${existingLead.id}`}
+                    className="font-mono underline hover:no-underline"
+                  >
+                    {existingLead.id}
+                  </Link>
+                </div>
+              )}
               <Link
                 to={dealersHref}
                 className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:bg-hd-black hover:text-hd-white transition"

@@ -86,6 +86,63 @@ async function flagNotificationFailed(
   }
 }
 
+// ─── Duplicate-by-mobile dedup helpers ────────────────────────────────────
+//
+// Phones are stored AES-GCM with a per-record random IV, so the database
+// can't filter by ciphertext directly. We pull every non-terminal lead
+// (typically a few hundred rows per dealer at most) and decrypt-and-
+// compare in memory. The same approach the public /my-status endpoint
+// uses — keeps the contract identical between "is the buyer allowed to
+// enquire?" and "should the create call accept this submit?".
+//
+// "Terminal" = the dealer marked the lead Not Interested. That includes
+// the legacy DEAD / LOST (still valid on every kind), and — once the
+// buyer-pipeline-v2 branch merges — NOT_INTERESTED. Until then we list
+// only the values present in this branch's leadStatus enum so the
+// notIn query stays type-safe.
+const TERMINAL_LEAD_STATUSES = ['DEAD', 'LOST'] as const;
+
+async function findOpenBuyerEnquiryForPhone(
+  listingId: string,
+  phone: string,
+): Promise<{ id: string } | null> {
+  const rows = (await prisma.enquiry.findMany({
+    where: {
+      listingId,
+      status: { notIn: [...TERMINAL_LEAD_STATUSES] },
+    },
+    select: { id: true, phoneEnc: true },
+  })) as Array<{ id: string; phoneEnc: string }>;
+  for (const r of rows) {
+    try {
+      if (decryptPii(r.phoneEnc) === phone) return { id: r.id };
+    } catch {
+      // PII decrypt failed — wrong key or corrupted ciphertext. Treat
+      // as "not a match" rather than aborting the whole check.
+    }
+  }
+  return null;
+}
+
+async function findOpenTradeInLeadForPhone(
+  phone: string,
+): Promise<{ id: string } | null> {
+  const rows = (await prisma.tradeInLead.findMany({
+    where: {
+      status: { notIn: [...TERMINAL_LEAD_STATUSES] },
+    },
+    select: { id: true, phoneEnc: true },
+  })) as Array<{ id: string; phoneEnc: string }>;
+  for (const r of rows) {
+    try {
+      if (decryptPii(r.phoneEnc) === phone) return { id: r.id };
+    } catch {
+      // see comment in findOpenBuyerEnquiryForPhone
+    }
+  }
+  return null;
+}
+
 // ─── Buyer enquiry on a specific listing (PRD §6.2.7) ─────────────────────
 
 export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInput) {
@@ -95,6 +152,19 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
   })) as { id: string; dealerId: string; modelName: string; year: number; status: string } | null;
   if (!listing || listing.status !== 'ACTIVE') {
     throw new HttpError(404, 'NOT_FOUND', 'Listing not available');
+  }
+  // Duplicate-by-mobile gate: customer can't open a second enquiry on
+  // the same listing while a previous one is still open. The dealer
+  // marking the lead Not Interested (DEAD / LOST today, NOT_INTERESTED
+  // once buyer-pipeline-v2 merges) clears this gate. Mirrors the
+  // pre-check in /listings/:slug/my-status so client and server agree.
+  const existing = await findOpenBuyerEnquiryForPhone(listing.id, input.phone);
+  if (existing) {
+    throw new HttpError(
+      409,
+      'ENQUIRY_ALREADY_OPEN',
+      'Enquiry form already filled with this number. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
+    );
   }
   const enquiry = await prisma.enquiry.create({
     data: {
@@ -134,6 +204,17 @@ export async function createTradeInLead(input: TradeInLeadInput) {
   }
   if (!dealerId) dealerId = await nearestActiveDealer();
 
+  // Duplicate-by-mobile gate: trade-in dedup is global by phone (a
+  // seller can only have one open seller-enquiry at a time, regardless
+  // of which bike). Cleared once the dealer marks Not Interested.
+  const existing = await findOpenTradeInLeadForPhone(input.phone);
+  if (existing) {
+    throw new HttpError(
+      409,
+      'SELLER_ENQUIRY_ALREADY_OPEN',
+      'Enquiry form already filled with this number. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
+    );
+  }
   const lead = await prisma.tradeInLead.create({
     data: {
       dealerId,
@@ -397,6 +478,19 @@ export async function dealerCreateBuyerEnquiry(
       'Listing not found for this dealer, or already sold / removed',
     );
   }
+  // Same duplicate-by-mobile gate as the customer-portal path: if a
+  // previous enquiry on this listing for the same phone is still open,
+  // surface a clear 409 so the dealer rep doesn't accidentally create
+  // a parallel ghost lead. Cleared once the previous lead is marked
+  // Not Interested.
+  const existing = await findOpenBuyerEnquiryForPhone(listing.id, input.phone);
+  if (existing) {
+    throw new HttpError(
+      409,
+      'ENQUIRY_ALREADY_OPEN',
+      'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+    );
+  }
   const enquiry = await prisma.enquiry.create({
     data: {
       listingId: listing.id,
@@ -427,6 +521,17 @@ export async function dealerCreateTradeInLead(
   dealerId: string,
   input: DealerTradeInLeadInput,
 ) {
+  // Same duplicate-by-mobile gate as the customer trade-in path. Global
+  // dedup by phone — one open seller-enquiry per number across the
+  // whole system until the dealer closes it as Not Interested.
+  const existing = await findOpenTradeInLeadForPhone(input.phone);
+  if (existing) {
+    throw new HttpError(
+      409,
+      'SELLER_ENQUIRY_ALREADY_OPEN',
+      'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+    );
+  }
   const lead = (await prisma.tradeInLead.create({
     data: {
       dealerId,

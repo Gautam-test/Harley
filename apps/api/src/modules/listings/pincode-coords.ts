@@ -2,18 +2,19 @@
 //
 // India's PIN codes are organised by 9 regions; the first digit gives the
 // region, the next two narrow it to a sub-region (state/zone). We don't need
-// per-pincode precision for "show bikes within 50 km of buyer" — the centroid
+// per-pincode precision for "show bikes within X km of buyer" — the centroid
 // of the sub-region is good enough for the dealer-radius filter and avoids a
 // runtime dependency on an external geocoder API.
 //
-// Lookup is layered:
-//   1. 3-digit prefix → exact city centroid (the PREFIX_MAP below).
-//   2. 1-digit region fallback → regional metro centroid (REGION_MAP).
-// The fallback exists so that any well-formed 6-digit pincode resolves to
-// SOMETHING — without it, an unmapped pincode caused the API filter to
-// silently no-op and the buyer perceived "search by pincode does nothing".
-// The caller receives `{ match: 'exact' | 'region' | 'invalid' }` so the
-// SPA can tell the buyer when results are an approximation.
+// Lookup is exact-prefix only: the buyer's first 3 digits must hit one of
+// the curated PREFIX_MAP entries. If they don't, we return null and the
+// caller treats it as "no dealers nearby" → buyer sees the empty-state
+// message ("No motorcycles available for this pincode"). An earlier
+// implementation tried a 1-digit regional fallback so any well-formed
+// pincode resolved to *something*, but that surfaced bikes from the
+// wrong city (e.g. typing a Tripura pincode showed Kolkata bikes), which
+// confused buyers more than it helped. Simpler is better here: either
+// the pincode resolves to a real coordinate or the search returns empty.
 
 interface Coord {
   lat: number;
@@ -105,40 +106,13 @@ const PREFIX_MAP: Record<string, Coord> = {
   '834': { lat: 23.3441, lng: 85.3096, city: 'Ranchi' },
 };
 
-// Region centroids — the 1-digit fallback when the 3-digit prefix isn't
-// in PREFIX_MAP. India's PIN system uses digit 1 for the postal region:
-// 1=North, 2=North-UP, 3=West-Raj/Guj, 4=West-MH/MP/CG, 5=South-AP/KA,
-// 6=South-KL/TN, 7=East-WB/OR/NE, 8=East-BR/JH, 9=APO/FPO. Each centroid
-// is the largest city in that region. Coarse — a buyer in interior
-// Tripura gets distances measured from Kolkata — but it means EVERY
-// well-formed pincode resolves to *something* and the radius filter
-// actually fires. The response tells the SPA when this approximate path
-// was taken so the buyer can be told "showing approximate results".
-const REGION_MAP: Record<string, Coord> = {
-  '1': { lat: 28.6139, lng: 77.2090, city: 'New Delhi' },
-  '2': { lat: 26.8467, lng: 80.9462, city: 'Lucknow' },
-  '3': { lat: 26.9124, lng: 75.7873, city: 'Jaipur' },
-  '4': { lat: 19.0760, lng: 72.8777, city: 'Mumbai' },
-  '5': { lat: 17.3850, lng: 78.4867, city: 'Hyderabad' },
-  '6': { lat: 13.0827, lng: 80.2707, city: 'Chennai' },
-  '7': { lat: 22.5726, lng: 88.3639, city: 'Kolkata' },
-  '8': { lat: 25.5941, lng: 85.1376, city: 'Patna' },
-  '9': { lat: 28.6139, lng: 77.2090, city: 'New Delhi' }, // APO/FPO — Delhi default
-};
-
-export type PincodeMatch = 'exact' | 'region' | 'invalid';
-
-export type PincodeLookup =
-  | { coord: Coord; match: 'exact' | 'region' }
-  | { coord: null; match: 'invalid' };
-
-export function pincodeCoord(pincode: string): PincodeLookup {
-  if (!/^\d{6}$/.test(pincode)) return { coord: null, match: 'invalid' };
-  const exact = PREFIX_MAP[pincode.slice(0, 3)];
-  if (exact) return { coord: exact, match: 'exact' };
-  const region = REGION_MAP[pincode[0] as string];
-  if (region) return { coord: region, match: 'region' };
-  return { coord: null, match: 'invalid' };
+// Returns the curated centroid for the 3-digit prefix, or null when the
+// prefix isn't in our table. The caller treats null the same as "no
+// dealers within range" — empty result set + "no motorcycles available
+// for this pincode" empty-state on the buyer SPA.
+export function pincodeCoord(pincode: string): Coord | null {
+  if (!/^\d{6}$/.test(pincode)) return null;
+  return PREFIX_MAP[pincode.slice(0, 3)] ?? null;
 }
 
 // Haversine — great-circle distance between two lat/lng points, in km.
