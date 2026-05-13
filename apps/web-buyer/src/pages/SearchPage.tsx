@@ -17,12 +17,15 @@ interface SearchResponse {
   total: number;
   page: number;
   pageSize: number;
-  // pincodeMatch tells us whether the radius filter ran against the exact
-  // 3-digit prefix centroid ('exact'), the broader 1-digit region centroid
-  // ('region' — approximate), or didn't run ('invalid' = unmapped pincode,
-  // null = no pincode/distance pair was supplied).
+  // Set when the buyer's pincode had no exact-match dealer and the API
+  // fell back to the distance filter. We render a short notice above
+  // the grid telling the buyer their exact pincode had no stock and
+  // these are the nearest results.
   meta?: {
-    pincodeMatch: 'exact' | 'region' | 'invalid' | null;
+    pincodeFallback?: {
+      searchedPincode: string;
+      nearestPincode: string;
+    };
   };
 }
 
@@ -141,28 +144,17 @@ export function SearchPage() {
               </div>
             )}
 
-            {/* Approximate-results notice — shown when the buyer's pincode
-                fell back to the regional centroid because we don't have
-                exact data for that 3-digit prefix. The radius filter still
-                ran, just from a regional metro rather than the precise
-                area, so the buyer sees nearby Certified stock instead of
-                the silent "filter did nothing" they used to get. */}
-            {data?.meta?.pincodeMatch === 'region' && (
+            {/* Pincode-fallback notice — surfaced when the buyer typed a
+                pincode that has no exact-match dealer with stock, and we
+                fell back to the distance filter. Tells them precisely
+                which pincode the displayed bikes are from so the
+                proximity is obvious (e.g. "no bikes for 122004 — showing
+                nearest from 122001"). */}
+            {data?.meta?.pincodeFallback && (
               <div className="mb-4 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[13px] rounded-card">
-                We don&apos;t have precise location data for pincode {params.get('pincode')} — showing
-                Certified stock within {params.get('distance')} km of the nearest region centroid.
-              </div>
-            )}
-
-            {/* Invalid-pincode notice — Indian PINs always start with a
-                digit 1-9, so '000000' or other unmapped 6-digit strings
-                can't be resolved to a location. The API returns zero
-                results in this case (so the buyer sees their bad filter
-                rather than unfiltered stock) and we explain why. */}
-            {data?.meta?.pincodeMatch === 'invalid' && (
-              <div className="mb-4 px-3 py-2 bg-danger/10 border border-danger text-danger text-[13px] rounded-card">
-                Pincode {params.get('pincode')} isn&apos;t a recognised Indian PIN code. Please check
-                the digits — Indian PINs start with 1-9.
+                No motorcycles available for pincode{' '}
+                <strong>{data.meta.pincodeFallback.searchedPincode}</strong> — showing nearest
+                results from pincode <strong>{data.meta.pincodeFallback.nearestPincode}</strong>.
               </div>
             )}
 
@@ -173,11 +165,26 @@ export function SearchPage() {
                 ))}
               </div>
             ) : data?.results.length === 0 ? (
+              // Empty-state — covers every "nothing to show" case with a
+              // single clear message:
+              //   - pincode supplied + dealers exist near it but no stock
+              //   - pincode supplied + no dealers in range
+              //   - pincode supplied + pincode unmappable
+              //   - other filter combos that produced zero results
+              // When a pincode IS in the URL we lead with the pincode-
+              // specific copy so the buyer immediately sees why the grid
+              // is empty; otherwise we keep the original generic message.
               <div className="bg-hd-white border border-gray-200 p-10 text-center rounded-card">
                 <p className="font-subhead text-lg text-text-on-light">
-                  No motorcycles match your search.
+                  {params.get('pincode')
+                    ? `No motorcycles available for pincode ${params.get('pincode')}.`
+                    : 'No motorcycles match your search.'}
                 </p>
-                <p className="text-sm text-gray-600 mt-2">Try widening the radius or clearing filters.</p>
+                <p className="text-sm text-gray-600 mt-2">
+                  {params.get('pincode')
+                    ? 'Try a different pincode, widen the distance, or clear the filter to see all stock.'
+                    : 'Try widening the radius or clearing filters.'}
+                </p>
                 <button
                   type="button"
                   onClick={() => setParams({})}

@@ -39,46 +39,94 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
     const q = req.query as unknown as ListingSearchQuery;
 
     // ─── Dealer-radius pre-filter (PRD §6.1.2 distance filter) ──────────
-    // When the buyer supplied a pincode + distance, look up the pincode's
-    // approximate (lat, lng) and find dealers within `distance` km. The
-    // listings query is then constrained to those dealerIds.
+    // Exact-pincode-first lookup. Two-step fallback so a buyer typing
+    // their pincode never gets "no results" when bikes ARE available
+    // a few km away in the same city:
     //
-    // Lookup is layered: an exact 3-digit prefix returns match='exact';
-    // an unmapped prefix in a known region returns match='region' with
-    // the regional metro centroid (so the filter still fires); a 6-digit
-    // string that doesn't map to any region (e.g. '000000' — Indian PINs
-    // start with 1-9) returns match='invalid'. When the buyer explicitly
-    // supplied pincode + distance and we can't resolve it, return zero
-    // results rather than silently showing every listing — the buyer
-    // typed a location filter, so falling back to "everything" looks
-    // broken and hides the bad input from them.
+    //   Step 1 — Look for any ACTIVE dealer whose pincode literally
+    //            equals the buyer's pincode. If any of those dealers has
+    //            ACTIVE listings, return only those bikes. No notice.
+    //
+    //   Step 2 — No exact-pincode dealer (or none with stock). Fall back
+    //            to the distance filter: convert the buyer's pincode to
+    //            a coordinate via the curated 3-digit prefix table, find
+    //            dealers within `distance` km, return their bikes, and
+    //            attach `meta.pincodeFallback = { searchedPincode,
+    //            nearestPincode }` so the SPA can render a notice
+    //            explaining the swap.
+    //
+    //   Step 3 — Pincode is unresolvable (unmapped 3-digit prefix or
+    //            invalid digits like 000000). Return zero results;
+    //            buyer sees the empty-state message.
     let dealerIdFilter: { in: string[] } | undefined;
-    let pincodeMatch: 'exact' | 'region' | 'invalid' | null = null;
+    let pincodeFallback: { searchedPincode: string; nearestPincode: string } | null = null;
     if (q.pincode && q.distance) {
-      const lookup = pincodeCoord(q.pincode);
-      pincodeMatch = lookup.match;
-      if (lookup.coord) {
-        const buyerCoord = lookup.coord;
-        const dealers = (await prisma.dealer.findMany({
-          where: { status: 'ACTIVE' },
-          select: { id: true, latitude: true, longitude: true },
-        })) as Array<{ id: string; latitude: number | null; longitude: number | null }>;
-        const withinRange = dealers
-          .filter((d) => d.latitude != null && d.longitude != null)
-          .filter(
-            (d) =>
-              distanceKm(buyerCoord, { lat: d.latitude as number, lng: d.longitude as number }) <=
-              (q.distance as number),
-          )
-          .map((d) => d.id);
-        // No dealers in range → return an empty result set explicitly so the
-        // total reflects the actual filtered count instead of "everything".
-        dealerIdFilter = { in: withinRange.length > 0 ? withinRange : ['__none__'] };
+      // Step 1 — exact match
+      const exactDealers = (await prisma.dealer.findMany({
+        where: { status: 'ACTIVE', pincode: q.pincode },
+        select: { id: true },
+      })) as Array<{ id: string }>;
+      let exactWithStock: string[] = [];
+      if (exactDealers.length > 0) {
+        const ids = exactDealers.map((d) => d.id);
+        const listingCount = await prisma.listing.count({
+          where: { dealerId: { in: ids }, status: 'ACTIVE' },
+        });
+        if (listingCount > 0) exactWithStock = ids;
+      }
+
+      if (exactWithStock.length > 0) {
+        dealerIdFilter = { in: exactWithStock };
       } else {
-        // Unresolvable pincode (e.g. '000000') — empty result so the
-        // SPA can render an "invalid pincode" notice instead of showing
-        // unfiltered stock that masks the bad input.
-        dealerIdFilter = { in: ['__none__'] };
+        // Step 2 — distance fallback
+        const buyerCoord = pincodeCoord(q.pincode);
+        if (buyerCoord) {
+          const dealers = (await prisma.dealer.findMany({
+            where: { status: 'ACTIVE' },
+            select: { id: true, pincode: true, latitude: true, longitude: true },
+          })) as Array<{
+            id: string;
+            pincode: string;
+            latitude: number | null;
+            longitude: number | null;
+          }>;
+          const withinRange = dealers
+            .filter((d) => d.latitude != null && d.longitude != null)
+            .map((d) => ({
+              id: d.id,
+              pincode: d.pincode,
+              distance: distanceKm(buyerCoord, {
+                lat: d.latitude as number,
+                lng: d.longitude as number,
+              }),
+            }))
+            .filter((d) => d.distance <= (q.distance as number))
+            .sort((a, b) => a.distance - b.distance);
+
+          if (withinRange.length > 0) {
+            // Verify at least one of the dealers in range has stock — if none
+            // do, surface the empty state instead of an empty "showing nearest"
+            // notice that would point at zero bikes.
+            const inRangeIds = withinRange.map((d) => d.id);
+            const inRangeStock = await prisma.listing.count({
+              where: { dealerId: { in: inRangeIds }, status: 'ACTIVE' },
+            });
+            if (inRangeStock > 0) {
+              dealerIdFilter = { in: inRangeIds };
+              pincodeFallback = {
+                searchedPincode: q.pincode,
+                nearestPincode: withinRange[0]!.pincode,
+              };
+            } else {
+              dealerIdFilter = { in: ['__none__'] };
+            }
+          } else {
+            dealerIdFilter = { in: ['__none__'] };
+          }
+        } else {
+          // Step 3 — unresolvable pincode (e.g. 000000)
+          dealerIdFilter = { in: ['__none__'] };
+        }
       }
     }
 
@@ -166,11 +214,12 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
       total,
       page: q.page,
       pageSize: q.pageSize,
-      // pincodeMatch tells the buyer SPA whether the radius filter ran
-      // against the exact 3-digit prefix centroid or fell back to the
-      // 1-digit region centroid. 'invalid' = pincode was unmapped and no
-      // filter ran. null = pincode/distance weren't supplied.
-      meta: { pincodeMatch },
+      // Set when the buyer's pincode had no exact-match dealer and we
+      // fell back to the distance filter. The SPA renders a notice:
+      // "No motorcycles for pincode {searched} — showing nearest results
+      // from pincode {nearest}". Omitted entirely when the exact-match
+      // path succeeded or no pincode was supplied (no notice needed).
+      ...(pincodeFallback ? { meta: { pincodeFallback } } : {}),
     });
   } catch (e) {
     next(e);
