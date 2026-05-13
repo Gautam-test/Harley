@@ -41,13 +41,24 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
     // ─── Dealer-radius pre-filter (PRD §6.1.2 distance filter) ──────────
     // When the buyer supplied a pincode + distance, look up the pincode's
     // approximate (lat, lng) and find dealers within `distance` km. The
-    // listings query is then constrained to those dealerIds. If we can't
-    // resolve the pincode (unknown prefix), we skip the filter rather than
-    // silently lie to the buyer.
+    // listings query is then constrained to those dealerIds.
+    //
+    // Lookup is layered: an exact 3-digit prefix returns match='exact';
+    // an unmapped prefix in a known region returns match='region' with
+    // the regional metro centroid (so the filter still fires); a 6-digit
+    // string that doesn't map to any region (e.g. '000000' — Indian PINs
+    // start with 1-9) returns match='invalid'. When the buyer explicitly
+    // supplied pincode + distance and we can't resolve it, return zero
+    // results rather than silently showing every listing — the buyer
+    // typed a location filter, so falling back to "everything" looks
+    // broken and hides the bad input from them.
     let dealerIdFilter: { in: string[] } | undefined;
+    let pincodeMatch: 'exact' | 'region' | 'invalid' | null = null;
     if (q.pincode && q.distance) {
-      const buyerCoord = pincodeCoord(q.pincode);
-      if (buyerCoord) {
+      const lookup = pincodeCoord(q.pincode);
+      pincodeMatch = lookup.match;
+      if (lookup.coord) {
+        const buyerCoord = lookup.coord;
         const dealers = (await prisma.dealer.findMany({
           where: { status: 'ACTIVE' },
           select: { id: true, latitude: true, longitude: true },
@@ -63,6 +74,11 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
         // No dealers in range → return an empty result set explicitly so the
         // total reflects the actual filtered count instead of "everything".
         dealerIdFilter = { in: withinRange.length > 0 ? withinRange : ['__none__'] };
+      } else {
+        // Unresolvable pincode (e.g. '000000') — empty result so the
+        // SPA can render an "invalid pincode" notice instead of showing
+        // unfiltered stock that masks the bad input.
+        dealerIdFilter = { in: ['__none__'] };
       }
     }
 
@@ -150,6 +166,11 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
       total,
       page: q.page,
       pageSize: q.pageSize,
+      // pincodeMatch tells the buyer SPA whether the radius filter ran
+      // against the exact 3-digit prefix centroid or fell back to the
+      // 1-digit region centroid. 'invalid' = pincode was unmapped and no
+      // filter ran. null = pincode/distance weren't supplied.
+      meta: { pincodeMatch },
     });
   } catch (e) {
     next(e);

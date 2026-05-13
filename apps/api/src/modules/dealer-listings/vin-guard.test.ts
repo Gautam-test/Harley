@@ -147,14 +147,15 @@ describe('rootVin prefix stripping', () => {
       });
       // We capture the OR clause that updateListing built — the second
       // arm (vin: rootVin) is what's interesting.
-      let capturedWhere: { OR?: Array<{ vin: string }> } | null = null;
-      findFirst.mockImplementationOnce((args: { where: typeof capturedWhere }) => {
+      type WhereShape = { OR?: Array<{ vin: string }> };
+      let capturedWhere: WhereShape | null = null;
+      findFirst.mockImplementationOnce((args: { where: WhereShape }) => {
         capturedWhere = args.where;
         return Promise.resolve(null);
       });
       update.mockResolvedValueOnce({ id: 'x', status: 'DRAFT' });
       await updateListing('d1', 'x', { price: 1500000 });
-      const orList = capturedWhere?.OR ?? [];
+      const orList: Array<{ vin: string }> = (capturedWhere as WhereShape | null)?.OR ?? [];
       const vins = orList.map((o) => o.vin);
       expect(vins).toContain(c.root);
     }
