@@ -17,6 +17,13 @@ interface SearchResponse {
   total: number;
   page: number;
   pageSize: number;
+  // pincodeMatch tells us whether the radius filter ran against the exact
+  // 3-digit prefix centroid ('exact'), the broader 1-digit region centroid
+  // ('region' — approximate), or didn't run ('invalid' = unmapped pincode,
+  // null = no pincode/distance pair was supplied).
+  meta?: {
+    pincodeMatch: 'exact' | 'region' | 'invalid' | null;
+  };
 }
 
 const PAGE_SIZE = 12;
@@ -131,6 +138,19 @@ export function SearchPage() {
             {isError && (
               <div className="text-danger bg-danger/10 border border-danger px-4 py-3 rounded-card">
                 Could not load listings. Please try again.
+              </div>
+            )}
+
+            {/* Approximate-results notice — shown when the buyer's pincode
+                fell back to the regional centroid because we don't have
+                exact data for that 3-digit prefix. The radius filter still
+                ran, just from a regional metro rather than the precise
+                area, so the buyer sees nearby Certified stock instead of
+                the silent "filter did nothing" they used to get. */}
+            {data?.meta?.pincodeMatch === 'region' && (
+              <div className="mb-4 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[13px] rounded-card">
+                We don&apos;t have precise location data for pincode {params.get('pincode')} — showing
+                Certified stock within {params.get('distance')} km of the nearest region centroid.
               </div>
             )}
 
