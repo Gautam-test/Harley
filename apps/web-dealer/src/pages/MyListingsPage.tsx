@@ -22,14 +22,23 @@ interface DealerListingRow {
 
 // Figma /Dealer/Halrey dealer_page-0003.jpg uses dealer-friendly labels for the
 // listing state machine. The DB enum stays unchanged; only the UI relabels.
-type TabId = 'ALL' | 'DRAFT' | 'ACTIVE' | 'DEACTIVATED' | 'SOLD' | 'REMOVED';
-const TABS: { id: TabId; label: string; statusFilter: DealerListingRow['status'] | '' }[] = [
-  { id: 'ALL', label: 'All', statusFilter: '' },
-  { id: 'DRAFT', label: 'Pending', statusFilter: 'DRAFT' },
-  { id: 'ACTIVE', label: 'Live', statusFilter: 'ACTIVE' },
-  { id: 'DEACTIVATED', label: 'Off', statusFilter: 'DEACTIVATED' },
-  { id: 'SOLD', label: 'Sold', statusFilter: 'SOLD' },
-  { id: 'REMOVED', label: 'Removed', statusFilter: 'REMOVED' },
+//
+// QA: separate Removed and Deactivated tabs were collapsed into a single
+// "Inactive" tab per ops request. Both statuses still exist on the DB
+// side and the per-row actions (Turn On for DEACTIVATED, removal-reason
+// banner for REMOVED) stay intact — the change is UI grouping only.
+// `statusFilter` is now an array so the Inactive tab can pull both.
+type TabId = 'ALL' | 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'SOLD';
+const TABS: {
+  id: TabId;
+  label: string;
+  statusFilter: ReadonlyArray<DealerListingRow['status']>;
+}[] = [
+  { id: 'ALL',      label: 'All',     statusFilter: [] },
+  { id: 'DRAFT',    label: 'Pending', statusFilter: ['DRAFT'] },
+  { id: 'ACTIVE',   label: 'Live',    statusFilter: ['ACTIVE'] },
+  { id: 'INACTIVE', label: 'Inactive', statusFilter: ['DEACTIVATED', 'REMOVED'] },
+  { id: 'SOLD',     label: 'Sold',    statusFilter: ['SOLD'] },
 ];
 
 // "Preview" opens the buyer-facing listing detail page. URL resolution:
@@ -99,8 +108,10 @@ export function MyListingsPage() {
   );
 
   const filtered = (all ?? []).filter((l) => {
-    const wanted = TABS.find((t) => t.id === tab)?.statusFilter;
-    return wanted ? l.status === wanted : true;
+    const wanted = TABS.find((t) => t.id === tab)?.statusFilter ?? [];
+    // Empty array = "All" tab → no filter; otherwise match any status in
+    // the tab's set (Inactive pulls both DEACTIVATED and REMOVED rows).
+    return wanted.length === 0 || wanted.includes(l.status);
   });
 
   const markSold = useMutation({
@@ -198,10 +209,12 @@ export function MyListingsPage() {
           nav can still scroll on narrow viewports via touch / wheel. */}
       <nav className="flex items-end gap-1 mb-4 border-b border-gray-200 overflow-x-auto scrollbar-hide">
         {TABS.map((t) => {
+          // Inactive sums DEACTIVATED + REMOVED; All sums everything;
+          // single-status tabs read straight off the per-status counts.
           const count =
             t.id === 'ALL'
               ? (all ?? []).length
-              : counts[t.statusFilter as DealerListingRow['status']] ?? 0;
+              : t.statusFilter.reduce((sum, s) => sum + (counts[s] ?? 0), 0);
           const isActive = tab === t.id;
           return (
             <button
