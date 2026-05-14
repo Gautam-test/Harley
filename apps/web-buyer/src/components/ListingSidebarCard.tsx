@@ -228,32 +228,24 @@ export function ListingSidebarCard({
               >
                 {submitting ? 'Sending…' : 'Visit Dealer'}
               </button>
-              {/* Small heads-up banner when an existing open enquiry exists
-                  for the verified phone — gives the buyer a Track shortcut
-                  without forcing them through the popup. The submit flow
-                  itself enforces the rule via the 409. */}
-              {existingLead && (
-                <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[11px] rounded-card">
-                  You&rsquo;ve already enquired about this bike. Reference:{' '}
-                  <Link
-                    to={`/track?id=${existingLead.id}`}
-                    className="font-mono underline hover:no-underline"
-                  >
-                    {existingLead.id}
-                  </Link>
-                </div>
-              )}
+              {/* QA: the previous "You've already enquired" amber banner
+                  AND the "You've already verified — clicking will submit"
+                  hint were both removed. Both rendered purely off
+                  localStorage state (storedPhone / verifiedToken cached
+                  from any earlier session in this browser), so they fired
+                  for buyers who hadn't even touched the form on the
+                  current page — the user pushed back: "until I haven't
+                  filled the mobile no., how can you tell the enquiry is
+                  submitted?". The submit-time popup (handleVerified's
+                  409 handler) is the only place we now surface "already
+                  submitted" copy, because that fires on a real attempt
+                  with a real phone and has full context. */}
               <Link
                 to={dealersHref}
                 className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:bg-hd-black hover:text-hd-white transition"
               >
                 View Dealer Details
               </Link>
-              {alreadyVerified && !submitting && (
-                <p className="text-[10px] text-gray-500 text-center">
-                  You&rsquo;ve already verified — clicking above will submit your enquiry.
-                </p>
-              )}
               {error && (
                 <p className="text-xs text-danger mt-1">{error}</p>
               )}
