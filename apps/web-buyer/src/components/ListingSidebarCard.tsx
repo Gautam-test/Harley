@@ -73,50 +73,16 @@ export function ListingSidebarCard({
     ? { id: myStatusQuery.data.leadId!, status: myStatusQuery.data.status! }
     : null;
 
-  // When the buyer has a fresh verifiedToken and remembered identity from a
-  // previous enquiry this session, the second click goes straight through
-  // without re-prompting. A 401 from the API means the token expired
-  // server-side; fall back to the modal to re-verify.
-  const submitDirectly = async () => {
-    if (!storedPhone || !storedName || !storedEmail) {
-      // Profile incomplete — open the modal so we re-collect the missing
-      // bits before posting. Shouldn't happen given alreadyVerified gate
-      // above, but defends against an older persisted store shape.
-      setModalOpen(true);
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const res = await api<{ id: string }>(`/leads/listings/${slug}/enquiry`, {
-        method: 'POST',
-        withOtpToken: true,
-        body: JSON.stringify({
-          name: storedName,
-          phone: storedPhone,
-          email: storedEmail,
-          message: `I'm interested in this ${modelInterest}. Please contact me.`,
-        }),
-      });
-      setSubmitted({ id: res.id });
-    } catch (e) {
-      // Token expired or otherwise invalid — fall back to the modal to
-      // collect a fresh OTP. The modal also handles other API errors.
-      if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-        setModalOpen(true);
-      } else if (e instanceof ApiError && e.code === 'ENQUIRY_ALREADY_OPEN') {
-        // Server-side duplicate-by-mobile gate fired. Refetch my-status
-        // to populate existingLead with the reference, then surface the
-        // friendly popup with Track-Enquiry shortcut.
-        await myStatusQuery.refetch();
-        setAlreadyPopupOpen(true);
-      } else {
-        setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // The previous "fast-path one-click submit for verified buyers"
+  // (submitDirectly) was removed when the QA ticket clarified that the
+  // form should always open on Visit Dealer click — even when the
+  // buyer's OTP token is still cached from this session. The verified
+  // path now flows through the same modal as a first-time buyer; the
+  // <InfoGateModal prefilled={…}/> wiring below skips the collect step
+  // and lands the buyer straight on OTP-entry, so the only added step
+  // is re-entering the freshly-sent code (cheap, and matches the
+  // ticket's "form should open normally" requirement).
+
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
@@ -229,21 +195,33 @@ export function ListingSidebarCard({
               <button
                 type="button"
                 onClick={() => {
-                  // QA: the form should always open on click. The previous
-                  // pre-block (immediate "already submitted" popup before
-                  // the modal even opened) confused buyers who'd just
-                  // refreshed the page or were checking the form layout.
-                  // The duplicate-by-mobile rule is now enforced at the
-                  // API on actual submit — if a non-terminal enquiry
-                  // exists for this phone, the POST returns 409
-                  // ENQUIRY_ALREADY_OPEN and the modal surfaces the
-                  // message at that point. Until the dealer marks the
-                  // previous lead Not Interested, submit fails; until
-                  // then the buyer can still review the form contents
-                  // and the existingLead reference (rendered as a small
-                  // banner above when present).
-                  if (alreadyVerified) submitDirectly();
-                  else setModalOpen(true);
+                  // Ticket: "When a user fills out the Buyer Enquiry form
+                  // using a mobile number by clicking the Visit Dealer
+                  // button, and then clicks the Visit Dealer button again,
+                  // the enquiry form should open normally."
+                  //
+                  // The fix has two halves:
+                  //   1. No client-side pre-block via my-status — handled
+                  //      by removing the existingLead-throws-popup gate
+                  //      that used to short-circuit before the modal.
+                  //   2. ALWAYS open the modal — even for buyers whose
+                  //      OTP token is still cached from an earlier
+                  //      enquiry this session. The previous shortcut
+                  //      (`if (alreadyVerified) submitDirectly()`) fired
+                  //      the API immediately and surfaced the 409 popup
+                  //      without ever showing the form, which is the
+                  //      "immediately displays the message" symptom the
+                  //      ticket reproduces.
+                  //
+                  // For verified buyers we hand the modal the prefilled
+                  // contact details (see <InfoGateModal prefilled={…} />
+                  // below) so the modal jumps straight to OTP-entry with
+                  // their name / phone / email pre-populated. The
+                  // duplicate-by-mobile rule is enforced on submit by
+                  // the API (409 ENQUIRY_ALREADY_OPEN); on that 409 the
+                  // friendly "Already Submitted" popup with Track
+                  // shortcut surfaces.
+                  setModalOpen(true);
                 }}
                 disabled={submitting}
                 className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:brightness-110 transition disabled:opacity-60"
@@ -326,6 +304,22 @@ export function ListingSidebarCard({
         open={modalOpen}
         purpose="ENQUIRY"
         context={{ modelInterest, preselectDealerId: dealerId }}
+        // Pass the cached profile when this session has a verified
+        // buyer — the modal then jumps straight to its OTP-entry step
+        // with name/phone/email pre-populated, instead of forcing the
+        // buyer to re-type fields they've already entered. Falls
+        // through to the full collect step for first-time buyers.
+        prefilled={
+          alreadyVerified && storedPhone && storedName && storedEmail
+            ? {
+                phone: storedPhone,
+                name: storedName,
+                email: storedEmail,
+                dealerId,
+                bikeModel: modelInterest,
+              }
+            : undefined
+        }
         onVerified={handleVerified}
         onClose={() => setModalOpen(false)}
       />
