@@ -386,6 +386,12 @@ export function AddListingPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              // Edit-mode never re-fetches Torque from a typed VIN — the
+              // VIN is locked once a listing exists (PRD §6.2.4). The
+              // initial hydration still fires fetchVin once on mount to
+              // populate the read-only Torque card; that runs from the
+              // existing.data effect, not from this form submit.
+              if (isEditMode) return;
               if (/^[A-HJ-NPR-Z0-9]{17}$/.test(s.vin)) fetchVin.mutate(s.vin);
             }}
             className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3"
@@ -395,6 +401,12 @@ export function AddListingPage() {
               placeholder="1HD1KB4197Y624381"
               className="font-mono text-base"
               value={s.vin}
+              // VIN is read-only in edit mode (PRD §6.2.4). updateListing
+              // doesn't accept a vin field anyway, so a typed change
+              // silently no-ops on submit — but a disabled input makes
+              // the lock obvious instead of letting the dealer waste
+              // time typing a new VIN they expected to take effect.
+              disabled={isEditMode}
               onChange={(e) =>
                 update({ vin: e.target.value.toUpperCase(), torque: null })
               }
@@ -402,14 +414,18 @@ export function AddListingPage() {
             <Button
               type="submit"
               disabled={
-                !/^[A-HJ-NPR-Z0-9]{17}$/.test(s.vin) || fetchVin.isPending
+                isEditMode ||
+                !/^[A-HJ-NPR-Z0-9]{17}$/.test(s.vin) ||
+                fetchVin.isPending
               }
             >
               {fetchVin.isPending ? 'Fetching…' : 'Fetch from Torque'}
             </Button>
           </form>
           <p className="text-xs text-gray-500 mt-2">
-            Vehicle details will be auto-fetched from the Torque DMS.
+            {isEditMode
+              ? 'VIN is locked once a listing exists. Remove and re-create the listing if you need to change it.'
+              : 'Vehicle details will be auto-fetched from the Torque DMS.'}
           </p>
           {fetchVin.error instanceof ApiError && (
             <div className="mt-3 bg-danger/10 border border-danger rounded-card p-3 text-sm text-text-on-light">

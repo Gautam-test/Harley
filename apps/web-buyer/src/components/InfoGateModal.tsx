@@ -938,6 +938,20 @@ export function InfoGateModal({
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="text-center text-2xl tracking-[0.5em] font-mono"
             />
+            {/* Soft notice when the modal lands on verify step but the
+                /otp/send request hasn't completed (or returned without
+                an otpId — happens on OTP_RESEND_TOO_SOON when the buyer
+                re-opens the modal within 30s of the previous send). The
+                Verify button is disabled in that state; this banner
+                tells them why so they tap Resend Code instead of
+                clicking Verify and getting the misleading "OTP not yet
+                sent" error. */}
+            {!otpId && !busy && !error && (
+              <div className="text-amber-900 text-xs bg-amber-50 border border-amber-200 px-3 py-2 rounded">
+                Waiting on the OTP to send. If you don&rsquo;t receive it shortly, tap{' '}
+                <strong>Resend code</strong> below.
+              </div>
+            )}
             {error && (
               <div className="text-danger text-sm bg-danger/10 border border-danger px-3 py-2 rounded">
                 {error}
@@ -946,7 +960,12 @@ export function InfoGateModal({
             <Button
               type="button"
               onClick={submitVerify}
-              disabled={code.length !== 6 || busy}
+              // Verify gated on (a) a 6-digit code typed, (b) no in-flight
+              // request, and (c) a real otpId from a successful /otp/send.
+              // The third gate prevents the misleading "OTP not yet sent"
+              // error path that surfaced when the buyer clicked Verify
+              // before the send completed (or after it failed silently).
+              disabled={code.length !== 6 || busy || !otpId}
               className="w-full"
             >
               {busy ? 'Verifying…' : 'Verify'}

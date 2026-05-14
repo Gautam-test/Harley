@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../lib/api';
-import { useOtpStore } from '../store/otp';
 import { InfoGateModal } from './InfoGateModal';
 
 interface ListingSidebarCardProps {
@@ -29,47 +27,15 @@ export function ListingSidebarCard({
   dealerName,
   dealerCity,
 }: ListingSidebarCardProps) {
-  // We pull `phone` from the OTP store solely to power the post-submit
-  // popup's existing-lead lookup (myStatusQuery). Other fields used to
-  // power a verified-shortcut + a prefilled modal, but both were removed
-  // — the modal opens at its collect step every time so the buyer types
-  // their CURRENT mobile, gets a fresh OTP, and dedup runs at submit.
-  const { phone: storedPhone } = useOtpStore();
-
+  // No localStorage-driven hints, no my-status pre-check, no popup. The
+  // duplicate-by-mobile rule lives entirely on the API: if the buyer
+  // submits with a phone that already has an open enquiry on this
+  // listing, the POST returns 409 with a friendly message which we
+  // surface as inline error text under the CTAs.
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [alreadyPopupOpen, setAlreadyPopupOpen] = useState(false);
-
-  // Server-side "has this verified buyer already enquired about this exact
-  // listing AND is the lead still active?" — drives the "Buyer enquiry form
-  // already submitted" popup on Visit Dealer click. Only fires when we
-  // have a verified phone in the OTP store; the unverified path falls
-  // straight through to the InfoGateModal so a first-time buyer never
-  // sees a phantom warning.
-  const myStatusQuery = useQuery({
-    enabled: Boolean(storedPhone),
-    queryKey: ['my-listing-status', slug, storedPhone],
-    queryFn: () =>
-      api<{ enquired: boolean; leadId?: string; status?: string }>(
-        `/leads/listings/${slug}/my-status?phone=${encodeURIComponent(storedPhone!)}`,
-      ),
-    staleTime: 30 * 1000,
-  });
-  const existingLead = myStatusQuery.data?.enquired
-    ? { id: myStatusQuery.data.leadId!, status: myStatusQuery.data.status! }
-    : null;
-
-  // The previous "fast-path one-click submit for verified buyers"
-  // (submitDirectly) was removed when the QA ticket clarified that the
-  // form should always open on Visit Dealer click — even when the
-  // buyer's OTP token is still cached from this session. The verified
-  // path now flows through the same modal as a first-time buyer; the
-  // <InfoGateModal prefilled={…}/> wiring below skips the collect step
-  // and lands the buyer straight on OTP-entry, so the only added step
-  // is re-entering the freshly-sent code (cheap, and matches the
-  // ticket's "form should open normally" requirement).
 
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
@@ -113,15 +79,14 @@ export function ListingSidebarCard({
       });
       setSubmitted({ id: res.id });
     } catch (e) {
-      // Surface the duplicate-by-mobile gate via the friendly popup with
-      // a Track-Enquiry shortcut; everything else falls through to the
-      // generic error message.
-      if (e instanceof ApiError && e.code === 'ENQUIRY_ALREADY_OPEN') {
-        await myStatusQuery.refetch();
-        setAlreadyPopupOpen(true);
-      } else {
-        setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
-      }
+      // Every API error — including 409 ENQUIRY_ALREADY_OPEN — surfaces
+      // as an inline message under the CTAs. We deliberately don't pop
+      // a modal on 409: QA pushback was that a popup blocks the flow,
+      // whereas the buyer should still be able to re-open the form and
+      // fill it (e.g. retry with a different mobile). The API's 409
+      // message reads "Enquiry form already filled with this number…"
+      // which is exactly the validation copy the ticket asks for.
+      setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
     } finally {
       setSubmitting(false);
     }
@@ -298,70 +263,12 @@ export function ListingSidebarCard({
         onClose={() => setModalOpen(false)}
       />
 
-      {/* "Already submitted" popup — surfaces when a returning verified
-          buyer clicks Visit Dealer on a listing they've already enquired
-          about (and the dealer hasn't marked the lead Not Interested).
-          Shows the reference ID + a Track Enquiry shortcut so the buyer
-          can follow up instead of bouncing into a dead-end OK button. */}
-      {alreadyPopupOpen && existingLead && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="already-enquired-title"
-          className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto"
-          onClick={() => setAlreadyPopupOpen(false)}
-        >
-          <div
-            className="bg-hd-white border-t-4 border-hd-orange max-w-md w-full p-5 sm:p-6 rounded-card shadow-xl my-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-baseline justify-between">
-              <h2
-                id="already-enquired-title"
-                className="font-subhead uppercase tracking-subhead text-text-on-light text-base"
-              >
-                Enquiry Already Submitted
-              </h2>
-              <button
-                type="button"
-                onClick={() => setAlreadyPopupOpen(false)}
-                aria-label="Close"
-                className="text-gray-500 hover:text-text-on-light text-sm"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-sm text-gray-700 mt-3 leading-relaxed">
-              Buyer enquiry form already submitted. {dealerName} will reach
-              out within 48 hours.
-            </p>
-            <div className="mt-4 border-t border-gray-200 pt-3">
-              <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
-                Reference ID
-              </p>
-              <code className="block font-mono text-xs break-all mt-1">
-                {existingLead.id}
-              </code>
-            </div>
-            <div className="flex justify-end gap-3 mt-5">
-              <button
-                type="button"
-                onClick={() => setAlreadyPopupOpen(false)}
-                className="border border-gray-300 px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
-              >
-                OK
-              </button>
-              <Link
-                to={`/track?id=${existingLead.id}`}
-                onClick={() => setAlreadyPopupOpen(false)}
-                className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
-              >
-                Track Enquiry →
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* "Already submitted" popup deleted — QA pushback: a popup
+          blocks the flow. The duplicate-by-mobile validation is now
+          surfaced as inline error text under the CTAs (see the
+          {error && ...} block above), so the buyer can re-open the
+          form, edit the mobile, and try again without dismissing
+          a modal. */}
     </>
   );
 }

@@ -130,6 +130,21 @@ export function MyListingsPage() {
     mutationFn: (id: string) => api(`/dealer/listings/${id}/turn-on`, { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
   });
+  // "Turn On" for REMOVED rows in the Inactive tab. The /turn-on
+  // endpoint only handles DEACTIVATED → ACTIVE, so for REMOVED we PATCH
+  // with an empty body which trips updateListing's restoreToDraft branch
+  // (clears soldAt + adminFeedback, flips status to DRAFT). The listing
+  // re-enters the admin review queue from there. We can't bypass admin
+  // approval client-side — only an admin can move DRAFT → ACTIVE per
+  // PRD §6.3.4.
+  const restoreFromRemoved = useMutation({
+    mutationFn: (id: string) =>
+      api(`/dealer/listings/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({}),
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
+  });
 
   // Admin-feedback-needs-attention banner: surfaces both DRAFT-returned
   // rows AND REMOVED-by-admin rows so the dealer can see *why* the admin
@@ -448,6 +463,39 @@ export function MyListingsPage() {
                         <PowerIcon />
                       </IconAction>
                     )}
+                    {/* QA: Inactive tab REMOVED rows now show the same
+                        Turn-On power button DEACTIVATED rows have, so the
+                        dealer has one consistent affordance to bring an
+                        inactive listing back. The action PATCHes with
+                        empty body which trips updateListing's
+                        restoreToDraft branch — flips status to DRAFT and
+                        the listing re-enters the admin queue. We can't
+                        skip admin approval client-side (PRD §6.3.4 keeps
+                        publish admin-only), so the listing lands in
+                        Pending rather than Live; the dealer's "+N items
+                        left" banner on the Pending tab will tell them
+                        admin review is the next step. The previous
+                        eye/View affordance is dropped for REMOVED — the
+                        dealer can still review the listing post-restore
+                        from the Pending tab's edit flow. */}
+                    {l.status === 'REMOVED' && (
+                      <IconAction
+                        label="Turn On"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Restore "${l.year} ${l.modelName}" and re-submit it for admin approval? It will move from Inactive back into Pending.`,
+                            )
+                          ) {
+                            restoreFromRemoved.mutate(l.id);
+                          }
+                        }}
+                        disabled={restoreFromRemoved.isPending}
+                        tone="primary"
+                      >
+                        <PowerIcon />
+                      </IconAction>
+                    )}
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
                       <IconAction
                         label="Remove"
@@ -465,21 +513,15 @@ export function MyListingsPage() {
                         <TrashIcon />
                       </IconAction>
                     )}
-                    {/* Off-market rows still need an action affordance —
-                        previously the column went empty for SOLD / REMOVED
-                        rows (QA flagged "missing operational links"). View
-                        opens the dealer-side detail/edit page hydrated from
-                        the server so the dealer can see photos, price, VIN,
-                        admin feedback, etc. for record-keeping. */}
-                    {(l.status === 'SOLD' || l.status === 'REMOVED') && (
+                    {/* SOLD rows keep the View affordance for record-
+                        keeping (photos, price, VIN, admin feedback). The
+                        REMOVED branch above replaces what used to be the
+                        eye icon with the Turn On action. */}
+                    {l.status === 'SOLD' && (
                       <Link
                         to={`/listings/${l.id}/edit`}
-                        aria-label={
-                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
-                        }
-                        title={
-                          l.status === 'SOLD' ? 'View Details' : 'View / Restore'
-                        }
+                        aria-label="View Details"
+                        title="View Details"
                         className="group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50"
                       >
                         <EyeIcon />
@@ -487,7 +529,7 @@ export function MyListingsPage() {
                           role="tooltip"
                           className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
                         >
-                          {l.status === 'SOLD' ? 'View Details' : 'View / Restore'}
+                          View Details
                         </span>
                       </Link>
                     )}
