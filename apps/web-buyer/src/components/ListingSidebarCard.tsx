@@ -29,24 +29,12 @@ export function ListingSidebarCard({
   dealerName,
   dealerCity,
 }: ListingSidebarCardProps) {
-  const {
-    verifiedToken,
-    verifiedFor,
-    phone: storedPhone,
-    name: storedName,
-    email: storedEmail,
-  } = useOtpStore();
-  // Shortcut only works when we have the FULL profile from the previous
-  // enquiry — otherwise we'd post placeholders and the dealer would get
-  // a "Returning buyer / unknown@buyer.local" lead. Falling back to the
-  // modal in that case is a one-time cost; the second listing in the
-  // same session has all three fields cached.
-  const alreadyVerified =
-    Boolean(verifiedToken) &&
-    verifiedFor === 'ENQUIRY' &&
-    Boolean(storedPhone) &&
-    Boolean(storedName) &&
-    Boolean(storedEmail);
+  // We pull `phone` from the OTP store solely to power the post-submit
+  // popup's existing-lead lookup (myStatusQuery). Other fields used to
+  // power a verified-shortcut + a prefilled modal, but both were removed
+  // — the modal opens at its collect step every time so the buyer types
+  // their CURRENT mobile, gets a fresh OTP, and dedup runs at submit.
+  const { phone: storedPhone } = useOtpStore();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -296,22 +284,16 @@ export function ListingSidebarCard({
         open={modalOpen}
         purpose="ENQUIRY"
         context={{ modelInterest, preselectDealerId: dealerId }}
-        // Pass the cached profile when this session has a verified
-        // buyer — the modal then jumps straight to its OTP-entry step
-        // with name/phone/email pre-populated, instead of forcing the
-        // buyer to re-type fields they've already entered. Falls
-        // through to the full collect step for first-time buyers.
-        prefilled={
-          alreadyVerified && storedPhone && storedName && storedEmail
-            ? {
-                phone: storedPhone,
-                name: storedName,
-                email: storedEmail,
-                dealerId,
-                bikeModel: modelInterest,
-              }
-            : undefined
-        }
+        // Intentionally NOT passing `prefilled` — that prop tells the
+        // modal to skip its collect step and jump to OTP-entry with the
+        // cached phone/name/email. QA pushed back: the cached values
+        // could be stale (a previous session's test data, a different
+        // person's phone on a shared device), and jumping straight to
+        // OTP makes the modal look like it's already submitted on
+        // someone's behalf. The modal now opens at its collect step
+        // every time so the buyer enters their CURRENT mobile, gets
+        // a fresh OTP for that exact number, and the duplicate-check
+        // runs against the actually-typed phone at submit time.
         onVerified={handleVerified}
         onClose={() => setModalOpen(false)}
       />
