@@ -12,6 +12,7 @@ import { audit } from '../audit/audit.service.js';
 import { torque } from '../torque/torque.module.js';
 import { emailProvider } from '../email/email.module.js';
 import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
+import { rootVin } from '../../utils/vin.js';
 
 interface AdminListingRow {
   id: string;
@@ -60,7 +61,11 @@ adminListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next
     res.json(
       rows.map((l) => ({
         id: l.id,
-        vin: l.vin,
+        // Strip retire-prefix sentinel so admins see the original 17-char
+        // VIN even on SOLD/REMOVED rows whose stored vin was retired by a
+        // re-list. Audit log line 74 in dealer-listings.routes.ts still
+        // captures the raw value for forensic trace.
+        vin: rootVin(l.vin),
         modelName: l.modelName,
         year: l.year,
         price: Number(l.price),
@@ -128,7 +133,9 @@ adminListingsRouter.get('/:id', validate(idParam, 'params'), async (req, res, ne
     res.json({
       id: row.id,
       slug: row.slug,
-      vin: row.vin,
+      // Same retire-prefix strip as the list payload above — admin
+      // preview drawer should see the clean 17-char VIN.
+      vin: rootVin(row.vin),
       modelFamily: row.modelFamily,
       modelName: row.modelName,
       year: row.year,

@@ -5,6 +5,7 @@ import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { distanceKm, pincodeCoord } from './pincode-coords.js';
 import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
+import { rootVin } from '../../utils/vin.js';
 
 // Narrow row shapes — make this module typecheck before `prisma generate` runs.
 // The generated client returns structurally-compatible types.
@@ -193,7 +194,12 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
       results: results.map((l) => ({
         id: l.id,
         slug: l.slug,
-        vin: l.vin,
+        // Strip the retire-prefix sentinel (sold:cmid: / removed:cmid:)
+        // so the public payload never leaks the internal storage format.
+        // Matters for SOLD listings still inside the 1-hour visibility
+        // window — if their VIN was retired by a re-list, the raw value
+        // would surface as "sold:cm123:1HD..." in the search results.
+        vin: rootVin(l.vin),
         modelFamily: l.modelFamily,
         modelName: l.modelName,
         year: l.year,
@@ -251,7 +257,10 @@ listingsRouter.get('/:slug', async (req, res, next) => {
     res.json({
       id: listing.id,
       slug: listing.slug,
-      vin: listing.vin,
+      // Defensive — public detail only serves ACTIVE listings (404 otherwise),
+      // so a prefixed vin shouldn't reach here. Strip anyway for symmetry
+      // with the public search payload above.
+      vin: rootVin(listing.vin),
       modelFamily: listing.modelFamily,
       modelName: listing.modelName,
       year: listing.year,
