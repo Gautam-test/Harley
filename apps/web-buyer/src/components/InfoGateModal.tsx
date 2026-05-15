@@ -7,6 +7,15 @@ import { useOtpStore, type OtpPurpose } from '../store/otp';
 import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
 import { HD_MODEL_CATALOG } from '../lib/models';
 import { reverseGeocode } from '../lib/reverseGeocode';
+import {
+  nameRules,
+  phoneRules,
+  emailRules,
+  cityRules,
+  optionalPincodeRules,
+  requiredSelect,
+  messageRules,
+} from '../lib/formRules';
 
 interface DealerOption {
   id: string;
@@ -592,10 +601,8 @@ export function InfoGateModal({
               <Input
                 placeholder={isBuyerEnquiry ? 'Mohit Tai' : 'Full name'}
                 aria-invalid={Boolean(errors.name)}
-                {...register('name', {
-                  required: 'Name is required',
-                  minLength: { value: 2, message: 'Enter at least 2 characters' },
-                })}
+                maxLength={100}
+                {...register('name', nameRules)}
               />
             </Labelled>
 
@@ -604,10 +611,7 @@ export function InfoGateModal({
                 <Controller
                   control={control}
                   name="phone"
-                  rules={{
-                    validate: (v) =>
-                      /^\+91[0-9]{10}$/.test(v) || 'Phone must be +91 followed by 10 digits',
-                  }}
+                  rules={phoneRules}
                   render={({ field }) => (
                     <Input
                       inputMode="tel"
@@ -628,10 +632,8 @@ export function InfoGateModal({
                     type="email"
                     placeholder="Enter email id"
                     aria-invalid={Boolean(errors.email)}
-                    {...register('email', {
-                      required: 'Email is required',
-                      pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
-                    })}
+                    maxLength={254}
+                    {...register('email', emailRules)}
                   />
                 </Labelled>
               )}
@@ -643,10 +645,8 @@ export function InfoGateModal({
                   type="email"
                   placeholder="Email"
                   aria-invalid={Boolean(errors.email)}
-                  {...register('email', {
-                    required: 'Email is required',
-                    pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
-                  })}
+                  maxLength={254}
+                  {...register('email', emailRules)}
                 />
               </Labelled>
             )}
@@ -714,9 +714,11 @@ export function InfoGateModal({
                       <p className="text-[10px] text-warning mt-1">{geoError}</p>
                     )}
                   </Labelled>
-                  <Labelled label="State" show>
+                  <Labelled label="State" required error={errors.state?.message} show>
                     <Select
+                      aria-invalid={Boolean(errors.state)}
                       {...register('state', {
+                        ...requiredSelect('a state'),
                         onChange: () => {
                           // Re-pick city if the previous one isn't valid for the
                           // newly-chosen state — prevents stale invalid pairs.
@@ -738,9 +740,7 @@ export function InfoGateModal({
                     <Select
                       aria-invalid={Boolean(errors.city)}
                       disabled={!selectedState}
-                      {...register('city', {
-                        required: 'City is required',
-                      })}
+                      {...register('city', requiredSelect('a city'))}
                     >
                       <option value="">
                         {selectedState ? 'Select city' : 'Pick a state first'}
@@ -758,17 +758,20 @@ export function InfoGateModal({
                       inputMode="numeric"
                       maxLength={6}
                       aria-invalid={Boolean(errors.pincode)}
-                      {...register('pincode', {
-                        pattern: { value: /^[0-9]{6}$/, message: '6 digits required' },
-                      })}
+                      {...register('pincode', optionalPincodeRules)}
                     />
                   </Labelled>
                 </div>
               </>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Location" show={false}>
-                  <Input placeholder="Choose location" {...register('city')} />
+                <Labelled label="Location" error={errors.city?.message} show={false}>
+                  <Input
+                    placeholder="Choose location"
+                    aria-invalid={Boolean(errors.city)}
+                    maxLength={60}
+                    {...register('city', cityRules)}
+                  />
                 </Labelled>
                 <Labelled label="Pincode" error={errors.pincode?.message} show={false}>
                   <Input
@@ -776,9 +779,7 @@ export function InfoGateModal({
                     inputMode="numeric"
                     maxLength={6}
                     aria-invalid={Boolean(errors.pincode)}
-                    {...register('pincode', {
-                      pattern: { value: /^[0-9]{6}$/, message: '6 digits required' },
-                    })}
+                    {...register('pincode', optionalPincodeRules)}
                   />
                 </Labelled>
               </div>
@@ -840,12 +841,14 @@ export function InfoGateModal({
             )}
 
             {isBuyerEnquiry && (
-              <Labelled label="Description" show>
+              <Labelled label="Description" error={errors.description?.message} show>
                 <textarea
                   rows={3}
                   placeholder="Add description here…"
+                  maxLength={1000}
+                  aria-invalid={Boolean(errors.description)}
                   className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
-                  {...register('description')}
+                  {...register('description', messageRules)}
                 />
               </Labelled>
             )}

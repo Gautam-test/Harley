@@ -9,6 +9,15 @@ import { HD_MODEL_CATALOG } from '../lib/models';
 import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
 import { reverseGeocode } from '../lib/reverseGeocode';
 import { useSellBikeStore } from '../store/sellBike';
+import {
+  nameRules,
+  phoneRules,
+  emailRules,
+  vinRules,
+  optionalPincodeRules,
+  requiredSelect,
+  termsCheckboxRules,
+} from '../lib/formRules';
 
 // "Tell Us About Your Bike" trade-in form per Figma /Customer/Frame 28.png.
 // Mounted globally and triggered via useSellBikeStore so any nav link can
@@ -49,8 +58,15 @@ function normalisePhone(raw: string): string {
 
 export function SellBikeModal() {
   const { open, closeSellBike } = useSellBikeStore();
-  const { register, handleSubmit, formState, getValues, setValue, control, reset } =
-    useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    getValues,
+    setValue,
+    control,
+    reset,
+  } = useForm<FormValues>({
       defaultValues: {
         username: '',
         bikeModel: '',
@@ -190,16 +206,21 @@ export function SellBikeModal() {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
-              <Labelled label="Your Name" required>
+              <Labelled label="Your Name" required error={errors.username?.message}>
                 <Input
                   placeholder="Mohd Tai"
-                  {...register('username', { required: true, minLength: 2 })}
+                  maxLength={100}
+                  aria-invalid={Boolean(errors.username)}
+                  {...register('username', nameRules)}
                 />
               </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Motorcycle Model" required>
-                  <Select {...register('bikeModel', { required: true })}>
+                <Labelled label="Motorcycle Model" required error={errors.bikeModel?.message}>
+                  <Select
+                    aria-invalid={Boolean(errors.bikeModel)}
+                    {...register('bikeModel', requiredSelect('a motorcycle model'))}
+                  >
                     <option value="">Choose motorcycle model</option>
                     {HD_MODEL_CATALOG.map((g) => (
                       <optgroup key={g.family} label={g.family}>
@@ -216,30 +237,35 @@ export function SellBikeModal() {
                   label="VIN Number"
                   required
                   hint="17 characters · letters + numbers · no I, O, Q"
+                  error={errors.vin?.message}
                 >
                   <Input
                     maxLength={17}
                     placeholder="e.g. 1HD1KB4197Y624381"
                     className="font-mono uppercase"
+                    aria-invalid={Boolean(errors.vin)}
                     {...register('vin', {
-                      required: true,
-                      pattern: /^[A-HJ-NPR-Z0-9]{17}$/,
+                      ...vinRules,
+                      // Auto-uppercase on type so the regex matches without
+                      // forcing the buyer to remember caps lock.
+                      onChange: (e) =>
+                        setValue('vin', String(e.target.value).toUpperCase(), {
+                          shouldValidate: true,
+                        }),
                     })}
                   />
                 </Labelled>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Phone Number" required>
+                <Labelled label="Phone Number" required error={errors.phone?.message}>
                   <Input
                     inputMode="tel"
                     maxLength={13}
                     placeholder="Enter phone number"
+                    aria-invalid={Boolean(errors.phone)}
                     {...register('phone', {
-                      required: true,
-                      validate: (v) =>
-                        /^\+91[0-9]{10}$/.test(v) ||
-                        'Phone must be +91 followed by 10 digits',
+                      ...phoneRules,
                       onChange: (e) =>
                         setValue('phone', normalisePhone(e.target.value), {
                           shouldValidate: true,
@@ -320,9 +346,11 @@ export function SellBikeModal() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="State">
+                <Labelled label="State" required error={errors.state?.message}>
                   <Select
+                    aria-invalid={Boolean(errors.state)}
                     {...register('state', {
+                      ...requiredSelect('a state'),
                       onChange: () =>
                         setValue('city', '', { shouldValidate: true }),
                     })}
@@ -335,10 +363,11 @@ export function SellBikeModal() {
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled label="City" required>
+                <Labelled label="City" required error={errors.city?.message}>
                   <Select
                     disabled={!selectedState}
-                    {...register('city', { required: true })}
+                    aria-invalid={Boolean(errors.city)}
+                    {...register('city', requiredSelect('a city'))}
                   >
                     <option value="">
                       {selectedState ? 'Select city' : 'Pick a state first'}
@@ -353,19 +382,19 @@ export function SellBikeModal() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Pin Code">
+                <Labelled label="Pin Code" error={errors.pincode?.message}>
                   <Input
                     inputMode="numeric"
                     maxLength={6}
                     placeholder="110053"
-                    {...register('pincode', {
-                      pattern: { value: /^[0-9]{6}$/, message: '6 digits required' },
-                    })}
+                    aria-invalid={Boolean(errors.pincode)}
+                    {...register('pincode', optionalPincodeRules)}
                   />
                 </Labelled>
-                <Labelled label="Choose Dealer" required>
+                <Labelled label="Choose Dealer" required error={errors.dealerId?.message}>
                   <Select
-                    {...register('dealerId', { required: true })}
+                    aria-invalid={Boolean(errors.dealerId)}
+                    {...register('dealerId', requiredSelect('a dealer'))}
                     disabled={dealersQuery.isLoading}
                   >
                     <option value="">
@@ -380,11 +409,13 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <Labelled label="Email" required>
+              <Labelled label="Email" required error={errors.email?.message}>
                 <Input
                   type="email"
                   placeholder="you@example.com"
-                  {...register('email', { required: true })}
+                  maxLength={254}
+                  aria-invalid={Boolean(errors.email)}
+                  {...register('email', emailRules)}
                 />
               </Labelled>
 
@@ -394,7 +425,8 @@ export function SellBikeModal() {
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 accent-hd-orange shrink-0"
-                  {...register('acceptedTerms', { required: true })}
+                  aria-invalid={Boolean(errors.acceptedTerms)}
+                  {...register('acceptedTerms', termsCheckboxRules)}
                 />
                 <span>
                   I have read, understood and accept the{' '}
@@ -431,7 +463,7 @@ export function SellBikeModal() {
                 >
                   Cancel
                 </button>
-                <Button type="submit" disabled={!formState.isValid || submitting}>
+                <Button type="submit" disabled={!isValid || submitting}>
                   {submitting ? 'Submitting…' : 'Send Enquiry'}
                 </Button>
               </div>
@@ -469,6 +501,7 @@ function Labelled({
   label,
   hint,
   required = false,
+  error,
   children,
 }: {
   label: string;
@@ -478,6 +511,10 @@ function Labelled({
   /** Renders a small red asterisk after the label so users learn the
       field is required up-front instead of via a submit error. */
   required?: boolean;
+  /** Per-field validation error from react-hook-form. When set, replaces
+   *  the hint with a red error message + applies an aria-describedby
+   *  link on the input via aria-invalid (set by the caller). */
+  error?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -487,7 +524,13 @@ function Labelled({
         {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
-      {hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>}
+      {error ? (
+        <p className="mt-1 text-[11px] text-danger" role="alert">
+          {error}
+        </p>
+      ) : (
+        hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>
+      )}
     </div>
   );
 }

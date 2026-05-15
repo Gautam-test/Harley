@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Badge, Button, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
+import { validators, buildFieldErrors } from '../lib/formRules';
 
 interface LeadRow {
   id: string;
@@ -282,6 +283,32 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+
+  // Per-field validation. Required fields are name + phone + email +
+  // listingId + source. City / state / pincode / budget / message are
+  // optional but validated when present. Errors are computed on every
+  // render so they update as the rep types — but only RENDERED after
+  // the first submit attempt (showFieldErrors gate) so the rep doesn't
+  // see red on every field as soon as the modal opens.
+  const fieldErrors = useMemo(
+    () =>
+      buildFieldErrors(form, {
+        listingId: validators.requiredSelect('a motorcycle listing'),
+        name: validators.name,
+        phone: validators.phone,
+        email: validators.email,
+        city: validators.optionalCity,
+        pincode: validators.optionalPincode,
+        source: validators.requiredSelect('a lead source'),
+        budget: validators.intInRange(0, 100_000_000, 'Budget'),
+        message: validators.message,
+      }),
+    [form],
+  );
+  const hasErrors = Object.keys(fieldErrors).length > 0;
+  const errFor = (k: keyof typeof form) =>
+    showFieldErrors ? fieldErrors[k] : undefined;
 
   // Pull this dealer's own listings so the rep can attach the lead to a bike.
   // Include EVERY listing the dealer has except permanently-removed rows —
@@ -344,16 +371,22 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          // First submit attempt switches on field-level errors. After
+          // that they stay visible (and update live) until the rep
+          // either fixes them or closes the modal.
+          setShowFieldErrors(true);
+          if (hasErrors) return;
           submit.mutate();
         }}
         className="space-y-5"
+        noValidate
       >
         <FormSection kicker="1" label="Motorcycle of Interest">
-          <Field label="Listing">
+          <Field label="Listing" required error={errFor('listingId')}>
             <Select
               value={form.listingId}
               onChange={(e) => setForm((f) => ({ ...f, listingId: e.target.value }))}
-              required
+              aria-invalid={Boolean(errFor('listingId'))}
             >
               <option value="">Select a motorcycle…</option>
               {listings.data?.map((l) => (
@@ -368,30 +401,32 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
 
         <FormSection kicker="2" label="Buyer Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Full Name">
+            <Field label="Full Name" required error={errFor('name')}>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                required
-                minLength={2}
+                maxLength={100}
+                aria-invalid={Boolean(errFor('name'))}
               />
             </Field>
-            <Field label="Phone (+91…)">
+            <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                required
-                pattern="^\+91[0-9]{10}$"
+                maxLength={13}
+                inputMode="tel"
                 placeholder="+919812345678"
+                aria-invalid={Boolean(errFor('phone'))}
               />
             </Field>
           </div>
-          <Field label="Email">
+          <Field label="Email" required error={errFor('email')}>
             <Input
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              required
+              maxLength={254}
+              aria-invalid={Boolean(errFor('email'))}
             />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -408,19 +443,23 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </Select>
             </Field>
-            <Field label="City">
+            <Field label="City" error={errFor('city')}>
               <Input
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                maxLength={60}
                 placeholder="e.g. Gurgaon"
+                aria-invalid={Boolean(errFor('city'))}
               />
             </Field>
-            <Field label="PIN code">
+            <Field label="PIN code" error={errFor('pincode')}>
               <Input
                 value={form.pincode}
                 onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
-                pattern="^[0-9]{6}$"
+                maxLength={6}
+                inputMode="numeric"
                 placeholder="122001"
+                aria-invalid={Boolean(errFor('pincode'))}
               />
             </Field>
           </div>
@@ -428,11 +467,11 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
 
         <FormSection kicker="3" label="Lead Qualification">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="How did the lead come in?">
+            <Field label="How did the lead come in?" required error={errFor('source')}>
               <Select
                 value={form.source}
                 onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
-                required
+                aria-invalid={Boolean(errFor('source'))}
               >
                 {SOURCE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -441,7 +480,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </Select>
             </Field>
-            <Field label="Stated budget (₹, optional)">
+            <Field label="Stated budget (₹, optional)" error={errFor('budget')}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -450,6 +489,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 value={form.budget}
                 onChange={(e) => setForm((f) => ({ ...f, budget: e.target.value }))}
                 placeholder="e.g. 1500000"
+                aria-invalid={Boolean(errFor('budget'))}
               />
             </Field>
           </div>
@@ -494,18 +534,24 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         </FormSection>
 
         <FormSection kicker="4" label="Notes">
-          <Field label="Conversation notes (optional)">
+          <Field label="Conversation notes (optional)" error={errFor('message')}>
             <textarea
               rows={3}
               value={form.message}
               onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
               maxLength={1000}
               placeholder="Walked in 11 AM, asked about EMI options, wants to bring spouse for second visit…"
+              aria-invalid={Boolean(errFor('message'))}
               className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
         </FormSection>
 
+        {showFieldErrors && hasErrors && !error && (
+          <p className="text-xs text-danger">
+            Please fix the highlighted fields above before submitting.
+          </p>
+        )}
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -550,6 +596,36 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+
+  // Per-field validation. Required: username + phone + email + city +
+  // bikeModel + vin + source. Year / kms / owner / asking-price are
+  // optional with numeric range checks; pincode optional with format
+  // check; message / colour / modifications / reasonForSelling
+  // optional with trim + max-length checks.
+  const fieldErrors = useMemo(() => {
+    const currentYearLocal = new Date().getFullYear();
+    return buildFieldErrors(form, {
+      username: validators.name,
+      phone: validators.phone,
+      email: validators.email,
+      city: validators.city,
+      pincode: validators.optionalPincode,
+      bikeModel: validators.requiredSelect('the motorcycle model'),
+      vin: validators.vin,
+      source: validators.requiredSelect('a lead source'),
+      year: validators.intInRange(1903, currentYearLocal, 'Year'),
+      kmsDriven: validators.intInRange(0, 500_000, 'KMs driven'),
+      askingPrice: validators.intInRange(0, 100_000_000, 'Asking price'),
+      colour: validators.optionalCity, // letters + spaces only
+      message: validators.message,
+      modifications: validators.message,
+      reasonForSelling: validators.message,
+    });
+  }, [form]);
+  const hasErrors = Object.keys(fieldErrors).length > 0;
+  const errFor = (k: keyof typeof form) =>
+    showFieldErrors ? fieldErrors[k] : undefined;
 
   const submit = useMutation({
     mutationFn: () => {
@@ -598,36 +674,41 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          setShowFieldErrors(true);
+          if (hasErrors) return;
           submit.mutate();
         }}
         className="space-y-5"
+        noValidate
       >
         <FormSection kicker="1" label="Seller Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Full Name">
+            <Field label="Full Name" required error={errFor('username')}>
               <Input
                 value={form.username}
                 onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
-                required
-                minLength={2}
+                maxLength={100}
+                aria-invalid={Boolean(errFor('username'))}
               />
             </Field>
-            <Field label="Phone (+91…)">
+            <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                required
-                pattern="^\+91[0-9]{10}$"
+                maxLength={13}
+                inputMode="tel"
                 placeholder="+919812345678"
+                aria-invalid={Boolean(errFor('phone'))}
               />
             </Field>
           </div>
-          <Field label="Email">
+          <Field label="Email" required error={errFor('email')}>
             <Input
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              required
+              maxLength={254}
+              aria-invalid={Boolean(errFor('email'))}
             />
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -644,21 +725,23 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </Select>
             </Field>
-            <Field label="City">
+            <Field label="City" required error={errFor('city')}>
               <Input
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                required
-                minLength={1}
+                maxLength={60}
                 placeholder="e.g. Gurgaon"
+                aria-invalid={Boolean(errFor('city'))}
               />
             </Field>
-            <Field label="PIN code">
+            <Field label="PIN code" error={errFor('pincode')}>
               <Input
                 value={form.pincode}
                 onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
-                pattern="^[0-9]{6}$"
+                maxLength={6}
+                inputMode="numeric"
                 placeholder="122001"
+                aria-invalid={Boolean(errFor('pincode'))}
               />
             </Field>
           </div>
@@ -666,27 +749,28 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
 
         <FormSection kicker="2" label="Motorcycle Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Model / Year line">
+            <Field label="Model / Year line" required error={errFor('bikeModel')}>
               <Input
                 value={form.bikeModel}
                 onChange={(e) => setForm((f) => ({ ...f, bikeModel: e.target.value }))}
-                required
+                maxLength={100}
                 placeholder="e.g. Street Glide Special"
+                aria-invalid={Boolean(errFor('bikeModel'))}
               />
             </Field>
-            <Field label="VIN">
+            <Field label="VIN" required error={errFor('vin')}>
               <Input
                 value={form.vin.toUpperCase()}
                 onChange={(e) => setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }))}
-                required
-                pattern="^[A-HJ-NPR-Z0-9]{17}$"
+                maxLength={17}
                 placeholder="17-char VIN, no I/O/Q"
                 className="font-mono"
+                aria-invalid={Boolean(errFor('vin'))}
               />
             </Field>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <Field label="Year">
+            <Field label="Year" error={errFor('year')}>
               <Input
                 type="number"
                 min={1903}
@@ -694,9 +778,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 value={form.year}
                 onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
                 placeholder={String(currentYear - 3)}
+                aria-invalid={Boolean(errFor('year'))}
               />
             </Field>
-            <Field label="KMs driven">
+            <Field label="KMs driven" error={errFor('kmsDriven')}>
               <Input
                 type="number"
                 min={0}
@@ -704,6 +789,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 value={form.kmsDriven}
                 onChange={(e) => setForm((f) => ({ ...f, kmsDriven: e.target.value }))}
                 placeholder="e.g. 12500"
+                aria-invalid={Boolean(errFor('kmsDriven'))}
               />
             </Field>
             <Field label="Owner">
@@ -717,11 +803,13 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 <option value="4">4th+</option>
               </Select>
             </Field>
-            <Field label="Colour">
+            <Field label="Colour" error={errFor('colour')}>
               <Input
                 value={form.colour}
                 onChange={(e) => setForm((f) => ({ ...f, colour: e.target.value }))}
+                maxLength={60}
                 placeholder="e.g. Vivid Black"
+                aria-invalid={Boolean(errFor('colour'))}
               />
             </Field>
           </div>
@@ -741,11 +829,11 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
 
         <FormSection kicker="3" label="Lead Qualification">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="How did the lead come in?">
+            <Field label="How did the lead come in?" required error={errFor('source')}>
               <Select
                 value={form.source}
                 onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
-                required
+                aria-invalid={Boolean(errFor('source'))}
               >
                 {SOURCE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -754,7 +842,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </Select>
             </Field>
-            <Field label="Asking price (₹, optional)">
+            <Field label="Asking price (₹, optional)" error={errFor('askingPrice')}>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -763,6 +851,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 value={form.askingPrice}
                 onChange={(e) => setForm((f) => ({ ...f, askingPrice: e.target.value }))}
                 placeholder="e.g. 950000"
+                aria-invalid={Boolean(errFor('askingPrice'))}
               />
             </Field>
           </div>
@@ -795,34 +884,42 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               label="Loan outstanding on the motorcycle"
             />
           </div>
-          <Field label="Accessories / modifications (optional)">
+          <Field label="Accessories / modifications (optional)" error={errFor('modifications')}>
             <Input
               value={form.modifications}
               onChange={(e) => setForm((f) => ({ ...f, modifications: e.target.value }))}
               maxLength={500}
               placeholder="HOG sticker, V&H exhaust, panniers, top-box…"
+              aria-invalid={Boolean(errFor('modifications'))}
             />
           </Field>
-          <Field label="Reason for selling (optional)">
+          <Field label="Reason for selling (optional)" error={errFor('reasonForSelling')}>
             <Input
               value={form.reasonForSelling}
               onChange={(e) => setForm((f) => ({ ...f, reasonForSelling: e.target.value }))}
               maxLength={500}
               placeholder="Upgrading to a touring model, relocating abroad, etc."
+              aria-invalid={Boolean(errFor('reasonForSelling'))}
             />
           </Field>
-          <Field label="Conversation notes (optional)">
+          <Field label="Conversation notes (optional)" error={errFor('message')}>
             <textarea
               rows={3}
               value={form.message}
               onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-              maxLength={2000}
+              maxLength={1000}
               placeholder="Walked in 3 PM, has paperwork ready, prefers WhatsApp follow-up…"
+              aria-invalid={Boolean(errFor('message'))}
               className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
         </FormSection>
 
+        {showFieldErrors && hasErrors && !error && (
+          <p className="text-xs text-danger">
+            Please fix the highlighted fields above before submitting.
+          </p>
+        )}
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
@@ -903,13 +1000,38 @@ function ModalShell({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  error,
+  hint,
+  children,
+}: {
+  label: string;
+  /** Renders a small red asterisk after the label so users learn the
+   *  field is required up-front instead of via a submit error. */
+  required?: boolean;
+  /** Per-field validation error from the validators helper. When set,
+   *  renders red text under the input. */
+  error?: string;
+  /** Optional grey caption below the input, suppressed when error is set. */
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1.5">
         {label}
+        {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </span>
       {children}
+      {error ? (
+        <span className="block mt-1 text-[11px] text-danger" role="alert">
+          {error}
+        </span>
+      ) : (
+        hint && <span className="block mt-1 text-[11px] text-gray-500">{hint}</span>
+      )}
     </label>
   );
 }
