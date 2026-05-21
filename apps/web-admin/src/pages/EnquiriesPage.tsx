@@ -53,10 +53,14 @@ interface DealerOption {
   name: string;
 }
 
-const KIND_OPTIONS: { value: 'all' | Kind; label: string }[] = [
-  { value: 'all', label: 'All Kinds' },
-  { value: 'buyer', label: 'Buyer Enquiries' },
-  { value: 'trade-in', label: 'Seller Enquiries' },
+// Kept around for consumers that still want a label lookup. The tab nav
+// in EnquiriesPage uses the same id values ('all' | 'buyer' | 'trade-in')
+// so behaviour stays identical — only the UX shape changed (tabs vs
+// Select).
+const KIND_TABS: { id: 'all' | Kind; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'buyer', label: 'Buyer' },
+  { id: 'trade-in', label: 'Seller' },
 ];
 
 const STATUS_OPTIONS: ('' | LeadStatus)[] = [
@@ -131,15 +135,40 @@ export function EnquiriesPage() {
         )}
       </div>
 
-      {/* Filter row */}
-      <div className="bg-hd-white border border-gray-200 rounded-card p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <Select value={kind} onChange={(e) => setKind(e.target.value as 'all' | Kind)}>
-          {KIND_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </Select>
+      {/* Tab nav — replaces the Kind dropdown. Three options drive the
+          same `kind` state the underlying query already used; switching
+          tabs re-keys the leads query so React Query refetches cleanly.
+          Mirrors the dealer-portal Enquiries page so admins and dealers
+          see the same vocabulary (All / Buyer / Seller). */}
+      <nav
+        className="flex items-end gap-1 mb-4 border-b border-gray-200 overflow-x-auto scrollbar-hide"
+        role="tablist"
+        aria-label="Enquiry kind"
+      >
+        {KIND_TABS.map((t) => {
+          const isActive = kind === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setKind(t.id)}
+              className={`px-4 py-2 text-sm font-subhead uppercase tracking-subhead border-b-2 -mb-px transition flex items-center gap-2 whitespace-nowrap ${
+                isActive
+                  ? 'border-hd-orange text-text-on-light'
+                  : 'border-transparent text-gray-500 hover:text-text-on-light'
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Filter row — Kind moved out into the tab nav above; remaining
+          filters (Status / Dealer / Search) stay in the same row layout. */}
+      <div className="bg-hd-white border border-gray-200 rounded-card p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Select
           value={status}
           onChange={(e) => setStatus(e.target.value as '' | LeadStatus)}
