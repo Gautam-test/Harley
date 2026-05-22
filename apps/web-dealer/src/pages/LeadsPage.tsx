@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
@@ -35,52 +35,169 @@ interface LeadRow {
 }
 
 type Kind = 'buyer' | 'trade-in';
+type Tab = 'all' | Kind;
 
-const KIND_META: Record<Kind, { title: string; subtitle: string; orangeWord: string; addLabel: string }> = {
-  buyer: {
-    title: 'Buyer Enquiries',
-    subtitle:
-      "Buyers who've submitted enquiries against your listed motorcycles. Click + Add Enquiry to log a phone call or walk-in.",
-    orangeWord: 'Enquiries',
-    addLabel: '+ Add Buyer Enquiry',
-  },
-  'trade-in': {
-    title: 'Seller Enquiries',
-    subtitle:
-      'H-D owners looking to sell. Walk through inspection, docs, and admin approval to make the motorcycle live.',
-    orangeWord: 'Enquiries',
-    addLabel: '+ Add Seller Enquiry',
-  },
+interface MergedLead extends LeadRow {
+  kind: Kind;
+}
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'buyer', label: 'Buyer' },
+  { id: 'trade-in', label: 'Seller' },
+];
+
+const TAB_SUBTITLE: Record<Tab, string> = {
+  all: 'Every buyer + seller enquiry routed to your dealership in one feed. Use the tabs to narrow by kind, or + Add Enquiry to log a phone call or walk-in.',
+  buyer:
+    "Buyers who've submitted enquiries against your listed motorcycles. Click + Add Enquiry to log a phone call or walk-in.",
+  'trade-in':
+    'H-D owners looking to sell. Walk through inspection, docs, and admin approval to make the motorcycle live.',
 };
 
 export function LeadsPage() {
-  const { kind: rawKind } = useParams<{ kind: string }>();
-  // 'general' was retired May 2026 — anyone who lands on /leads/general (old
-  // bookmarks, sidebar links from a stale build) gets redirected to the buyer
-  // view, which is the closest equivalent.
-  const kind = (['buyer', 'trade-in'].includes(rawKind ?? '') ? rawKind : 'buyer') as Kind;
-  const meta = KIND_META[kind];
-  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  // URL contract:
+  //   /enquiries           → All tab (default)
+  //   /enquiries/buyer     → Buyer tab (deep link, also serves the legacy
+  //                          dealer-sidebar link)
+  //   /enquiries/trade-in  → Seller tab (deep link)
+  // Legacy /leads/* URLs are aliased via redirects in App.tsx so existing
+  // bookmarks survive. 'general' (the retired info-gate kind) folds into
+  // the Buyer tab — same fall-back the previous build used.
+  const { kind: rawKind } = useParams<{ kind?: string }>();
+  const tab: Tab =
+    rawKind === 'buyer' || rawKind === 'trade-in'
+      ? rawKind
+      : rawKind === 'general'
+        ? 'buyer'
+        : 'all';
+  // Form-modal mode: null = closed; 'buyer' / 'trade-in' = open with that
+  // kind preselected. On the All tab the + Add Enquiry button opens a
+  // tiny chooser; on the kind-specific tabs it jumps straight in.
+  const [formMode, setFormMode] = useState<Kind | null>(null);
+  const [chooserOpen, setChooserOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['leads', kind],
-    queryFn: () => api<LeadRow[]>(`/dealer/leads/${kind}`),
+  // Each tab keys its own query so React Query caches the lists
+  // independently — switching tabs is instant after the first load. The
+  // "All" tab fires both in parallel and merges client-side; total
+  // payload for a typical dealer is small (~50 rows), no server-side
+  // pagination needed.
+  const buyerQuery = useQuery({
+    queryKey: ['leads', 'buyer'],
+    queryFn: () => api<LeadRow[]>(`/dealer/leads/buyer`),
+    enabled: tab === 'all' || tab === 'buyer',
   });
+  const sellerQuery = useQuery({
+    queryKey: ['leads', 'trade-in'],
+    queryFn: () => api<LeadRow[]>(`/dealer/leads/trade-in`),
+    enabled: tab === 'all' || tab === 'trade-in',
+  });
+  const data: MergedLead[] | undefined = useMemo(() => {
+    if (tab === 'buyer') {
+      return buyerQuery.data?.map((l) => ({ ...l, kind: 'buyer' as const }));
+    }
+    if (tab === 'trade-in') {
+      return sellerQuery.data?.map((l) => ({ ...l, kind: 'trade-in' as const }));
+    }
+    if (!buyerQuery.data || !sellerQuery.data) return undefined;
+    const merged: MergedLead[] = [
+      ...buyerQuery.data.map((l) => ({ ...l, kind: 'buyer' as const })),
+      ...sellerQuery.data.map((l) => ({ ...l, kind: 'trade-in' as const })),
+    ];
+    merged.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    return merged;
+  }, [tab, buyerQuery.data, sellerQuery.data]);
+  const isLoading =
+    tab === 'all'
+      ? buyerQuery.isLoading || sellerQuery.isLoading
+      : tab === 'buyer'
+        ? buyerQuery.isLoading
+        : sellerQuery.isLoading;
+
+  // Counts for the tab badges. Falls back to undefined → renders nothing
+  // until the data lands so we don't flash "0" while loading.
+  const buyerCount = buyerQuery.data?.length;
+  const sellerCount = sellerQuery.data?.length;
+  const allCount =
+    buyerCount !== undefined && sellerCount !== undefined
+      ? buyerCount + sellerCount
+      : undefined;
+  const countFor = (t: Tab) =>
+    t === 'all' ? allCount : t === 'buyer' ? buyerCount : sellerCount;
+
+  // Tab-switch helper — drives URL so deep-links + browser back/forward
+  // work cleanly. The All tab uses the bare /enquiries path so it stays
+  // bookmark-friendly.
+  const goToTab = (t: Tab) => {
+    navigate(t === 'all' ? '/enquiries' : `/enquiries/${t}`);
+  };
+
+  // Add Enquiry button behaviour:
+  //   - On All        → open chooser modal (pick buyer or seller)
+  //   - On Buyer      → open Add Buyer Enquiry directly
+  //   - On Seller     → open Add Seller Enquiry directly
+  const onAddClick = () => {
+    if (tab === 'all') setChooserOpen(true);
+    else setFormMode(tab);
+  };
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       <div className="flex items-baseline justify-between flex-wrap gap-4">
         <div>
           <h1 className="font-headline text-3xl tracking-headline uppercase text-text-on-light">
-            {meta.title.replace(meta.orangeWord, '').trim()}{' '}
-            <span className="text-hd-orange">{meta.orangeWord}</span>
+            Enquiries
           </h1>
-          <p className="text-gray-600 text-sm mt-2 max-w-2xl">{meta.subtitle}</p>
+          <p className="text-gray-600 text-sm mt-2 max-w-2xl">{TAB_SUBTITLE[tab]}</p>
         </div>
-        <Button variant="primary" onClick={() => setShowForm(true)}>
-          {meta.addLabel}
+        <Button variant="primary" onClick={onAddClick}>
+          + Add Enquiry
         </Button>
       </div>
+
+      {/* Tab nav — All / Buyer / Seller. Each tab carries an inline
+          count chip so the dealer can see at a glance how many leads
+          live where without switching tabs. */}
+      <nav
+        className="flex items-end gap-1 mt-6 border-b border-gray-200 overflow-x-auto scrollbar-hide"
+        role="tablist"
+        aria-label="Enquiry kind"
+      >
+        {TABS.map((t) => {
+          const isActive = tab === t.id;
+          const count = countFor(t.id);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => goToTab(t.id)}
+              className={`px-4 py-2 text-sm font-subhead uppercase tracking-subhead border-b-2 -mb-px transition flex items-center gap-2 whitespace-nowrap ${
+                isActive
+                  ? 'border-hd-orange text-text-on-light'
+                  : 'border-transparent text-gray-500 hover:text-text-on-light'
+              }`}
+            >
+              {t.label}
+              {count !== undefined && (
+                <span
+                  className={`text-[10px] font-subhead px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none ${
+                    isActive
+                      ? 'bg-hd-orange text-hd-black'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Layout collapses 9 cols → 5 by stacking related fields:
             Lead    = ID (caption) + name (heading)
@@ -95,7 +212,14 @@ export function LeadsPage() {
             <tr>
               <Th>Lead</Th>
               <Th>Contact</Th>
-              <Th>{kind === 'buyer' ? 'Motorcycle Enquired' : 'Motorcycle Offered'}</Th>
+              <Th>
+                {tab === 'buyer'
+                  ? 'Motorcycle Enquired'
+                  : tab === 'trade-in'
+                    ? 'Motorcycle Offered'
+                    : 'Motorcycle'}
+              </Th>
+              {tab === 'all' && <Th>Kind</Th>}
               <Th>Status</Th>
               <Th className="text-right pr-4">
                 <span className="sr-only">Open</span>
@@ -105,28 +229,38 @@ export function LeadsPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={5} className="text-center py-8 text-gray-500">
+                <td colSpan={tab === 'all' ? 6 : 5} className="text-center py-8 text-gray-500">
                   Loading…
                 </td>
               </tr>
             )}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-gray-500">
-                  No {kind} leads yet — click <span className="font-subhead uppercase tracking-subhead text-hd-orange">{meta.addLabel}</span> to log one.
+                <td colSpan={tab === 'all' ? 6 : 5} className="text-center py-12 text-gray-500">
+                  No{' '}
+                  {tab === 'buyer'
+                    ? 'buyer'
+                    : tab === 'trade-in'
+                      ? 'seller'
+                      : ''}{' '}
+                  enquiries yet — click{' '}
+                  <span className="font-subhead uppercase tracking-subhead text-hd-orange">
+                    + Add Enquiry
+                  </span>{' '}
+                  to log one.
                 </td>
               </tr>
             )}
             {data?.map((l, idx) => (
               <tr
-                key={l.id}
+                key={`${l.kind}-${l.id}`}
                 className={`hover:bg-hd-orange/5 transition-colors ${
                   idx % 2 === 1 ? 'bg-gray-50/40' : ''
                 }`}
               >
                 <Td>
                   <div className="font-mono text-[10px] text-gray-500 leading-none mb-1">
-                    {formatLeadId(kind as LeadKind, l.id, l.createdAt)}
+                    {formatLeadId(l.kind as LeadKind, l.id, l.createdAt)}
                   </div>
                   <div className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight">
                     {l.name}
@@ -151,7 +285,7 @@ export function LeadsPage() {
                   <div className="text-text-on-light leading-tight">
                     {l.bikeModel ?? '—'}
                   </div>
-                  {kind === 'trade-in' && l.vin && (
+                  {l.kind === 'trade-in' && l.vin && (
                     <div
                       className="font-mono text-[10px] text-gray-500 mt-1"
                       title={l.vin}
@@ -160,6 +294,19 @@ export function LeadsPage() {
                     </div>
                   )}
                 </Td>
+                {tab === 'all' && (
+                  <Td>
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-subhead uppercase tracking-subhead ${
+                        l.kind === 'buyer'
+                          ? 'bg-hd-orange/10 text-hd-orange border border-hd-orange/30'
+                          : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                      }`}
+                    >
+                      {l.kind === 'buyer' ? 'Buyer' : 'Seller'}
+                    </span>
+                  </Td>
+                )}
                 <Td>
                   <StatusBadge status={l.status} />
                   {l.notificationFailed && (
@@ -180,7 +327,7 @@ export function LeadsPage() {
                 </Td>
                 <Td className="text-right pr-4">
                   <Link
-                    to={`/leads/${kind}/${l.id}`}
+                    to={`/leads/${l.kind}/${l.id}`}
                     className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-black hover:border-hd-orange transition rounded-card"
                   >
                     Open
@@ -192,12 +339,55 @@ export function LeadsPage() {
         </table>
       </div>
 
-      {showForm &&
-        (kind === 'buyer' ? (
-          <AddBuyerEnquiryModal onClose={() => setShowForm(false)} />
-        ) : (
-          <AddSellerEnquiryModal onClose={() => setShowForm(false)} />
-        ))}
+      {/* Chooser modal — surfaces only on the All tab where the +Add
+          button can't infer which form to open. Two big buttons; clicking
+          one stores the choice in formMode and unmounts the chooser. */}
+      {chooserOpen && (
+        <ModalShell title="Add Enquiry" onClose={() => setChooserOpen(false)}>
+          <p className="text-sm text-gray-600 mb-4">
+            Which kind of enquiry are you logging?
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setChooserOpen(false);
+                setFormMode('buyer');
+              }}
+              className="text-left border border-gray-300 rounded-card p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
+            >
+              <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
+                Buyer Enquiry
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                Customer asking about one of your listed motorcycles.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setChooserOpen(false);
+                setFormMode('trade-in');
+              }}
+              className="text-left border border-gray-300 rounded-card p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
+            >
+              <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
+                Seller Enquiry
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                H-D owner looking to trade in / sell their motorcycle.
+              </p>
+            </button>
+          </div>
+        </ModalShell>
+      )}
+
+      {formMode === 'buyer' && (
+        <AddBuyerEnquiryModal onClose={() => setFormMode(null)} />
+      )}
+      {formMode === 'trade-in' && (
+        <AddSellerEnquiryModal onClose={() => setFormMode(null)} />
+      )}
     </div>
   );
 }

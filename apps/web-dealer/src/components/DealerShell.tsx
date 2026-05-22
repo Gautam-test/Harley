@@ -16,17 +16,20 @@ interface NavItem {
   to: string;
   label: string;
   end?: boolean;
-  badgeKey?: 'pendingListings' | 'newBuyerLeads' | 'newSellerLeads';
+  badgeKey?: 'pendingListings' | 'newLeads';
 }
 
 // Sidebar order matches Figma /Dealer/Halrey dealer_page-0007.jpg, minus the
 // General Leads tab which was retired May 2026 (info-gate flow removed).
+// Buyer + Seller Enquiries collapsed into a single Enquiries link per QA
+// — the destination page (LeadsPage) carries All / Buyer / Seller tabs
+// inside. The sidebar badge totals both kinds so the dealer still sees
+// "5 new enquiries" at a glance without opening the page.
 const NAV: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', end: true },
   { to: '/listings/new', label: 'Add Listing' },
   { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings' },
-  { to: '/leads/buyer', label: 'Buyer Enquiries', badgeKey: 'newBuyerLeads' },
-  { to: '/leads/trade-in', label: 'Seller Enquiries', badgeKey: 'newSellerLeads' },
+  { to: '/enquiries', label: 'Enquiries', badgeKey: 'newLeads' },
   { to: '/profile', label: 'Profile' },
 ];
 
@@ -72,8 +75,11 @@ export function DealerShell() {
 
   const badges = {
     pendingListings: (listingsQuery.data ?? []).filter((l) => l.status === 'DRAFT').length,
-    newBuyerLeads: (buyerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
-    newSellerLeads: (sellerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
+    // Unified count across both kinds — drives the single Enquiries
+    // sidebar item that replaced the separate Buyer / Seller entries.
+    newLeads:
+      (buyerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length +
+      (sellerLeadsQuery.data ?? []).filter((l) => l.status === 'NEW').length,
   } as const;
 
   const onSignOut = () => {

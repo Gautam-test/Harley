@@ -185,7 +185,7 @@ export function LeadDetailPage() {
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       <Link
-        to={`/leads/${kind}`}
+        to={`/enquiries/${kind}`}
         className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5 rounded-card"
       >
         ← Back to {KIND_BACK_LABEL[kind]}
