@@ -1,4 +1,5 @@
-import { Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import { SiteHeader } from './components/SiteHeader';
 import { SiteFooter } from './components/SiteFooter';
 import { CookieBanner } from './components/CookieBanner';
@@ -13,9 +14,36 @@ import { TrackPage } from './pages/TrackPage';
 import { DealersPage } from './pages/DealersPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
+// QA: Footer "Marketplace / Info / Legal" links land on a section page but
+// previously kept the buyer's scroll position from the previous page
+// (react-router doesn't auto-scroll on route changes). The hook below runs
+// on every pathname/hash change: when a hash is present, it smoothly
+// scrolls to the matching anchor; otherwise it jumps to the very top of
+// the page so the new section starts fresh. Footer subtype links can use
+// hash anchors (e.g. `/about#contact`) for "open the page and scroll
+// straight to the relevant block".
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      // Defer so the new route's DOM is mounted before we look up the
+      // anchor element.
+      const id = hash.replace(/^#/, '');
+      const el = id ? document.getElementById(id) : null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+  }, [pathname, hash]);
+  return null;
+}
+
 export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-hd-white text-text-on-light">
+      <ScrollManager />
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-hd-orange focus:text-hd-black focus:px-3 focus:py-2 focus:font-subhead focus:uppercase focus:tracking-subhead"

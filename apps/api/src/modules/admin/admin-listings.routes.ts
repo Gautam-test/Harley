@@ -31,16 +31,49 @@ interface AdminListingRow {
 export const adminListingsRouter = Router();
 adminListingsRouter.use(requireAuth(['ADMIN']));
 
-const listQuery = z.object({ status: listingStatus.optional(), q: z.string().optional() });
+// `status` accepts a single value (legacy) OR a comma-separated list
+// (e.g. "DEACTIVATED,REMOVED" for the admin Inactive tab that bundles
+// both off-market states). The transform splits, trims, and validates
+// each value against the listingStatus enum so an unknown token still
+// 400s cleanly.
+const listQuery = z.object({
+  status: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      if (!raw) return undefined;
+      const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const parsed = parts.map((p) => {
+        const r = listingStatus.safeParse(p);
+        if (!r.success) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unknown status: ${p}` });
+          return null;
+        }
+        return r.data;
+      });
+      return parsed.filter((v): v is ListingStatus => v !== null);
+    }),
+  q: z.string().optional(),
+});
 const idParam = z.object({ id: z.string().min(1) });
-const removeBody = z.object({ reason: z.string().min(3).max(500) });
+// Reason kept on the schema but lowered to 0-char allowed so the admin
+// "Remove" flow can fire as a simple Yes/Cancel confirm (no Reason input).
+// The client now sends a fixed default ("Removed by admin") when the modal
+// is the simplified one, but if a future UI wants to capture a reason it
+// can still pass any non-empty string up to 500 chars.
+const removeBody = z.object({ reason: z.string().max(500).default('') });
 const returnBody = z.object({ feedback: z.string().min(5).max(1000) });
 
 adminListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) => {
   try {
-    const q = req.query as { status?: ListingStatus; q?: string };
+    const q = req.query as { status?: ListingStatus[]; q?: string };
+    const statuses = q.status ?? [];
     const where = {
-      ...(q.status ? { status: q.status } : {}),
+      ...(statuses.length === 1
+        ? { status: statuses[0] }
+        : statuses.length > 1
+        ? { status: { in: statuses } }
+        : {}),
       ...(q.q
         ? {
             OR: [

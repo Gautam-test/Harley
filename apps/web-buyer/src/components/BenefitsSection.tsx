@@ -87,12 +87,22 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // py-10 outer, mt-4 between heading and body, mt-6 between
         // "What" and "Overview" blocks. text-[13px] body keeps the
         // paragraph tight to the headline.
-        <section className="bg-hd-white py-10 md:py-12">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
+        // QA Bug 21 (Figma parity on benefits/overview):
+        //   – outer padding bumped (py-14 → py-16/20) so the section
+        //     breathes against the dark hero band above and the alternating
+        //     feature rows below.
+        //   – max-width widened (max-w-3xl → max-w-4xl) so horizontal
+        //     gutters on desktop match the rest of the home rhythm.
+        //   – body copy raised to text-[15px]/text-base so it reads as
+        //     long-form rather than caption text.
+        //   – section headings step up to text-3xl/4xl, matching the
+        //     Figma hierarchy between hero H1 and section H2.
+        <section className="bg-hd-white py-14 md:py-16 lg:py-20">
+          <div className="max-w-4xl mx-auto px-6 md:px-8 text-center">
+            <h2 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light leading-tight">
               What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
-            <p className="mt-4 text-[13px] text-gray-700 leading-relaxed">
+            <p className="mt-6 text-[15px] md:text-base text-gray-700 leading-relaxed">
               When you own any Harley-Davidson motorcycle the expectations are sky high,
               justifiably of course. Choose a H-D Certified&trade; Approved Used
               Harley-Davidson and you can rest assured that they have been rigorously checked
@@ -106,24 +116,30 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto px-6 mt-6 text-center">
-            <h3 className="font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
-              Overview Of H-D Certified&trade; - Ride With Confidence
+          <div className="max-w-4xl mx-auto px-6 md:px-8 mt-10 md:mt-14 text-center">
+            <h3 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light leading-tight">
+              Overview Of H-D Certified&trade; — Ride With Confidence
             </h3>
-            <p className="mt-4 text-[13px] text-gray-700 leading-relaxed">
+            <p className="mt-6 text-[15px] md:text-base text-gray-700 leading-relaxed">
               The desire of H-D Certified&trade; is to become the go to place for all customers
               wanting to purchase a pre-owned Harley-Davidson motorcycle. The program provides
               customers with the confidence that the pre-owned motorcycle they purchase is of high
               standard and quality. It is also backed with comprehensive part and labour warranty
               which includes roadside assistance and many other benefits.
             </p>
-            <p className="mt-3 text-[13px] text-gray-700 leading-relaxed">
+            <p className="mt-4 text-[15px] md:text-base text-gray-700 leading-relaxed">
               An H-D Certified&trade; Approved Used motorcycle can be a fantastic first entry
               point to the Harley-Davidson brand or a cost-effective demo motorcycle for a custom
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
-            <ul className="mt-2 max-w-xl mx-auto text-left text-[13px] text-gray-700 leading-relaxed list-disc pl-6 marker:text-hd-orange space-y-1">
+            {/* Bullets render as plain sentence-case body text per Figma
+                /Customer/Home.png — earlier change to uppercase subhead
+                caps was an overcorrection. Keep the orange list-marker
+                for the brand accent, otherwise inherit the surrounding
+                paragraph rhythm so the list reads as continuation of
+                the overview copy above it. */}
+            <ul className="mt-4 max-w-2xl mx-auto text-left list-disc pl-6 marker:text-hd-orange space-y-1.5 text-[15px] md:text-base text-gray-700 leading-relaxed">
               {OVERVIEW_BULLETS.map((b) => (
                 <li key={b}>{b}</li>
               ))}

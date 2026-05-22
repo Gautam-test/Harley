@@ -24,22 +24,27 @@ interface AdminListingRow {
   dealerPincode: string;
 }
 
-// QA: the Removed tab was hidden from the admin UI per ops request — the
-// REMOVED status itself stays in the system (admins still soft-remove via
-// the row action and the REMOVED state is still a valid filter value on
-// the API), it's just not surfaced as a dedicated tab. Removed listings
-// remain reachable from the "All" tab. Reordered so Drafts (the queue
-// admins actually work from) sits second.
-const TABS: { id: AdminListingRow['status'] | ''; label: string }[] = [
-  { id: 'ACTIVE', label: 'Ongoing' },
-  { id: 'DRAFT', label: 'Drafts' },
-  { id: 'SOLD', label: 'Sold' },
-  { id: 'DEACTIVATED', label: 'Deactivated' },
-  { id: '', label: 'All' },
+// QA: the Removed tab was hidden from the admin UI per ops request, but
+// the "Deactivated" tab was previously a single-status filter and didn't
+// include REMOVED rows — admins reported deleted listings disappearing
+// from every tab except All. Renamed to "Deactivated" (still the visible
+// label) but the filter now pulls both DEACTIVATED + REMOVED via the
+// API's comma-separated status query so removed bikes resurface here
+// alongside deactivated ones.
+//
+// `statusFilter` is the comma-joined query value sent to the API; `id` is
+// a stable React key. `''` means no filter (All).
+const TABS: { id: string; label: string; statusFilter: string }[] = [
+  { id: 'ACTIVE', label: 'Ongoing', statusFilter: 'ACTIVE' },
+  { id: 'DRAFT', label: 'Drafts', statusFilter: 'DRAFT' },
+  { id: 'SOLD', label: 'Sold', statusFilter: 'SOLD' },
+  { id: 'DEACTIVATED', label: 'Deactivated', statusFilter: 'DEACTIVATED,REMOVED' },
+  { id: 'ALL', label: 'All', statusFilter: '' },
 ];
 
 export function ListingsPage() {
-  const [status, setStatus] = useState<AdminListingRow['status'] | ''>('ACTIVE');
+  const [tabId, setTabId] = useState<string>('ACTIVE');
+  const status = TABS.find((t) => t.id === tabId)?.statusFilter ?? '';
   const [q, setQ] = useState('');
   const [removing, setRemoving] = useState<AdminListingRow | null>(null);
   const [returning, setReturning] = useState<AdminListingRow | null>(null);
@@ -132,10 +137,10 @@ export function ListingsPage() {
       <nav className="flex items-end gap-1 mb-4 border-b border-gray-200">
         {TABS.map((t) => (
           <button
-            key={t.id || 'all'}
-            onClick={() => setStatus(t.id)}
+            key={t.id}
+            onClick={() => setTabId(t.id)}
             className={`px-4 py-2 text-sm font-subhead uppercase tracking-subhead border-b-2 -mb-px transition flex items-center gap-2 ${
-              status === t.id
+              tabId === t.id
                 ? 'border-hd-orange text-text-on-light'
                 : 'border-transparent text-gray-500 hover:text-text-on-light'
             }`}
@@ -358,7 +363,12 @@ export function ListingsPage() {
           listing={removing}
           submitting={remove.isPending}
           onCancel={() => setRemoving(null)}
-          onConfirm={(reason) => remove.mutate({ id: removing.id, reason })}
+          // QA: the old modal forced the admin to type a "Reason" before
+          // Remove could fire. Ops fed back that delete should be a one-tap
+          // confirm; we now send a fixed default so the server's audit
+          // trail still has copy ("Removed by admin"), and the dealer
+          // notification carries the same line.
+          onConfirm={() => remove.mutate({ id: removing.id, reason: 'Removed by admin' })}
         />
       )}
 
@@ -400,29 +410,29 @@ function RemoveModal({
   listing: AdminListingRow;
   submitting: boolean;
   onCancel: () => void;
-  onConfirm: (reason: string) => void;
+  onConfirm: () => void;
 }) {
-  const [reason, setReason] = useState('');
+  // QA: simplified to a Remove/Cancel confirm. The old "Reason"
+  // textarea was friction the admin team didn't want — Remove is
+  // already audited server-side and the dealer notification copy is
+  // generated from a fixed default in the caller.
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-4">
       <div className="bg-hd-white text-text-on-light max-w-md w-full p-6">
-        <h2 className="font-headline text-2xl tracking-headline">Remove Listing</h2>
-        <p className="text-sm text-gray-600 mt-2">
-          Removing <strong>{listing.year} {listing.modelName}</strong>. The dealer is notified with the reason below.
+        <h2 className="font-headline text-2xl tracking-headline">Remove Listing?</h2>
+        <p className="text-sm text-gray-600 mt-3 leading-relaxed">
+          This will take <strong>{listing.year} {listing.modelName}</strong>
+          {' '}off the buyer site and move it into the Deactivated section.
+          The dealer is notified.
         </p>
-        <textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={4}
-          placeholder="Reason (visible to dealer)"
-          className="w-full bg-hd-white border border-gray-200 px-4 py-3 mt-4 focus:outline-none focus:ring-2 focus:ring-hd-orange"
-        />
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="secondary" onClick={onCancel}>Cancel</Button>
+        <div className="flex justify-end gap-2 mt-6">
+          <Button variant="secondary" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
           <Button
             variant="destructive"
-            onClick={() => onConfirm(reason)}
-            disabled={reason.trim().length < 3 || submitting}
+            onClick={onConfirm}
+            disabled={submitting}
           >
             {submitting ? 'Removing…' : 'Remove'}
           </Button>

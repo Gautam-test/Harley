@@ -169,6 +169,11 @@ export function InfoGateModal({
       body.style.overflow = prevBody;
     };
   }, [open]);
+
+  // Track open transitions so we can reset modal state on every fresh open
+  // (see effect below the resendCooldown declaration — placed there to avoid
+  // a TDZ on setResendCooldown).
+  const wasOpen = useRef(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
@@ -371,6 +376,40 @@ export function InfoGateModal({
     }, 1000);
     return () => window.clearTimeout(t);
   }, [resendCooldown]);
+
+  // Reset the modal back to its initial step every time it opens. The
+  // component instance is preserved across open/close cycles by the parent
+  // (`if (!open) return null` skips the JSX but the React element / hook
+  // state survive), so `step` would otherwise stay on whatever value it
+  // last had — i.e. a buyer who reached the 'verify' step, closed the
+  // modal, and then clicked Visit Dealer again would see the OTP entry
+  // instead of the enquiry form. QA: "When a user fills out the Buyer
+  // Enquiry form … and then clicks the Visit Dealer button again, the
+  // enquiry form should open normally". Prefilled callers (Sell Bike)
+  // intentionally skip the collect step — for those we re-arm the verify
+  // step and clear the previous attempt's otpId so the auto-send effect
+  // fires fresh.
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      wasOpen.current = true;
+      if (prefilled) {
+        setStep('verify');
+      } else {
+        setStep('collect');
+        setProfile(null);
+      }
+      setOtpId(null);
+      setCode('');
+      setError(null);
+      setSendBlocked(null);
+      setBusy(false);
+      setLastSentAt(null);
+      setResendCooldown(0);
+    } else if (!open && wasOpen.current) {
+      wasOpen.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const resendOtp = () => {
     // Diagnostic trace — same rationale as submitVerify above (QA #4).
