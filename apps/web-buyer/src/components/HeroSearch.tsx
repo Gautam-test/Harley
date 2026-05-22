@@ -142,16 +142,25 @@ export function HeroSearch() {
         />
 
         <div className="relative max-w-container mx-auto px-6 py-24 md:py-32 lg:py-40">
-          <div className="max-w-5xl">
-            {/* Single-line headline + ™ — replaces the previous stacked
-                "H-D CERTIFIED / APPROVED USED BIKES". Figma uses one
-                continuous heading for tighter rhythm. */}
-            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+          <div className="max-w-3xl">
+            {/* Headline matches Figma /Customer/Home.png: two-line stack
+                ("H-D CERTIFIED APPROVED" / "USED MOTORCYCLES") in the
+                H-D display face, leading-[0.95]. Sizes calibrated against
+                the Figma hero crop — the earlier lg:text-[88px] was
+                oversized and pushed the search band off-screen on 1440px
+                viewports. */}
+            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-4xl sm:text-5xl md:text-6xl lg:text-[64px]">
               H-D Certified
-              <span className="text-hd-orange align-super text-lg ml-1">&trade;</span>
-              {' '}Approved Used Motorcycles
+              <span className="text-hd-orange align-super text-base ml-1">&trade;</span>
+              {' '}Approved
+              <br />
+              Used Motorcycles
             </h1>
-            <p className="text-3xl md:text-4xl text-hd-orange mt-5 font-subhead">
+            {/* Tagline in mixed case (not uppercase) per Figma — softer
+                treatment so it reads as a wordmark line beneath the
+                shouting headline rather than a second H1. Inter subhead
+                face, orange, ~30-40% of H1 size. */}
+            <p className="font-subhead text-hd-orange mt-4 text-xl md:text-2xl">
               Ride With Confidence
             </p>
           </div>

@@ -454,14 +454,23 @@ export function MyListingsPage() {
                       </>
                     )}
                     {l.status === 'DEACTIVATED' && (
-                      <IconAction
-                        label="Turn On"
+                      // QA: dealers wanted an explicit, labelled "Turn On"
+                      // affordance on the Inactive tab instead of the icon-
+                      // only button (which only revealed its action on
+                      // hover). Promoted to a primary-tone pill — same
+                      // hit-target size class as the surrounding icon
+                      // buttons (h-8) but with the verb visible at rest.
+                      <button
+                        type="button"
                         onClick={() => turnOn.mutate(l.id)}
                         disabled={turnOn.isPending}
-                        tone="primary"
+                        aria-label="Turn On"
+                        title="Turn On — show this listing to buyers again"
+                        className="inline-flex items-center gap-1.5 h-8 px-3 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange text-[10px] font-subhead uppercase tracking-subhead hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                      </IconAction>
+                        <span>Turn On</span>
+                      </button>
                     )}
                     {/* QA: Inactive tab REMOVED rows now show the same
                         Turn-On power button DEACTIVATED rows have, so the
@@ -479,8 +488,11 @@ export function MyListingsPage() {
                         dealer can still review the listing post-restore
                         from the Pending tab's edit flow. */}
                     {l.status === 'REMOVED' && (
-                      <IconAction
-                        label="Turn On"
+                      // Same labelled pill as the DEACTIVATED branch above —
+                      // dealers were asking why the Inactive tab had only an
+                      // icon (looked like a Preview eye to some of them).
+                      <button
+                        type="button"
                         onClick={() => {
                           if (
                             window.confirm(
@@ -491,10 +503,13 @@ export function MyListingsPage() {
                           }
                         }}
                         disabled={restoreFromRemoved.isPending}
-                        tone="primary"
+                        aria-label="Turn On"
+                        title="Turn On — restore and re-submit for admin approval"
+                        className="inline-flex items-center gap-1.5 h-8 px-3 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange text-[10px] font-subhead uppercase tracking-subhead hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                      </IconAction>
+                        <span>Turn On</span>
+                      </button>
                     )}
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
                       <IconAction
