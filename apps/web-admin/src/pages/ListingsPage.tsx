@@ -1,8 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Input } from '@hd-cpo/ui';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { ListingPreviewDrawer } from '../components/ListingPreviewDrawer';
+
+// Friendly copy for the publish-time conflict codes raised by
+// POST /admin/listings/:id/publish. The server message is detailed
+// ("VIN ABC is already in use by another live listing (status: ACTIVE).
+// Mark the existing one Sold or Removed before publishing this one.")
+// — usable, but QA asked for a single, shorter, explicit alert as the
+// primary signal. We keep the server's detail as a secondary line so
+// the admin can still act on it without re-opening the listing.
+function friendlyPublishError(err: unknown): { title: string; detail: string } | null {
+  if (!(err instanceof ApiError)) return null;
+  if (err.status === 409 && (err.code === 'VIN_PENDING_DUPLICATE' || err.code === 'VIN_ALREADY_PUBLISHED')) {
+    return {
+      title: 'VIN Number already registered.',
+      detail: err.message,
+    };
+  }
+  if (err.status === 409) {
+    return { title: err.message || 'Publish blocked.', detail: '' };
+  }
+  return { title: err.message || 'Could not publish listing.', detail: '' };
+}
 
 interface AdminListingRow {
   id: string;
@@ -78,14 +99,35 @@ export function ListingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-listings'] }),
   });
 
+  // QA: When publishing a DRAFT whose VIN clashes with another live or
+  // pending listing, the API replies 409 with code VIN_ALREADY_PUBLISHED
+  // or VIN_PENDING_DUPLICATE. The mutation used to swallow this silently,
+  // so the admin's click looked like a no-op. We now lift the error into
+  // local state and render a banner above the page header explaining
+  // exactly what went wrong, with the server's detail as a sub-line so
+  // the admin can act ("mark the other one Sold first" etc).
+  const [publishAlert, setPublishAlert] = useState<{ title: string; detail: string } | null>(null);
   const publish = useMutation({
     mutationFn: (id: string) => api(`/admin/listings/${id}/publish`, { method: 'POST' }),
     onSuccess: () => {
       setPreviewId(null);
+      setPublishAlert(null);
       qc.invalidateQueries({ queryKey: ['admin-listings'] });
       qc.invalidateQueries({ queryKey: ['admin-listing-detail'] });
     },
+    onError: (e) => {
+      const msg = friendlyPublishError(e);
+      if (msg) setPublishAlert(msg);
+    },
   });
+  // Auto-dismiss the alert after 8s so it doesn't linger after the admin
+  // navigates away. Cleared on every fresh publish click via onSuccess /
+  // a new onError.
+  useEffect(() => {
+    if (!publishAlert) return;
+    const t = window.setTimeout(() => setPublishAlert(null), 8_000);
+    return () => window.clearTimeout(t);
+  }, [publishAlert]);
 
   const returnToDealer = useMutation({
     mutationFn: (vars: { id: string; feedback: string }) =>
@@ -124,6 +166,45 @@ export function ListingsPage() {
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      {/* Publish-time error banner. Surfaces 409 VIN conflicts from the
+          publish endpoint with a clear "VIN Number already registered."
+          headline (per QA) and the server's actionable detail below it
+          ("…Mark the existing one Sold or Removed before publishing this
+          one."). Self-dismisses after 8s; admin can dismiss earlier
+          with the close button. Sticks to the top of the listing page
+          so it's visible regardless of scroll position. */}
+      {publishAlert && (
+        <div
+          role="alert"
+          className="mb-6 bg-danger/10 border border-danger/40 rounded-card px-4 py-3 flex items-start gap-3"
+        >
+          <span
+            aria-hidden
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-danger text-hd-white text-xs font-bold shrink-0 mt-0.5"
+          >
+            !
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="font-subhead uppercase tracking-subhead text-[13px] text-danger leading-tight">
+              {publishAlert.title}
+            </p>
+            {publishAlert.detail && (
+              <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                {publishAlert.detail}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setPublishAlert(null)}
+            aria-label="Dismiss"
+            className="text-gray-500 hover:text-text-on-light text-sm shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex items-baseline justify-between flex-wrap gap-4 mb-6">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">Listings</h1>
         <Input
