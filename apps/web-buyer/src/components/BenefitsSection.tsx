@@ -94,18 +94,20 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // py-10 outer, mt-4 between heading and body, mt-6 between
         // "What" and "Overview" blocks. text-[13px] body keeps the
         // paragraph tight to the headline.
-        // QA RE-OPEN: latest Figma reverts the alignment from LEFT
-        // back to CENTER and restores the formal "MOTORCYCLES" noun in
-        // the headlines. Body copy gets a center-aligned soft off-white
-        // canvas card (bg-surface-light) so the section stops looking
-        // like flat raw white. En-dash (–) used in the subtitle, not
-        // em-dash (—). "donor motorcycle" replaces "demo motorcycle".
+        // QA BUG_UI_032: tighter typography spec —
+        //   • Headings exactly 28px Bold 700 in 1903 Sans (font-subhead).
+        //   • Body copy exactly 14px (text-[14px]).
+        //   • Subtitle divider uses a simple hyphen "-" (not "–" / "—").
+        //   • Wider container (max-w-5xl) so paragraphs don't compress
+        //     into a narrow central column on desktop.
+        //   • Still center-aligned per BUG_UI_032 + bg-surface-light
+        //     soft off-white canvas.
         <section className="bg-surface-light py-14 md:py-16 lg:py-20">
-          <div className="max-w-4xl mx-auto px-6 md:px-10 text-center">
-            <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
+          <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
+            <h2 className="font-subhead font-bold tracking-subhead uppercase text-[28px] text-text-on-light leading-tight">
               What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
-            <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            <p className="mt-5 text-[14px] text-gray-700 leading-relaxed">
               When you own any Harley-Davidson motorcycle the expectations are sky high,
               justifiably of course. Choose a H-D Certified&trade; Approved Used
               Harley-Davidson and you can rest assured that they have been rigorously checked
@@ -119,27 +121,24 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto px-6 md:px-10 mt-12 md:mt-16 text-center">
-            <h3 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
-              Overview Of H-D Certified&trade; &ndash; Ride With Confidence
+          <div className="max-w-5xl mx-auto px-6 md:px-10 mt-12 md:mt-16 text-center">
+            <h3 className="font-subhead font-bold tracking-subhead uppercase text-[28px] text-text-on-light leading-tight">
+              Overview Of H-D Certified&trade; - Ride With Confidence
             </h3>
-            <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            <p className="mt-5 text-[14px] text-gray-700 leading-relaxed">
               The desire of H-D Certified&trade; is to become the go to place for all customers
               wanting to purchase a pre-owned Harley-Davidson motorcycle. The program provides
               customers with the confidence that the pre-owned motorcycle they purchase is of high
               standard and quality. It is also backed with comprehensive part and labour warranty
               which includes roadside assistance and many other benefits.
             </p>
-            <p className="mt-4 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            <p className="mt-4 text-[14px] text-gray-700 leading-relaxed">
               An H-D Certified&trade; Approved Used motorcycle can be a fantastic first entry
               point to the Harley-Davidson brand or a cost-effective donor motorcycle for a custom
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
-            {/* Center-aligned bullet list — items themselves stay
-                left-aligned within the centered block so multi-line
-                bullets read cleanly. */}
-            <ul className="mt-4 max-w-2xl mx-auto text-left text-[15px] md:text-base text-gray-700 leading-relaxed space-y-1.5">
+            <ul className="mt-4 max-w-2xl mx-auto text-left text-[14px] text-gray-700 leading-relaxed space-y-1.5">
               {OVERVIEW_BULLETS.map((b) => (
                 <li key={b}>{b}</li>
               ))}

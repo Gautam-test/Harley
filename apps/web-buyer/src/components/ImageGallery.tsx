@@ -51,8 +51,11 @@ export function ImageGallery({
         )}
       </div>
       {safe.length > 1 && (
-        <div className="grid grid-cols-5 gap-2">
-          {safe.map((src, i) => (
+        // QA latest: thumbnail grid is exactly 4 wide-aspect cells per
+        // Figma. Capped at 4 even when more images exist; any extra
+        // thumbs are dropped (rarely happens — dealers upload 1-6).
+        <div className="grid grid-cols-4 gap-2">
+          {safe.slice(0, 4).map((src, i) => (
             <button
               key={src + i}
               type="button"

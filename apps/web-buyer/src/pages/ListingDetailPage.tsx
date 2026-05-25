@@ -98,12 +98,23 @@ export function ListingDetailPage() {
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
 
-      <div className="bg-hd-white text-text-on-light">
+      {/* QA latest: VDP page wrapper uses the soft off-white canvas
+          (#F4F4F4 = bg-surface-light) so the tab content cards below
+          read as elevated white blocks layered on top of it. */}
+      <div className="bg-surface-light text-text-on-light">
         <div className="max-w-container mx-auto px-6 py-6">
-          <nav className="text-xs text-gray-600 mb-5">
-            <Link to="/" className="hover:text-hd-orange">Home</Link>
-            <span className="mx-2">›</span>
-            <Link to="/search" className="hover:text-hd-orange">Search Stock</Link>
+          {/* QA latest: UPPERCASE "HOME / SEARCH STOCK" with slash
+              separator (not ›). Current page name highlighted in
+              brand orange. */}
+          <nav
+            aria-label="Breadcrumb"
+            className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] mb-5"
+          >
+            <Link to="/" className="text-text-on-light hover:text-hd-orange transition">
+              Home
+            </Link>
+            <span aria-hidden className="mx-2 text-gray-400">/</span>
+            <span className="text-hd-orange">Search Stock</span>
           </nav>
 
           {/* Top section — gallery left, price/dealer card right */}
@@ -192,32 +203,37 @@ export function ListingDetailPage() {
                 full
               />
 
-              {/* Tabs — Overview | Specifications */}
-              <div className="mt-10 border-b border-gray-200 flex gap-1">
-                {(['overview', 'specs'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTab(t)}
-                    className={`px-4 py-2 font-subhead uppercase tracking-subhead text-xs border-b-2 -mb-px transition ${
-                      tab === t
-                        ? 'border-hd-orange text-text-on-light'
-                        : 'border-transparent text-gray-500 hover:text-text-on-light'
-                    }`}
-                  >
-                    {t === 'overview' ? 'Overview' : 'Specifications'}
-                  </button>
-                ))}
-              </div>
+              {/* QA latest: tabs + content rendered as ELEVATED white
+                  card layered on the soft #F4F4F4 page canvas. Tab
+                  selector sits inside the same card so the active
+                  underline reads cleanly. */}
+              <div className="mt-10 bg-hd-white shadow-sm border border-gray-200">
+                <div className="border-b border-gray-200 flex gap-1 px-5 pt-2">
+                  {(['overview', 'specs'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTab(t)}
+                      className={`px-4 py-3 font-subhead font-bold tracking-subhead uppercase text-xs border-b-2 -mb-px transition ${
+                        tab === t
+                          ? 'border-hd-orange text-text-on-light'
+                          : 'border-transparent text-gray-500 hover:text-text-on-light'
+                      }`}
+                    >
+                      {t === 'overview' ? 'Overview' : 'Specification'}
+                    </button>
+                  ))}
+                </div>
 
-              <div className="mt-6">
-                {tab === 'overview' ? (
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
-                    {data.description}
-                  </p>
-                ) : (
-                  <SpecsTable data={data} />
-                )}
+                <div className="p-6">
+                  {tab === 'overview' ? (
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
+                      {data.description}
+                    </p>
+                  ) : (
+                    <SpecsTable data={data} />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -234,8 +250,13 @@ export function ListingDetailPage() {
               "INSPECTION") sits next to the descriptive copy. Inspection
               report download stays as a black secondary button on the
               right. */}
+          {/* QA latest: 110 PT inspection banner ends flush at the
+              right edge — the previous black "Inspection Report"
+              button on the far right is dropped per Figma. The PDF
+              link remains accessible via the dealer card / future
+              spec-sheet link if needed. */}
           {data.certificationStatus === 'CPO' && (
-            <div className="mt-12 bg-surface-light border border-gray-200 grid md:grid-cols-[auto_1fr_auto] gap-0 items-stretch">
+            <div className="mt-12 bg-hd-white border border-gray-200 grid md:grid-cols-[auto_1fr] gap-0 items-stretch">
               <div className="bg-hd-orange text-hd-white px-6 py-5 flex flex-col justify-center text-center min-w-[120px]">
                 <span className="font-subhead font-bold tracking-subhead text-3xl leading-none">
                   110 PT
@@ -249,29 +270,6 @@ export function ListingDetailPage() {
                 authorised technician and qualifies for the 12-month mechanical &amp; electrical
                 guarantee, roadside assistance, and HOG membership.
               </p>
-              {data.inspectionReportUrl && (
-                <div className="px-5 py-5 flex items-center">
-                  <a
-                    href={data.inspectionReportUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-hd-black text-hd-white font-subhead font-bold uppercase tracking-subhead text-[11px] px-4 py-2.5 hover:brightness-125 transition whitespace-nowrap"
-                  >
-                    <svg
-                      className="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                    </svg>
-                    Inspection Report
-                  </a>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -335,9 +333,35 @@ function SpecsTable({ data }: { data: ListingDetail }) {
   // tab so they're intentionally NOT repeated here. Year / Colour / KM
   // also live in the meta line directly under the H1 — also dropped here
   // to remove the triple-display the buyer flagged.
+  // QA latest: Specification panel is a comprehensive two-column
+  // asymmetric layout — labels left, values right, generous row
+  // spacing inside the elevated card. Items match the Figma spec list
+  // (Year / Model / Category / KMs / Owners / Inspection / Mileage /
+  // Colour / Location / Vehicle Registration / VIN / Certification).
   const rows: Array<[string, string]> = [
-    ['Model Family', data.modelFamily],
+    ['Year', String(data.year)],
     ['Model', data.modelName],
+    ['Category', data.modelFamily],
+    ['KMs', `${data.kmsDriven.toLocaleString('en-IN')} KM`],
+    [
+      'Owners',
+      data.owners
+        ? data.owners === 1
+          ? '1 (Single owner)'
+          : `${data.owners}`
+        : '—',
+    ],
+    [
+      'Inspection',
+      data.certificationStatus === 'CPO' ? '110-Point Passed' : 'As-Is',
+    ],
+    ['Mileage', '—'],
+    ['Colour', data.colour],
+    [
+      'Location',
+      [data.city, data.pincode, data.state].filter(Boolean).join(' · '),
+    ],
+    ['Vehicle Registration', data.vin?.slice(-5).toUpperCase() || '—'],
     ['VIN', data.vin],
     [
       'Certification',
@@ -345,11 +369,16 @@ function SpecsTable({ data }: { data: ListingDetail }) {
     ],
   ];
   return (
-    <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm bg-surface-light/60 border border-gray-200 p-5">
+    <dl className="divide-y divide-gray-200">
       {rows.map(([k, v]) => (
-        <div key={k} className="flex justify-between border-b border-gray-200 pb-2 last:border-b-0">
-          <dt className="text-gray-600">{k}</dt>
-          <dd className="text-text-on-light text-right font-subhead">{v}</dd>
+        <div
+          key={k}
+          className="grid grid-cols-[180px_1fr] gap-x-6 py-3 text-sm first:pt-0 last:pb-0"
+        >
+          <dt className="font-subhead font-bold uppercase tracking-subhead text-[12px] text-gray-500">
+            {k}
+          </dt>
+          <dd className="font-body text-text-on-light">{v}</dd>
         </div>
       ))}
     </dl>

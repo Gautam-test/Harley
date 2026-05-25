@@ -37,8 +37,10 @@ export interface ListingCardData {
 //   │              View Details ›
 //   └────────────────────────┘
 export function ListingCardItem({ listing }: { listing: ListingCardData }) {
-  // BUG_UI_005 #5 dropped the stock-code chip + map-pin row from this
-  // card; both still surface on the listing detail page.
+  // QA BUG_UI_031: Stock ID restored — derive a 5-char tail from the
+  // VIN (the same shorthand the dealer + admin tables use). Falls back
+  // to empty string if the listing is missing a VIN somehow.
+  const stockCode = listing.vin?.slice(-5).toUpperCase() || '';
   const isSold = listing.status === 'SOLD';
   // SOLD cards stay in the grid for the 1-hour visibility window so a
   // buyer who was tracking this bike sees what happened, but the link is
@@ -118,18 +120,32 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           )}
         </div>
       </div>
-      {/* BUG_UI_005 #5: metadata simplified to the Figma format
-          ([Year] · [KM] · [Color]) directly above the price. The
-          location pin row, dealer + city + pincode line, stock code,
-          and "Indicative ex-showroom" caption are all dropped per the
-          ticket — the listing detail page still carries the full
-          disclosure for buyers who click through. */}
-      <div className="p-4">
+      {/* QA BUG_UI_031: card body rebuilt per latest Figma —
+            • Title in bold 1903 Sans (kept)
+            • Dealer location row with orange pin icon + dealer name
+            • Metadata 4-up: [Stock ID] · [Year] · [KM] · [Color Family]
+            • Horizontal gray separator between metadata + price
+            • Price in wide 1903 Sans (font-subhead font-bold, NOT
+              the condensed headline cut that was distorting it)
+            • Title-case "View Details >" with plain > chevron
+          More generous vertical padding (p-5) so the card breathes. */}
+      <div className="p-5">
         <h3 className="font-subhead font-bold uppercase tracking-subhead text-base text-text-on-light leading-tight">
           {listing.modelName}
         </h3>
-        <p className="text-[12px] text-gray-600 mt-1.5 leading-relaxed">
+
+        {/* Dealer location row with orange pin */}
+        <p className="flex items-center gap-1.5 text-[12px] text-gray-600 mt-2">
+          <svg className="w-3 h-3 text-hd-orange shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+          </svg>
+          <span className="truncate">{listing.dealerName}</span>
+        </p>
+
+        {/* Metadata: Stock ID · Year · KM · Color */}
+        <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
           {[
+            stockCode || null,
             listing.year,
             `${listing.kmsDriven.toLocaleString('en-IN')} KM`,
             listing.colour ? listing.colour.toUpperCase() : null,
@@ -137,13 +153,15 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             .filter(Boolean)
             .join(' · ')}
         </p>
-        <div className="mt-3 flex items-baseline justify-between gap-2">
-          <span className="font-headline text-xl text-text-on-light tracking-headline">
+
+        {/* Horizontal separator + price row */}
+        <div className="mt-4 pt-4 border-t border-gray-200 flex items-baseline justify-between gap-2">
+          <span className="font-subhead font-bold text-xl text-text-on-light tracking-subhead">
             ₹ {listing.price.toLocaleString('en-IN')}
           </span>
           {!isSold && (
-            <span className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange group-hover:underline">
-              View Details ›
+            <span className="font-body text-[12px] text-hd-orange group-hover:underline">
+              View Details &gt;
             </span>
           )}
         </div>

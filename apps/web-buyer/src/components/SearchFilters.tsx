@@ -245,13 +245,13 @@ export function SearchFilters() {
       className="bg-surface-light border border-gray-200 overflow-hidden"
     >
       <div className="px-5 pt-5">
-        {/* "Search By:" label — sentence case, body face, NOT uppercase
-            caps (BUG re-open #1). The :colon stays per Figma. */}
-        <p className="font-body text-[13px] text-text-on-light">Search By:</p>
-        {/* Tab selector — full-height adjacent buttons that share a
-            border. Active = solid orange + white text. Inactive = white
-            with light grey border. Equal-share grid keeps both buttons
-            the same height regardless of label length (BUG re-open #2). */}
+        {/* QA BUG_UI_028: Title Case "Search By:" header, muted grey,
+            1903 Sans Regular. Not uppercase. */}
+        <p className="font-body text-[13px] text-gray-500">Search By:</p>
+        {/* Tab selector — Title Case "Cash Price" / "Monthly Budget"
+            labels. Active state = orange fill + white text; inactive =
+            white card with grey border. Default state has neither
+            highlighted; user picks one. */}
         <div className="mt-3 grid grid-cols-2">
           <button
             type="button"
@@ -259,9 +259,9 @@ export function SearchFilters() {
               setSearchBy('cash');
               setValue('searchBy', 'cash');
             }}
-            className={`h-10 px-3 font-subhead font-bold uppercase tracking-subhead text-[11px] border transition ${
+            className={`h-10 px-3 font-body text-[13px] border transition ${
               searchBy === 'cash'
-                ? 'bg-hd-orange text-hd-white border-hd-orange'
+                ? 'bg-hd-orange text-hd-white border-hd-orange font-bold'
                 : 'bg-hd-white text-text-on-light border-gray-300 hover:border-gray-400'
             }`}
           >
@@ -273,9 +273,9 @@ export function SearchFilters() {
               setSearchBy('monthly');
               setValue('searchBy', 'monthly');
             }}
-            className={`h-10 px-3 font-subhead font-bold uppercase tracking-subhead text-[11px] border -ml-px transition ${
+            className={`h-10 px-3 font-body text-[13px] border -ml-px transition ${
               searchBy === 'monthly'
-                ? 'bg-hd-orange text-hd-white border-hd-orange'
+                ? 'bg-hd-orange text-hd-white border-hd-orange font-bold'
                 : 'bg-hd-white text-text-on-light border-gray-300 hover:border-gray-400'
             }`}
           >
@@ -407,45 +407,25 @@ export function SearchFilters() {
           </Button>
         </div>
 
-        {/* BUG re-open #3: EMI Calculator widget lives INSIDE this
-            sidebar, directly beneath the primary CTAs, per Figma. Was
-            previously mounted outside SearchFilters by SearchPage —
-            moved here so the Figma "sidebar hierarchy" is honoured
-            literally and ANY page rendering <SearchFilters /> (not
-            just SearchPage) gets the calculator for free.
-
-            On Apply → writes searchBy=monthly + maxMonthly to the URL,
-            which the params-watcher above picks up to refilter the
-            grid AND swap the Monthly Budget slider into the active
-            view. */}
-        <EmiCalculatorPanel
-          onApply={(maxMonthly) => {
-            setSearchBy('monthly');
-            setValue('searchBy', 'monthly');
-            setValue('maxMonthly', String(Math.min(maxMonthly, MONTHLY_MAX)));
-            handleSubmit(onSubmit)();
-          }}
-        />
+        {/* QA BUG_UI_028: EMI Calculator widget — "Apply as Filter"
+            CTA removed (not in Figma spec). Widget is purely
+            informational; the buyer reads the monthly figure and
+            decides how to adjust the Monthly Budget slider above. */}
+        <EmiCalculatorPanel />
       </div>
     </form>
   );
 }
 
 // ---------- EMI Calculator panel (Figma-spec sidebar widget) ----------
-// Lives inside SearchFilters per BUG re-open #3. Pure-presentational —
-// no API calls. Caller-provided onApply receives the computed monthly
-// figure so the parent form can write it onto the URL filter.
-function EmiCalculatorPanel({
-  onApply,
-}: {
-  onApply: (maxMonthly: number) => void;
-}) {
+// Purely presentational — no API calls, no parent callbacks. QA
+// BUG_UI_028: removed the "Apply as Filter" CTA, brightened metric
+// label colour (text-gray-500), bumped the EMI result font size.
+function EmiCalculatorPanel() {
   const [price, setPrice] = useState<number>(1_500_000);
   const [downPct, setDownPct] = useState<number>(EMI_DEFAULTS.downPct);
   const [months, setMonths] = useState<number>(EMI_DEFAULTS.months);
 
-  // Inline EMI formula — kept here to avoid pulling in the full helper
-  // (we only need a single calc and the imports above are noisy enough).
   const principal = price * (1 - downPct);
   const r = EMI_DEFAULTS.rateAnnual / 12;
   const n = months;
@@ -471,17 +451,17 @@ function EmiCalculatorPanel({
     >
       <h3
         id="emi-calc-heading"
-        className="font-subhead font-bold uppercase tracking-subhead text-[13px] text-text-on-light"
+        className="font-body text-[13px] text-gray-500"
       >
         EMI Calculator
       </h3>
 
       <div className="mt-3">
         <div className="flex items-baseline justify-between">
-          <label htmlFor="emi-price" className="font-body text-[12px] text-text-on-light">
+          <label htmlFor="emi-price" className="font-body text-[12px] text-gray-500">
             On-Road Price
           </label>
-          <span className="font-body font-bold text-[13px] text-text-on-light">
+          <span className="font-body text-[13px] text-text-on-light">
             {inr(price)}
           </span>
         </div>
@@ -500,10 +480,10 @@ function EmiCalculatorPanel({
 
       <div className="mt-3">
         <div className="flex items-baseline justify-between">
-          <label htmlFor="emi-down" className="font-body text-[12px] text-text-on-light">
+          <label htmlFor="emi-down" className="font-body text-[12px] text-gray-500">
             Down Payment
           </label>
-          <span className="font-body font-bold text-[13px] text-text-on-light">
+          <span className="font-body text-[13px] text-text-on-light">
             {Math.round(downPct * 100)}% &middot; {inr(price * downPct)}
           </span>
         </div>
@@ -522,10 +502,10 @@ function EmiCalculatorPanel({
 
       <div className="mt-3">
         <div className="flex items-baseline justify-between">
-          <label htmlFor="emi-months" className="font-body text-[12px] text-text-on-light">
+          <label htmlFor="emi-months" className="font-body text-[12px] text-gray-500">
             Tenure
           </label>
-          <span className="font-body font-bold text-[13px] text-text-on-light">
+          <span className="font-body text-[13px] text-text-on-light">
             {months} months
           </span>
         </div>
@@ -543,41 +523,31 @@ function EmiCalculatorPanel({
       </div>
 
       <div className="mt-3 flex items-baseline justify-between">
-        <span className="font-body text-[12px] text-text-on-light">Interest Rate</span>
-        <span className="font-body font-bold text-[13px] text-text-on-light">
+        <span className="font-body text-[12px] text-gray-500">Interest Rate</span>
+        <span className="font-body text-[13px] text-text-on-light">
           {(EMI_DEFAULTS.rateAnnual * 100).toFixed(1)}% APR
         </span>
       </div>
 
-      {/* "Estimated Monthly EMI" callout — soft grey background, orange
-          figure inside, per Figma. */}
+      {/* Estimated Monthly EMI callout — bigger figure per QA. */}
       <div className="mt-4 bg-gray-100 p-4">
         <p className="font-body text-[11px] text-gray-600 uppercase tracking-subhead">
           Estimated Monthly EMI
         </p>
-        <p className="font-subhead font-bold text-2xl tracking-subhead text-hd-orange mt-1">
-          ₹ {monthly.toLocaleString('en-IN')}
+        <p className="font-subhead font-bold text-3xl tracking-subhead text-hd-orange mt-1 leading-none">
+          {inr(monthly)}
         </p>
       </div>
-
-      <button
-        type="button"
-        onClick={() => onApply(monthly)}
-        className="mt-3 w-full bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
-      >
-        Apply as Filter
-      </button>
     </section>
   );
 }
 
-// Sentence-case label in the body face (1903 Sans Regular) per Figma.
-// Was font-subhead uppercase tracking-subhead which forced caps + the
-// system fallback weight to read as "shouting". BUG re-open #1.
+// QA BUG_UI_028: Title Case label in 1903 Sans Regular, muted grey,
+// not uppercase. Wraps each Pincode/Distance/Models/Year/Colors field.
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block font-body text-[13px] text-text-on-light mb-1.5">
+      <label className="block font-body text-[13px] text-gray-500 mb-1.5">
         {label}
       </label>
       {children}

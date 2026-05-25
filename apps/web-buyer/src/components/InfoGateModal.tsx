@@ -628,9 +628,14 @@ export function InfoGateModal({
         )}
 
         {step === 'collect' && (
+          // QA latest: every input + select gets a heavy 1.5px solid
+          // black border + sharp corners via descendant variants,
+          // matching the Figma spec ("border: 1.5px solid #000000").
+          // Targets <input> and <select> children of this form only —
+          // doesn't affect the OTP code input on the verify step.
           <form
             onSubmit={handleSubmit(submitDetails)}
-            className={`mt-6 ${isBuyerEnquiry ? 'space-y-4' : 'space-y-3'}`}
+            className={`mt-6 [&_input]:!border-[1.5px] [&_input]:!border-hd-black [&_select]:!border-[1.5px] [&_select]:!border-hd-black [&_textarea]:!border-[1.5px] [&_textarea]:!border-hd-black ${isBuyerEnquiry ? 'space-y-4' : 'space-y-3'}`}
             noValidate
           >
             <Labelled label="Full Name" required error={errors.name?.message} show={isBuyerEnquiry}>
@@ -864,14 +869,10 @@ export function InfoGateModal({
                       </option>
                     ))}
                   </Select>
-                  {context?.preselectDealerId && (
-                    <p
-                      id="dealer-preselect-hint"
-                      className="text-[10px] text-gray-500 mt-1 leading-snug"
-                    >
-                      Auto-selected from this listing &mdash; change if you prefer another dealer.
-                    </p>
-                  )}
+                  {/* QA latest: "Auto-selected from this listing — change
+                      if you prefer another dealer" instructional subtext
+                      removed per Figma. The dealer dropdown stays
+                      pre-populated; the buyer can still change it. */}
                 </Labelled>
               </div>
             )}
@@ -894,11 +895,15 @@ export function InfoGateModal({
                 {error}
               </div>
             )}
+            {/* QA latest: terms checkbox renders as a CLEAN UNBORDERED
+                open square per Figma — drop the accent-hd-orange fill.
+                Native appearance-none + 1.5px border keeps it visible
+                without the colour-fill feel. */}
             <p className="text-xs text-gray-500">
               <input
                 type="checkbox"
                 defaultChecked
-                className="mr-1.5 align-middle accent-hd-orange"
+                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-hd-white checked:after:content-['✓'] checked:after:text-hd-black checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
                 aria-label="I have read and understood the Terms and Conditions and Privacy Policy"
               />
               I have read &amp; understood the{' '}
@@ -911,25 +916,29 @@ export function InfoGateModal({
               </a>
               .
             </p>
+            {/* QA latest: both buttons UPPERCASE — "CANCEL" / "SEND
+                ENQUIRY" with sharp corners + bold weight. The Cancel
+                button gets the black-outline treatment to match the
+                rugged brand voice. */}
             <div
-              className={`flex ${isBuyerEnquiry ? 'justify-end gap-3' : ''} ${isBuyerEnquiry ? '' : ''}`}
+              className={`flex ${isBuyerEnquiry ? 'justify-end gap-3' : ''}`}
             >
               {isBuyerEnquiry && onClose && (
                 <button
                   type="button"
                   onClick={onClose}
-                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition"
+                  className="border-2 border-hd-black px-8 py-2.5 font-subhead font-bold uppercase tracking-subhead text-xs text-hd-black hover:bg-hd-black hover:text-hd-white transition"
                 >
-                  Cancel
+                  CANCEL
                 </button>
               )}
-              <Button
+              <button
                 type="submit"
                 disabled={busy}
-                className={isBuyerEnquiry ? '' : 'w-full'}
+                className={`bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-8 py-2.5 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed ${isBuyerEnquiry ? '' : 'w-full'}`}
               >
-                {busy ? 'Sending OTP…' : isBuyerEnquiry ? 'Send Enquiry' : 'Continue'}
-              </Button>
+                {busy ? 'SENDING OTP…' : isBuyerEnquiry ? 'SEND ENQUIRY' : 'CONTINUE'}
+              </button>
             </div>
           </form>
         )}

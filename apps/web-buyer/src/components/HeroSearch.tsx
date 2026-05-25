@@ -113,19 +113,28 @@ export function HeroSearch() {
   return (
     <>
       <section className="relative bg-hd-black overflow-hidden">
-        {/* QA RE-OPEN: H-D Bar & Shield brand badge overlay, top-left.
-            Asymmetric orange/white accent card backs the bar-and-shield
-            mark so it reads as a sticker-on-photo corner element. Hidden
-            below sm so the smaller hero typography on phones isn't
-            crowded; the brand mark is already in the SiteHeader nav. */}
+        {/* QA latest: brand badge is a sharp asymmetric orange + white
+            block flush against the top-left corner, with the H-D
+            shield mark riding the seam between the two halves. Reads
+            as a corner sticker rather than a floating rectangle. The
+            orange triangle slab (clip-path) sits behind a white square
+            tile holding the shield SVG. */}
         <div className="absolute top-0 left-0 z-10 hidden sm:block pointer-events-none">
           <div className="relative">
-            <div className="bg-hd-orange w-16 h-16 md:w-20 md:h-20" aria-hidden />
-            <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-hd-white p-2 md:p-2.5 shadow-lg">
+            {/* Orange asymmetric slab — angled bottom-right cut so it
+                feels like a sticker layered onto the photo. */}
+            <div
+              aria-hidden
+              className="bg-hd-orange w-24 h-24 md:w-28 md:h-28"
+              style={{ clipPath: 'polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%)' }}
+            />
+            {/* White inset tile holding the shield. Sits flush against
+                the top-left so the orange wraps around two sides. */}
+            <div className="absolute top-0 left-0 bg-hd-white p-2.5 md:p-3 shadow-md">
               <img
                 src="/brand/hd-bar-shield.svg"
                 alt="Harley-Davidson"
-                className="w-10 h-10 md:w-12 md:h-12"
+                className="w-12 h-12 md:w-14 md:h-14"
                 width={56}
                 height={56}
                 decoding="async"
@@ -162,19 +171,20 @@ export function HeroSearch() {
             in view without scrolling on 1440-tall viewports. */}
         <div className="relative max-w-container mx-auto px-6 py-16 md:py-20 lg:py-24">
           <div className="max-w-3xl">
-            {/* QA RE-OPEN: headline reverted to "MOTORCYCLES" (was
-                "BIKES"); ™ kept on CERTIFIED. The orange dot/separator
-                quirk noted in QA isn't in this render — it was likely
-                an artifact of the earlier text-shadow + condensed font
-                combination. */}
-            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[0.95] uppercase text-[28px] sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]">
+            {/* QA latest: headline exactly 40px on desktop (wide 1903
+                Sans). Lets the full string fit cleanly on one line at
+                lg+ — the prior lg:text-6xl wrapped to 3 cramped lines
+                per the QA report. Scales down on mobile via
+                text-[26px] / text-3xl steps. No <br/> — let the line
+                wrap naturally based on container width. */}
+            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[26px] sm:text-3xl md:text-[36px] lg:text-[40px]">
               H-D Certified
-              <span className="text-hd-orange align-super text-base ml-1">&trade;</span>
-              {' '}Approved
-              <br />
-              Used Motorcycles
+              <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
+              {' '}Approved Used Motorcycles
             </h1>
-            <p className="font-subhead text-hd-white mt-4 text-xl md:text-2xl">
+            {/* QA latest: subhead exactly 28px Title Case in 1903 Sans
+                wide cut. mt-6 for breathing room beneath the heading. */}
+            <p className="font-subhead font-bold text-hd-white mt-6 text-[20px] sm:text-2xl md:text-[28px]">
               Ride With Confidence
             </p>
           </div>

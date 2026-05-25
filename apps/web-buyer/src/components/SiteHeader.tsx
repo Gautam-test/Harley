@@ -66,19 +66,19 @@ export function SiteHeader() {
           + links cross-axis-center inside the taller container; the
           wordmark itself stays at h-9 so it doesn't outgrow the bar. */}
       <div className="max-w-container mx-auto px-6 h-20 flex items-center justify-between">
-        {/* QA RE-OPEN (Search Stock Figma reference): header lockup
-            reverted to the "H-D CERTIFIED" wordmark — white H + orange
-            dash + "D CERTIFIED". The bar-and-shield + "Certified Pre-
-            Owned Marketplace" eyebrow from the earlier BUG_UI_002 pass
-            isn't in the latest Figma prototype, so we restore the
-            cleaner wordmark. */}
+        {/* QA latest: brand-supplied H-D CERTIFIED wordmark — 295×21
+            natural viewBox (~14:1 aspect). Rendered at h-6 (24px) so
+            width ≈ 337px — fits comfortably on the left of the nav
+            without overpowering it. Width attribute matches the
+            computed display width so the browser reserves correct
+            layout space before the SVG loads. */}
         <Link to="/" className="flex items-center group" aria-label="H-D Certified — home">
           <img
             src="/brand/hd-certified-wordmark-light.svg"
             alt="H-D Certified"
-            className="h-9 w-auto"
-            width={281}
-            height={36}
+            className="h-6 w-auto"
+            width={337}
+            height={24}
             decoding="async"
           />
         </Link>

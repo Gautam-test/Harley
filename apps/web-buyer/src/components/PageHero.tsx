@@ -22,7 +22,13 @@ import { Link } from 'react-router-dom';
 export const HERO = {
   // Local lifestyle banners (preferred for the high-traffic pages).
   home: '/heros/home.jpg',
-  searchStock: '/heros/search-stock.jpg',
+  // QA BUG_UI_027 #1: brand-supplied "background" SVG — multi-bike
+  // shot in front of industrial shipping containers, with the dark
+  // overlay gradient baked into the asset itself (90% black-to-
+  // transparent vertical gradient). Replaces the prior single-bike-
+  // by-water JPG. The SVG is large (~3.5 MB) because it embeds the
+  // raster; HTTP gzip + browser cache amortise it after first visit.
+  searchStock: '/heros/search-stock-bg.svg',
   sellBike: '/heros/sell-bike.jpg',
 
   // CDN studio shots (per-bike, used for inner pages).
@@ -74,24 +80,24 @@ export function PageHero({
 }: PageHeroProps) {
   const padY =
     size === 'lg' ? 'py-24 md:py-28' : size === 'sm' ? 'py-14 md:py-16' : 'py-20 md:py-24';
-  // Responsive headline scaling:
-  //   sm (utility heroes / Track, Sell): 30 → 48 → 56 px
-  //   md (info pages / 404):              36 → 56 → 64 px
-  //   lg (marquee — Search Stock):        48 → 64 → 72 → 80 px (capped)
-  // The lg variant was at lg:text-[88px] which broke layout under 1024px
-  // and looked oversized on ultra-wide. Capping at 80px (xl) keeps
-  // headlines proportionate across every breakpoint.
+  // QA BUG_UI_027: marquee headline (`lg` size — e.g. "SEARCH STOCK")
+  // capped at exactly 60px on desktop per Figma spec. Scales smoothly
+  // from 30px (phone) → 48px (sm) → 56px (md) → 60px (lg+).
   const titleSize =
     size === 'lg'
-      ? 'text-[30px] sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]'
+      ? 'text-[30px] sm:text-5xl md:text-[56px] lg:text-[60px]'
       : size === 'sm'
       ? 'text-[26px] sm:text-3xl md:text-5xl'
       : 'text-3xl sm:text-4xl md:text-6xl';
 
   return (
     <section className="relative bg-hd-black overflow-hidden">
+      {/* QA BUG_UI_027: the brand-supplied search-stock-bg.svg has its
+          own dark gradient baked in (90% opacity), so we removed the
+          previous `opacity-50` photo dimming + softened the overlay so
+          the bikes + containers are visible behind the headline. */}
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-50"
+        className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url("${image}")` }}
         aria-hidden
       />
@@ -99,15 +105,18 @@ export function PageHero({
         className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.92) 100%)',
+            'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.55) 100%)',
         }}
         aria-hidden
       />
       <div className={`relative max-w-container mx-auto px-6 text-center ${padY}`}>
         {breadcrumbs && breadcrumbs.length > 0 && (
+          // QA BUG_UI_027: breadcrumb gets explicit mb-8 so it sits
+          // comfortably ABOVE the H1 with clear whitespace separation,
+          // not compressed against the title.
           <nav
             aria-label="Breadcrumb"
-            className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] md:text-xs mb-6"
+            className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] md:text-xs mb-8"
           >
             <ol className="inline-flex items-center justify-center flex-wrap gap-x-2 text-hd-white">
               {breadcrumbs.map((bc, i) => {
@@ -134,10 +143,11 @@ export function PageHero({
           {title} <span className="text-hd-orange">{emphasis}</span>
         </h1>
         {subtitle && (
-          // BUG_UI_008 #4: rendered in Title Case (not forced uppercase),
-          // body face, slightly larger. Caller controls the literal casing
-          // of the string they pass in; we no longer apply text-transform.
-          <p className="font-body text-sm md:text-base text-text-secondary mt-5 max-w-3xl mx-auto leading-relaxed">
+          // QA BUG_UI_027: subtitle exactly 16px (text-base) per Figma.
+          // Title Case casing controlled by the caller string. Brightened
+          // colour from text-secondary to text-hd-white/85 so it reads
+          // clearly against the dark hero.
+          <p className="font-body text-base text-hd-white/85 mt-5 max-w-3xl mx-auto leading-relaxed">
             {subtitle}
           </p>
         )}
