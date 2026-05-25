@@ -71,14 +71,14 @@ const FEATURES: FeatureRow[] = [
 ];
 
 // Figma /Customer/Home.png — exact bullet copy from the Overview section.
-// Different (and shorter) than the FEATURES titles above; these are the
-// "benefits summary" bullets, not the feature-row titles.
+// QA RE-OPEN: tokens normalised per Figma — hyphenated "12-month" /
+// "1-year" + restored ™ on the H-D Certified bullet.
 const OVERVIEW_BULLETS = [
   '110 point checklist.',
-  "12 month national extended manufacturer's warranty & option to extend up to 36 months (Conditions apply).",
+  "12-month national extended manufacturer's warranty & option to extend up to 36 months (Conditions apply).",
   'Qualification for H.O.G. membership (1 year).',
-  '1 year Roadside Assistance (with the option to extend).',
-  'HD Certified Custom Coverage.',
+  '1-year Roadside Assistance (with the option to extend).',
+  'H-D Certified™ Custom Coverage.',
 ];
 
 interface BenefitsSectionProps {
@@ -94,25 +94,16 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // py-10 outer, mt-4 between heading and body, mt-6 between
         // "What" and "Overview" blocks. text-[13px] body keeps the
         // paragraph tight to the headline.
-        // BUG_UI_003 revisions (Figma /Customer/Home.png + crops):
-        //   • Wider container (max-w-3xl → max-w-6xl) so body copy uses
-        //     the full canvas like the Figma reference instead of being
-        //     compressed into a narrow central column.
-        //   • Body text LEFT-aligned (was text-center) — Figma flows the
-        //     paragraphs as standard long-form copy across wide rows,
-        //     not as centered marketing pitches.
-        //   • Headings switched to font-subhead (1903 Sans, the "clean
-        //     wide geometric" cut) instead of font-headline (1903 Sans
-        //     Condensed). Headline-condensed was visually too compressed
-        //     for these section titles per BUG_UI_003 #4.
-        //   • Bullets: dropped orange list-disc markers entirely per
-        //     BUG_UI_003 #3 ("unauthorized orange bullet points
-        //     injected"). The list now renders as a clean unbulleted
-        //     stack, indented at pl-0 with each item spaced for scan.
-        <section className="bg-hd-white py-14 md:py-16 lg:py-20">
-          <div className="max-w-6xl mx-auto px-6 md:px-10">
+        // QA RE-OPEN: latest Figma reverts the alignment from LEFT
+        // back to CENTER and restores the formal "MOTORCYCLES" noun in
+        // the headlines. Body copy gets a center-aligned soft off-white
+        // canvas card (bg-surface-light) so the section stops looking
+        // like flat raw white. En-dash (–) used in the subtitle, not
+        // em-dash (—). "donor motorcycle" replaces "demo motorcycle".
+        <section className="bg-surface-light py-14 md:py-16 lg:py-20">
+          <div className="max-w-4xl mx-auto px-6 md:px-10 text-center">
             <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
-              What Are The Benefits Of H-D Certified&trade; Approved Used Bikes?
+              What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
             <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
               When you own any Harley-Davidson motorcycle the expectations are sky high,
@@ -128,9 +119,9 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
           </div>
 
-          <div className="max-w-6xl mx-auto px-6 md:px-10 mt-12 md:mt-16">
+          <div className="max-w-4xl mx-auto px-6 md:px-10 mt-12 md:mt-16 text-center">
             <h3 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
-              Overview Of H-D Certified&trade; — Ride With Confidence
+              Overview Of H-D Certified&trade; &ndash; Ride With Confidence
             </h3>
             <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
               The desire of H-D Certified&trade; is to become the go to place for all customers
@@ -141,14 +132,14 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
             <p className="mt-4 text-[15px] md:text-base text-gray-700 leading-relaxed">
               An H-D Certified&trade; Approved Used motorcycle can be a fantastic first entry
-              point to the Harley-Davidson brand or a cost-effective demo motorcycle for a custom
+              point to the Harley-Davidson brand or a cost-effective donor motorcycle for a custom
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
-            {/* BUG_UI_003 #3: removed the orange list-disc markers per
-                Figma; the list is a clean unbulleted stack with minimal
-                indentation, each item on its own line. */}
-            <ul className="mt-4 max-w-3xl text-[15px] md:text-base text-gray-700 leading-relaxed space-y-1.5">
+            {/* Center-aligned bullet list — items themselves stay
+                left-aligned within the centered block so multi-line
+                bullets read cleanly. */}
+            <ul className="mt-4 max-w-2xl mx-auto text-left text-[15px] md:text-base text-gray-700 leading-relaxed space-y-1.5">
               {OVERVIEW_BULLETS.map((b) => (
                 <li key={b}>{b}</li>
               ))}

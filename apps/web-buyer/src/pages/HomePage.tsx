@@ -22,26 +22,17 @@ export function HomePage() {
       <HeroSearch />
       <BenefitsSection />
 
-      <div className="bg-hd-white py-10 text-center border-t border-gray-200">
+      {/* QA RE-OPEN: CTA — drop rounded corners, drop the top/bottom
+          gray divider lines, swap the arrow glyph for a clean chevron
+          (›). The section now sits seamlessly between Benefits and
+          Featured Certified per Figma. */}
+      <div className="bg-hd-white py-10 text-center">
         <Link
           to="/search"
-          className="inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition rounded-card group"
+          className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
         >
           <span>View All Approved Used Stock</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 transition-transform group-hover:translate-x-1"
-            aria-hidden
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-            <polyline points="12 5 19 12 12 19" />
-          </svg>
+          <span aria-hidden className="text-lg leading-none">&rsaquo;</span>
         </Link>
       </div>
 

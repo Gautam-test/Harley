@@ -85,7 +85,7 @@ export function SiteHeader() {
 
         {/* Desktop nav — visible at md and above. Below md it collapses into
             the hamburger drawer below. */}
-        <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+        <nav className="hidden lg:flex items-center gap-6 lg:gap-8">
           <NavLink to="/" className={navLinkClasses} end>
             Home
           </NavLink>
@@ -114,7 +114,7 @@ export function SiteHeader() {
           aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen((v) => !v)}
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center text-hd-white hover:text-hd-white/80 transition"
+          className="lg:hidden inline-flex h-10 w-10 items-center justify-center text-hd-white hover:text-hd-white/80 transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -152,9 +152,9 @@ export function SiteHeader() {
             type="button"
             aria-label="Close menu backdrop"
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 top-20 z-30 bg-hd-black/60 md:hidden"
+            className="fixed inset-0 top-20 z-30 bg-hd-black/60 lg:hidden"
           />
-          <nav className="md:hidden fixed inset-x-0 top-20 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
+          <nav className="lg:hidden fixed inset-x-0 top-20 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
             <NavLink to="/" className={drawerLinkClasses} end>
               Home
             </NavLink>

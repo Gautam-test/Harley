@@ -590,7 +590,7 @@ export function InfoGateModal({
     // modal — Verify and Resend look unresponsive on mobile. Bumping to
     // z-60 puts OTP unambiguously on top for both paint AND hit-testing.
     // QA: "Verify+Resend not working on Sell Your Motorcycle (works on Buy)".
-    <div className="fixed inset-0 z-[60] bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
+    <div className="fixed inset-0 z-[60] bg-black/80 flex items-start justify-center px-3 sm:px-4 pt-6 pb-12 sm:py-8 overflow-y-auto">
       <div
         className={`bg-hd-white border-t-4 border-hd-orange ${
           isBuyerEnquiry && step === 'collect' ? 'max-w-xl' : 'max-w-md'

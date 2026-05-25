@@ -189,7 +189,11 @@ export function SellBikeModal() {
 
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
+      {/* QA RE-OPEN responsive: pb-12 sm:pb-8 ensures the Send Enquiry
+          CTA never clips under the mobile browser chrome / safe area.
+          The overflow-y-auto + my-auto pattern centres content but the
+          extra bottom pad gives wiggle room above the address bar. */}
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-3 sm:px-4 pt-6 pb-12 sm:py-8 overflow-y-auto">
         <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-xl my-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">

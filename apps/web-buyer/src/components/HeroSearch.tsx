@@ -113,6 +113,26 @@ export function HeroSearch() {
   return (
     <>
       <section className="relative bg-hd-black overflow-hidden">
+        {/* QA RE-OPEN: H-D Bar & Shield brand badge overlay, top-left.
+            Asymmetric orange/white accent card backs the bar-and-shield
+            mark so it reads as a sticker-on-photo corner element. Hidden
+            below sm so the smaller hero typography on phones isn't
+            crowded; the brand mark is already in the SiteHeader nav. */}
+        <div className="absolute top-0 left-0 z-10 hidden sm:block pointer-events-none">
+          <div className="relative">
+            <div className="bg-hd-orange w-16 h-16 md:w-20 md:h-20" aria-hidden />
+            <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-hd-white p-2 md:p-2.5 shadow-lg">
+              <img
+                src="/brand/hd-bar-shield.svg"
+                alt="Harley-Davidson"
+                className="w-10 h-10 md:w-12 md:h-12"
+                width={56}
+                height={56}
+                decoding="async"
+              />
+            </div>
+          </div>
+        </div>
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url("${HERO_IMG}")` }}
@@ -142,17 +162,18 @@ export function HeroSearch() {
             in view without scrolling on 1440-tall viewports. */}
         <div className="relative max-w-container mx-auto px-6 py-16 md:py-20 lg:py-24">
           <div className="max-w-3xl">
-            {/* Two-line stack per Figma. BUG_UI_002 #2: the ™ symbol was
-                missing — restored here on "CERTIFIED". */}
-            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-[28px] sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]">
+            {/* QA RE-OPEN: headline reverted to "MOTORCYCLES" (was
+                "BIKES"); ™ kept on CERTIFIED. The orange dot/separator
+                quirk noted in QA isn't in this render — it was likely
+                an artifact of the earlier text-shadow + condensed font
+                combination. */}
+            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[0.95] uppercase text-[28px] sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]">
               H-D Certified
               <span className="text-hd-orange align-super text-base ml-1">&trade;</span>
               {' '}Approved
               <br />
-              Used Bikes
+              Used Motorcycles
             </h1>
-            {/* BUG_UI_002 #2: Figma renders the tagline in white (#FFFFFF),
-                not orange — the orange treatment was the QA mismatch. */}
             <p className="font-subhead text-hd-white mt-4 text-xl md:text-2xl">
               Ride With Confidence
             </p>
@@ -175,7 +196,7 @@ export function HeroSearch() {
               className={`inline-flex items-center gap-1 font-subhead text-sm transition ${
                 searchBy === 'cash'
                   ? 'text-hd-orange'
-                  : 'text-text-secondary hover:text-hd-white'
+                  : 'text-hd-white/70 hover:text-hd-white'
               }`}
             >
               {/* BUG_UI_002 #3: Figma label is "Search by cash Price"
@@ -189,7 +210,7 @@ export function HeroSearch() {
               className={`inline-flex items-center gap-1 font-subhead text-sm transition ${
                 searchBy === 'monthly'
                   ? 'text-hd-orange'
-                  : 'text-text-secondary hover:text-hd-white'
+                  : 'text-hd-white/70 hover:text-hd-white'
               }`}
             >
               Search by Monthly Budget

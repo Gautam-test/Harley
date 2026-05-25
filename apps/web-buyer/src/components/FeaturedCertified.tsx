@@ -43,15 +43,25 @@ export function FeaturedCertified() {
             to="/search"
             className="hidden sm:inline-flex items-center border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:bg-hd-black hover:text-hd-white transition mt-7"
           >
-            View All Approved Used Stock →
+            View All Approved Used Stock ›
           </Link>
         </div>
+        {/* QA RE-OPEN: copy uses sentence case with a period after
+            "Dealer Network." per Figma — was "dealer network —" with
+            an em-dash. */}
         <p className="text-[15px] text-gray-700 max-w-3xl mb-8 leading-relaxed">
-          Hand-picked Harley-Davidson&trade; motorcycles from our authorised dealer
-          network — each one inspected, verified, and ready to ride.
+          Hand-picked Harley-Davidson&trade; motorcycles from our Authorised Dealer Network.
+          Each one inspected, verified, and ready to ride.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* QA RE-OPEN: grid forces 4 columns on lg+ with equal-height
+            cells via items-stretch, so each card matches its neighbour
+            regardless of title length. First card receives a default
+            highlighted state — orange box-shadow glow + orange border
+            via [&>*:first-child]:ring-2 [&>*:first-child]:ring-hd-orange
+            descendant selectors so we don't have to refactor
+            ListingCardItem's props. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch [&>a:first-child]:ring-2 [&>a:first-child]:ring-hd-orange [&>a:first-child]:shadow-[0_0_24px_rgba(255,102,0,0.35)] [&>button:first-child]:ring-2 [&>button:first-child]:ring-hd-orange [&>button:first-child]:shadow-[0_0_24px_rgba(255,102,0,0.35)]">
           {isLoading &&
             Array.from({ length: 4 }).map((_, i) => <ListingCardSkeleton key={i} />)}
           {!isLoading &&
