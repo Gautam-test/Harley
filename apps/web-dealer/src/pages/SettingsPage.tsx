@@ -9,7 +9,7 @@ export function SettingsPage() {
       </h1>
       <p className="text-gray-600 text-sm mt-2">Account details and dealer profile.</p>
 
-      <div className="bg-hd-white border border-gray-200 rounded-card mt-6 max-w-xl divide-y divide-gray-200">
+      <div className="bg-hd-white border border-gray-200 mt-6 max-w-xl divide-y divide-gray-200">
         <Row label="Display Name" value={user?.name ?? '—'} />
         <Row label="Role" value="Dealer Principal" />
         <Row label="User ID" value={user?.id ?? '—'} mono />

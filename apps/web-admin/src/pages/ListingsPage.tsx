@@ -176,7 +176,7 @@ export function ListingsPage() {
       {publishAlert && (
         <div
           role="alert"
-          className="mb-6 bg-danger/10 border border-danger/40 rounded-card px-4 py-3 flex items-start gap-3"
+          className="mb-6 bg-danger/10 border border-danger/40 px-4 py-3 flex items-start gap-3"
         >
           <span
             aria-hidden
@@ -241,7 +241,7 @@ export function ListingsPage() {
           Status stacks badge + created date. Actions stack vertically so
           the column stays narrow even with the Publish / Return / Deactivate /
           Remove combinations on draft rows. */}
-      <div className="bg-hd-white border border-gray-200 rounded-card overflow-x-auto">
+      <div className="bg-hd-white border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50/80">
             <tr>

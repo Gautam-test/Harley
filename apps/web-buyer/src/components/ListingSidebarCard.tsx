@@ -94,20 +94,20 @@ export function ListingSidebarCard({
 
   return (
     <>
-      <div className="bg-hd-white border border-gray-200 rounded-card overflow-hidden">
+      <div className="bg-hd-white border border-gray-200 overflow-hidden">
         {/* Price + EMI from */}
         <div className="p-5">
-          <p className="font-headline tracking-headline text-3xl text-text-on-light leading-none">
+          {/* Price wordmark in font-subhead (1903 Sans) per the Figma
+              parity pass — Condensed was visually compressing the rupee
+              + digits and felt off-spec next to the calmer card chrome. */}
+          <p className="font-subhead font-bold tracking-subhead text-3xl text-text-on-light leading-none">
             ₹ {price.toLocaleString('en-IN')}
           </p>
-          {/* Indicative-pricing disclosure — mandatory once we go live in
-              India because the marketplace doesn't transact (RTO, on-road,
-              GST and any insurance bundle quote come from the dealer
-              direct). Buyer-protection regulators flag fixed-price displays
-              without this caption as misleading. */}
-          <p className="text-[11px] text-gray-500 mt-1 leading-snug">
-            Indicative ex-showroom · RTO, insurance &amp; on-road quoted by the dealer
-          </p>
+          {/* QA NEW: "Indicative ex-showroom — RTO, insurance & on-road
+              quoted by the dealer" caption removed per Figma — the
+              clutter wasn't in the design spec. The disclosure now
+              lives only on the EMI calculator footer + listing detail
+              spec table. */}
           <p className="text-xs text-gray-500 mt-2">
             EMI From{' '}
             <span className="text-hd-orange font-subhead">
@@ -126,7 +126,7 @@ export function ListingSidebarCard({
             Authorised H-D dealer · {dealerCity}
           </p>
 
-          <div className="mt-3 aspect-[16/9] border border-gray-200 rounded-card overflow-hidden bg-surface-light">
+          <div className="mt-3 aspect-[16/9] border border-gray-200 overflow-hidden bg-surface-light">
             <iframe
               title={`Map for ${dealerName}`}
               src={mapsEmbed}
@@ -177,9 +177,9 @@ export function ListingSidebarCard({
                   setModalOpen(true);
                 }}
                 disabled={submitting}
-                className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:brightness-110 transition disabled:opacity-60"
+                className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:brightness-110 transition disabled:opacity-60"
               >
-                {submitting ? 'Sending…' : 'Visit Dealer'}
+                {submitting ? 'Sending…' : 'Enquire With Dealer'}
               </button>
               {/* QA: the previous "You've already enquired" amber banner
                   AND the "You've already verified — clicking will submit"
@@ -195,7 +195,7 @@ export function ListingSidebarCard({
                   with a real phone and has full context. */}
               <Link
                 to={dealersHref}
-                className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 rounded-card hover:bg-hd-black hover:text-hd-white transition"
+                className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:bg-hd-black hover:text-hd-white transition"
               >
                 View Dealer Details
               </Link>
@@ -204,7 +204,7 @@ export function ListingSidebarCard({
               )}
             </>
           ) : (
-            <div className="bg-hd-black text-hd-white rounded-card overflow-hidden">
+            <div className="bg-hd-black text-hd-white overflow-hidden">
               <div className="bg-hd-orange px-4 py-2.5 flex items-center gap-2">
                 <span
                   aria-hidden
@@ -217,7 +217,7 @@ export function ListingSidebarCard({
                 </span>
               </div>
               <div className="px-4 py-4">
-                <p className="font-headline tracking-headline uppercase text-base leading-tight">
+                <p className="font-subhead font-bold tracking-subhead uppercase text-base leading-tight">
                   Thank you. <span className="text-hd-orange">Ride With Confidence.</span>
                 </p>
                 <p className="text-sm text-text-secondary mt-2 leading-relaxed">
@@ -235,7 +235,7 @@ export function ListingSidebarCard({
 
                 <Link
                   to={`/track?id=${submitted.id}`}
-                  className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 rounded-card hover:brightness-110 transition"
+                  className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
                 >
                   Track Your Enquiry →
                 </Link>

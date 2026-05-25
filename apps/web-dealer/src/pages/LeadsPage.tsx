@@ -206,7 +206,7 @@ export function LeadsPage() {
             Status  = status badge + received date below
           Wider cells beat narrow ones for scan-ability — easier than reading
           across 9 thin columns. */}
-      <div className="bg-hd-white border border-gray-200 mt-6 overflow-x-auto rounded-card">
+      <div className="bg-hd-white border border-gray-200 mt-6 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50/80">
             <tr>
@@ -328,7 +328,7 @@ export function LeadsPage() {
                 <Td className="text-right pr-4">
                   <Link
                     to={`/leads/${l.kind}/${l.id}`}
-                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-black hover:border-hd-orange transition rounded-card"
+                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-black hover:border-hd-orange transition"
                   >
                     Open
                   </Link>
@@ -354,7 +354,7 @@ export function LeadsPage() {
                 setChooserOpen(false);
                 setFormMode('buyer');
               }}
-              className="text-left border border-gray-300 rounded-card p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
+              className="text-left border border-gray-300 p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
             >
               <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
                 Buyer Enquiry
@@ -369,7 +369,7 @@ export function LeadsPage() {
                 setChooserOpen(false);
                 setFormMode('trade-in');
               }}
-              className="text-left border border-gray-300 rounded-card p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
+              className="text-left border border-gray-300 p-4 hover:border-hd-orange hover:bg-hd-orange/5 transition"
             >
               <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
                 Seller Enquiry
@@ -1168,7 +1168,7 @@ function ModalShell({
     >
       <div
         data-modal-form
-        className="bg-hd-white border border-gray-200 rounded-card max-w-3xl w-full p-4 sm:p-6 shadow-2xl"
+        className="bg-hd-white border border-gray-200 max-w-3xl w-full p-4 sm:p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">

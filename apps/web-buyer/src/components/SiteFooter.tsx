@@ -1,64 +1,64 @@
 import { Link } from 'react-router-dom';
 
+// BUG_UI_010 rebuild — the Figma footer is a minimalist single horizontal
+// inline bar (NOT the multi-column fat footer the earlier BUG_UI_007
+// iteration produced). This version supersedes that one:
+//
+//   Layout : flex row — brand wordmark on the far left, 4 pipe-separated
+//            links on the right ("Privacy Policy | Cookie Policy |
+//            About us | Contact Us"). Wraps to a stack on mobile so the
+//            links don't overflow.
+//   Brand  : "H-D CERTIFIED" in 1903 Sans (wide), solid white, with a
+//            single orange dash glyph between "H" and "D" — no
+//            "CERTIFIED" recolor.
+//   Drops  : the entire copyright/trademark sub-bar (not in the Figma
+//            spec per BUG_UI_010 #4).
+//   Drops  : the "Cookie Policy" link was missing from the previous
+//            build — added here. "About us" stays lowercase 'u'.
+//   Drops  : the previous Search Stock / Sell Your Bike / Track
+//            Enquiry / FAQ / Terms & Conditions links — not in the
+//            Figma spec per BUG_UI_010 #3.
+const LINKS: { to: string; label: string }[] = [
+  { to: '/privacy', label: 'Privacy Policy' },
+  { to: '/cookies', label: 'Cookie Policy' },
+  { to: '/about', label: 'About us' },
+  { to: '/contact', label: 'Contact Us' },
+];
+
 export function SiteFooter() {
   return (
     <footer className="bg-hd-black border-t border-surface-2 mt-16">
-      <div className="max-w-container mx-auto px-6 py-12 grid md:grid-cols-4 gap-8 text-sm">
-        <div>
-          <div className="font-headline text-xl tracking-headline text-hd-white mb-3">
-            H-D <span className="text-hd-orange">CERTIFIED</span>
-          </div>
-          <p className="text-text-secondary leading-relaxed">
-            Approved Used Motorcycles, exclusively from authorised Harley-Davidson dealers.
-          </p>
-        </div>
-        {/* Each section header is itself a Link to the canonical landing
-            page for that subtype — clicking "Marketplace" opens the search
-            grid, "Information" opens About, "Legal" opens Terms. Earlier
-            the headers were plain <h3> labels (QA Bug 4 — "Clicking
-            Marketplace/Info/Legal links should open the main landing page
-            for that subtype"). */}
-        <div>
-          <h3 className="font-subhead text-text-primary mb-3">
-            <Link to="/search" className="hover:text-hd-orange transition">
-              Marketplace
-            </Link>
-          </h3>
-          <ul className="space-y-2 text-text-secondary">
-            <li><Link to="/search" className="hover:text-hd-orange">Search Stock</Link></li>
-            <li><Link to="/sell-bike" className="hover:text-hd-orange">Sell Your Motorcycle</Link></li>
-            <li><Link to="/track" className="hover:text-hd-orange">Track Enquiry</Link></li>
+      <div className="max-w-container mx-auto px-6 py-6 md:py-7 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Brand wordmark to match the SiteHeader. The bar-and-shield
+            variant was introduced in an earlier iteration but the latest
+            Figma reverts both header AND footer to the wordmark. */}
+        <Link
+          to="/"
+          aria-label="H-D Certified — home"
+          className="inline-flex items-center font-subhead font-bold uppercase tracking-[0.18em] text-base md:text-lg text-hd-white hover:text-hd-white/80 transition"
+        >
+          <span>H</span>
+          <span aria-hidden className="inline-block w-3 h-[3px] bg-hd-orange mx-2 align-middle" />
+          <span>D Certified</span>
+        </Link>
+
+        {/* Inline link row. Pipe dividers between items. On mobile the
+            row wraps and the pipes are hidden via the last:hidden
+            sibling rule. */}
+        <nav aria-label="Footer">
+          <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 font-body text-[13px] text-hd-white">
+            {LINKS.map((l, i) => (
+              <li key={l.to} className="inline-flex items-center gap-x-3">
+                <Link to={l.to} className="hover:text-hd-orange transition">
+                  {l.label}
+                </Link>
+                {i < LINKS.length - 1 && (
+                  <span aria-hidden className="text-hd-white/40">|</span>
+                )}
+              </li>
+            ))}
           </ul>
-        </div>
-        <div>
-          <h3 className="font-subhead text-text-primary mb-3">
-            <Link to="/about" className="hover:text-hd-orange transition">
-              Information
-            </Link>
-          </h3>
-          <ul className="space-y-2 text-text-secondary">
-            <li><Link to="/about" className="hover:text-hd-orange">About</Link></li>
-            <li><Link to="/faq" className="hover:text-hd-orange">FAQ</Link></li>
-            <li><Link to="/contact" className="hover:text-hd-orange">Contact</Link></li>
-          </ul>
-        </div>
-        <div>
-          <h3 className="font-subhead text-text-primary mb-3">
-            <Link to="/terms" className="hover:text-hd-orange transition">
-              Legal
-            </Link>
-          </h3>
-          <ul className="space-y-2 text-text-secondary">
-            <li><Link to="/terms" className="hover:text-hd-orange">Terms &amp; Conditions</Link></li>
-            <li><Link to="/privacy" className="hover:text-hd-orange">Privacy Policy</Link></li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-surface-2">
-        <div className="max-w-container mx-auto px-6 py-4 text-xs text-text-secondary flex justify-between">
-          <span>&copy; {new Date().getFullYear()} H-D Certified Marketplace</span>
-          <span>Harley-Davidson&reg; is a registered trademark.</span>
-        </div>
+        </nav>
       </div>
     </footer>
   );

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
@@ -6,20 +7,28 @@ interface DealerLocation {
   name: string;
   city: string;
   pincode: string;
+  address: string | null;
+  phone: string | null;
   latitude: number | null;
   longitude: number | null;
+  distanceKm: number | null;
 }
 
 // PRD §6.1.1 — dealer locator with map + list of nearest dealers.
-// Map is an embed (Google Maps Embed API); a real Maps JS integration with
-// markers + clustering wires once GOOGLE_MAPS_API_KEY is provided.
 //
-// Shows the THREE nearest dealers. The API endpoint sorts by haversine
-// distance from the supplied lat/lng (we use the India centroid since the
-// buyer hasn't shared their location at this point in the journey), so
-// slicing top 3 gives the geographically closest dealerships. Buyers who
-// want the full list can use the search-page filter sidebar's pincode +
-// distance fields.
+// BUG_UI_006 rebuild:
+//   • Heading switched to font-subhead (1903 Sans, wide cut) — was
+//     font-headline Condensed, which read as compressed vertical block.
+//   • First card is selected by DEFAULT on mount (orange background,
+//     white text). Click any other card to swap selection.
+//   • Each card carries name, multi-line address (street + city +
+//     pincode), phone (tel: link), and distance ("4.5 KM AWAY") when
+//     the API returns coords.
+//   • "VIEW DETAILS →" link dropped — the card itself is the action.
+//   • Sub-headline copy aligned with Figma: "authorized" (z), ® not ™,
+//     and second sentence reads "Find the one closest to you."
+//   • Map iframe re-points to the selected dealer's location on every
+//     selection change so the pin always matches the active card.
 const VISIBLE_DEALERS = 3;
 
 export function DealerLocator() {
@@ -27,64 +36,146 @@ export function DealerLocator() {
     queryKey: ['public-dealers'],
     queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=5000'),
   });
-  const visible = data?.slice(0, VISIBLE_DEALERS) ?? [];
+  const visible = useMemo(() => data?.slice(0, VISIBLE_DEALERS) ?? [], [data]);
 
-  // Centre on India by default; recentre client-side with geolocation in Sprint 6.
-  const mapSrc =
-    'https://www.google.com/maps?q=Harley-Davidson+India&output=embed';
+  // Default-select the first dealer once data arrives. Subsequent loads
+  // keep the user's selection if it's still in the list, otherwise fall
+  // back to the first row.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    const first = visible[0];
+    if (!first) return;
+    if (!selectedId || !visible.some((d) => d.id === selectedId)) {
+      setSelectedId(first.id);
+    }
+  }, [visible, selectedId]);
+
+  const selected = visible.find((d) => d.id === selectedId) ?? visible[0] ?? null;
+
+  // Map iframe URL — focuses on the selected dealer when we have one,
+  // otherwise falls back to a country-level view. Using the lightweight
+  // "?q=...&output=embed" form (no API key required) — the marker is the
+  // single result for the query, so the chaotic global pin cluster from
+  // the previous "Harley-Davidson India" search is gone.
+  const mapSrc = selected
+    ? `https://www.google.com/maps?q=${encodeURIComponent(
+        `${selected.name} ${selected.address ?? ''} ${selected.city} ${selected.pincode}`,
+      )}&output=embed`
+    : 'https://www.google.com/maps?q=India&output=embed';
 
   return (
-    <section className="bg-surface-light py-20 border-t border-gray-200" aria-labelledby="dealer-locator-heading">
+    <section
+      className="bg-surface-light py-20 border-t border-gray-200"
+      aria-labelledby="dealer-locator-heading"
+    >
       <div className="max-w-container mx-auto px-6">
-        {/* Figma /Customer/Home.png — preheader "THE DEALER NETWORK" sits
-            above the h2 "FIND YOUR DEALER" (DEALER in orange). */}
-        <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+        <p className="font-subhead font-bold uppercase tracking-subhead text-[11px] text-hd-orange">
           The Dealer Network
         </p>
         <h2
           id="dealer-locator-heading"
-          className="font-headline text-3xl md:text-5xl tracking-headline uppercase text-text-on-light mt-2"
+          className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light mt-2 leading-tight"
         >
           Find Your <span className="text-hd-orange">Dealer</span>
         </h2>
-        <p className="font-body text-gray-600 mt-4 max-w-2xl text-sm leading-relaxed">
-          Every certified motorcycle is backed by an authorised Harley-Davidson&trade;
-          dealer. Use the map below to find one near you.
+        {/* BUG_UI_006 #4: Figma copy uses "authorized" (z), the ®
+            symbol (not ™), and "Find the one closest to you" as the
+            second sentence. */}
+        <p className="font-body text-gray-600 mt-4 max-w-2xl text-[15px] leading-relaxed">
+          Every certified motorcycle is backed by an authorized Harley-Davidson&reg; dealer.
+          Find the one closest to you.
         </p>
-        {/* List LEFT, map RIGHT per Figma — opposite of the previous arrangement. */}
-        <div className="mt-10 grid lg:grid-cols-2 gap-8 items-stretch">
-          <div className="bg-hd-white border border-gray-200 p-6 max-h-[28rem] overflow-y-auto">
-            {isLoading && <p className="text-gray-600 text-sm">Loading…</p>}
-            {data?.length === 0 && (
-              <p className="text-gray-600 text-sm">No dealers added yet.</p>
+
+        <div className="mt-10 grid lg:grid-cols-2 gap-6 items-stretch">
+          {/* Dealer list (left) */}
+          <div className="bg-hd-white border border-gray-200 p-4 max-h-[28rem] overflow-y-auto">
+            {isLoading && <p className="text-gray-600 text-sm px-2 py-1">Loading dealers…</p>}
+            {!isLoading && data?.length === 0 && (
+              <p className="text-gray-600 text-sm px-2 py-1">No dealers added yet.</p>
             )}
-            <ul className="space-y-4">
-              {visible.map((d) => (
-                <li
-                  key={d.id}
-                  className="border border-gray-200 p-4 hover:border-hd-orange transition"
-                >
-                  <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
-                    {d.name} — {d.city.toUpperCase()}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-1.5 leading-snug">
-                    {d.city} · {d.pincode}
-                  </p>
-                  <a
-                    href={`https://www.google.com/maps?q=${encodeURIComponent(d.name + ' ' + d.city)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block mt-2 text-[11px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
-                  >
-                    View Details →
-                  </a>
-                </li>
-              ))}
+            <ul className="space-y-3">
+              {visible.map((d) => {
+                const isActive = d.id === selectedId;
+                return (
+                  <li key={d.id}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedId(d.id)}
+                      aria-pressed={isActive}
+                      className={`w-full text-left p-4 border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-hd-orange ${
+                        isActive
+                          ? 'bg-hd-orange border-hd-orange text-hd-white'
+                          : 'bg-hd-white border-gray-200 text-text-on-light hover:border-hd-orange'
+                      }`}
+                    >
+                      <p
+                        className={`font-subhead font-bold uppercase tracking-subhead text-[13px] leading-tight ${
+                          isActive ? 'text-hd-white' : 'text-text-on-light'
+                        }`}
+                      >
+                        {d.name}
+                      </p>
+                      {/* Multi-line address: street (if available) on one
+                          line, city + pincode on the next. */}
+                      {d.address && (
+                        <p
+                          className={`text-[12px] mt-1.5 leading-snug ${
+                            isActive ? 'text-hd-white/90' : 'text-gray-700'
+                          }`}
+                        >
+                          {d.address}
+                        </p>
+                      )}
+                      <p
+                        className={`text-[12px] mt-0.5 leading-snug ${
+                          isActive ? 'text-hd-white/90' : 'text-gray-700'
+                        }`}
+                      >
+                        {d.city} &middot; {d.pincode}
+                      </p>
+
+                      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-3">
+                        {d.phone && (
+                          // Active state: white on orange — hover stays
+                          // white + underline (NOT orange — would fail
+                          // WCAG AA contrast on the orange bg). Inactive
+                          // state: orange link with hover-darken.
+                          <a
+                            href={`tel:${d.phone.replace(/\s+/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`font-body text-[12px] underline-offset-2 ${
+                              isActive
+                                ? 'text-hd-white hover:underline'
+                                : 'text-hd-orange hover:brightness-90 hover:underline'
+                            }`}
+                          >
+                            {d.phone}
+                          </a>
+                        )}
+                        {d.distanceKm != null && (
+                          <span
+                            className={`font-subhead uppercase tracking-subhead text-[10px] ${
+                              isActive ? 'text-hd-white' : 'text-gray-500'
+                            }`}
+                          >
+                            {d.distanceKm} KM AWAY
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
+
+          {/* Map (right) — re-renders on selection change via the key
+              prop so the iframe genuinely re-navigates rather than
+              keeping its previous viewport. */}
           <div className="bg-hd-white border border-gray-200 min-h-80 overflow-hidden">
             <iframe
-              title="Dealer locator map"
+              key={selected?.id ?? 'fallback'}
+              title={selected ? `Map of ${selected.name}` : 'Dealer locator map'}
               src={mapSrc}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

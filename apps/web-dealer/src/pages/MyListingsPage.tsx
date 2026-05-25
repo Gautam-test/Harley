@@ -171,7 +171,7 @@ export function MyListingsPage() {
 
       {/* Admin feedback banner — surfaces drafts the admin returned for fixes */}
       {returnedDrafts.length > 0 && (
-        <div className="mb-6 bg-danger/10 border border-danger/40 rounded-card p-4 space-y-3">
+        <div className="mb-6 bg-danger/10 border border-danger/40 p-4 space-y-3">
           <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
             {returnedDrafts.length} listing{returnedDrafts.length === 1 ? '' : 's'} need
             {returnedDrafts.length === 1 ? 's' : ''} your attention
@@ -198,7 +198,7 @@ export function MyListingsPage() {
                   which hydrates the wizard from the existing draft. */}
               <Link
                 to={`/listings/${l.id}/edit`}
-                className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-110 transition"
+                className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
               >
                 Resume Edit →
               </Link>
@@ -261,7 +261,7 @@ export function MyListingsPage() {
           stacks rupee + CPO/As-Is badge. Status column stacks the status
           badge + the listed date. Actions stack vertically so the column
           stays narrow and the available actions remain glanceable. */}
-      <div className="bg-hd-white border border-gray-200 rounded-card overflow-x-auto">
+      <div className="bg-hd-white border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50/80 text-text-on-light">
             <tr>
@@ -698,7 +698,7 @@ function RemovedNotificationsCarousel({ rows }: { rows: DealerListingRow[] }) {
   const next = () => setIdx((i) => (i + 1) % total);
 
   return (
-    <div className="mb-6 bg-warning/10 border border-warning/40 rounded-card p-4">
+    <div className="mb-6 bg-warning/10 border border-warning/40 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
           {total} listing{total === 1 ? '' : 's'} removed by admin

@@ -186,7 +186,7 @@ export function DealerShell() {
               <span className="block font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
                 Dealer Portal
               </span>
-              <span className="block font-headline tracking-headline text-lg uppercase text-text-on-light truncate">
+              <span className="block font-subhead font-bold tracking-subhead text-lg uppercase text-text-on-light truncate">
                 {dealerName}
               </span>
             </span>

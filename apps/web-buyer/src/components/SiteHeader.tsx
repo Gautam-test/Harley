@@ -2,30 +2,30 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useMatch } from 'react-router-dom';
 import { useSellBikeStore } from '../store/sellBike';
 
-// Top-nav link weight: H-D 2026 guidelines reserve 1903 Bold (700) for
-// page headlines and primary CTAs. Nav items + the drawer rows use 1903
-// Regular (400) — overriding the .font-subhead utility's bundled 700 with
-// `font-normal` so the header doesn't read as visually heavier than the
-// page headline below it (QA bug — "Header font weight too heavy"). The
-// uppercase + tracking-subhead treatment carries the brand voice without
-// the bold cut.
+// Top-nav typography — per Figma BUG_UI_001 the active link text MUST
+// remain pure white (#FFFFFF); the orange underline is the only signal
+// for the active route. Earlier builds flipped both the text colour AND
+// the underline to orange, which read as a "selected state" but
+// destroyed the brand's "white wordmark / orange accent" rhythm. Font
+// weight stays at 500 (Medium) — heavier than body, lighter than the
+// 700 the header was using.
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `font-subhead font-normal uppercase tracking-subhead text-sm transition pb-1 border-b-2 ${
+  `font-subhead font-medium uppercase tracking-subhead text-sm transition pb-1 border-b-2 text-hd-white ${
     isActive
-      ? 'text-hd-orange border-hd-orange'
-      : 'text-text-primary border-transparent hover:text-hd-orange'
+      ? 'border-hd-orange'
+      : 'border-transparent hover:border-hd-orange/60'
   }`;
 
 const navButtonClasses =
-  'font-subhead font-normal uppercase tracking-subhead text-sm transition pb-1 border-b-2 border-transparent text-text-primary hover:text-hd-orange';
+  'font-subhead font-medium uppercase tracking-subhead text-sm transition pb-1 border-b-2 border-transparent text-hd-white hover:border-hd-orange/60';
 
-// Same NavLink active classes but adapted for the mobile drawer (no
-// underline; full-width row instead).
+// Mobile drawer — same white-text / orange-underline-equivalent treatment
+// using a left orange border for the active row instead of a bottom one.
 const drawerLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `block px-6 py-4 font-subhead font-normal uppercase tracking-subhead text-base border-l-4 transition ${
+  `block px-6 py-4 font-subhead font-medium uppercase tracking-subhead text-base border-l-4 transition text-hd-white ${
     isActive
-      ? 'text-hd-orange border-hd-orange bg-hd-orange/10'
-      : 'text-text-primary border-transparent hover:text-hd-orange hover:bg-surface-2/40'
+      ? 'border-hd-orange bg-hd-orange/10'
+      : 'border-transparent hover:bg-surface-2/40'
   }`;
 
 export function SiteHeader() {
@@ -61,17 +61,24 @@ export function SiteHeader() {
 
   return (
     <header className="bg-hd-black border-b border-surface-2 sticky top-0 z-40">
-      <div className="max-w-container mx-auto px-6 h-16 flex items-center justify-between">
+      {/* QA BUG_UI_001: bar height bumped 64 → 80px so the nav has the
+          breathing room Figma calls for ("premium padding values"). Logo
+          + links cross-axis-center inside the taller container; the
+          wordmark itself stays at h-9 so it doesn't outgrow the bar. */}
+      <div className="max-w-container mx-auto px-6 h-20 flex items-center justify-between">
+        {/* QA RE-OPEN (Search Stock Figma reference): header lockup
+            reverted to the "H-D CERTIFIED" wordmark — white H + orange
+            dash + "D CERTIFIED". The bar-and-shield + "Certified Pre-
+            Owned Marketplace" eyebrow from the earlier BUG_UI_002 pass
+            isn't in the latest Figma prototype, so we restore the
+            cleaner wordmark. */}
         <Link to="/" className="flex items-center group" aria-label="H-D Certified — home">
-          {/* H-D Certified™ wordmark — hand-authored SVG (light variant for
-              the dark header). The eyebrow text was removed at brand request;
-              the wordmark is the only header lockup. */}
           <img
             src="/brand/hd-certified-wordmark-light.svg"
-            alt="H-D Certified™"
-            className="h-8 w-auto"
-            width={172}
-            height={32}
+            alt="H-D Certified"
+            className="h-9 w-auto"
+            width={281}
+            height={36}
             decoding="async"
           />
         </Link>
@@ -85,7 +92,7 @@ export function SiteHeader() {
           <NavLink to="/search" className={searchActive}>
             Search Stock
           </NavLink>
-          {/* Sell Your Bike opens a modal globally rather than navigating to a
+          {/* Sell Your Motorcycle opens a modal globally rather than navigating to a
               standalone route — Figma /Customer/Frame 28.png shows it as a
               popup. The /sell-bike route is preserved as a deep-link fallback. */}
           <button
@@ -107,7 +114,7 @@ export function SiteHeader() {
           aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen((v) => !v)}
-          className="md:hidden inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-hd-orange transition"
+          className="md:hidden inline-flex h-10 w-10 items-center justify-center text-hd-white hover:text-hd-white/80 transition"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -145,9 +152,9 @@ export function SiteHeader() {
             type="button"
             aria-label="Close menu backdrop"
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 top-16 z-30 bg-hd-black/60 md:hidden"
+            className="fixed inset-0 top-20 z-30 bg-hd-black/60 md:hidden"
           />
-          <nav className="md:hidden fixed inset-x-0 top-16 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
+          <nav className="md:hidden fixed inset-x-0 top-20 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
             <NavLink to="/" className={drawerLinkClasses} end>
               Home
             </NavLink>
@@ -160,7 +167,7 @@ export function SiteHeader() {
                 openSellBike();
                 setDrawerOpen(false);
               }}
-              className="block w-full text-left px-6 py-4 font-subhead font-normal uppercase tracking-subhead text-base border-l-4 border-transparent text-text-primary hover:text-hd-orange hover:bg-surface-2/40 transition"
+              className="block w-full text-left px-6 py-4 font-subhead font-medium uppercase tracking-subhead text-base border-l-4 border-transparent text-hd-white hover:bg-surface-2/40 transition"
             >
               Sell Your Motorcycle
             </button>

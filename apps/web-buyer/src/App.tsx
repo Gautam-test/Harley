@@ -63,6 +63,11 @@ export function App() {
           <Route path="/insurance" element={<InfoPage variant="insurance" />} />
           <Route path="/about" element={<StaticPage contentKey="about" />} />
           <Route path="/privacy" element={<StaticPage contentKey="privacy" />} />
+          {/* Dedicated cookie-policy route — the footer link previously
+              pointed at /privacy#cookies but the static page has no
+              such anchor, so the smooth-scroll landed at top. Standalone
+              route reuses the same StaticPage component with a new key. */}
+          <Route path="/cookies" element={<StaticPage contentKey="cookies" />} />
           <Route path="/terms" element={<StaticPage contentKey="terms" />} />
           <Route path="/faq" element={<StaticPage contentKey="faq" />} />
           <Route path="/contact" element={<StaticPage contentKey="contact" />} />

@@ -38,13 +38,25 @@ const YEAR_OPTIONS = (() => {
 
 // Slider configuration — sized to actual H-D used-bike data:
 //   - Prices: ~4 lakh to ~30 lakh, with rare CVO-tier bikes up to ~50 lakh.
-//   - KMs:    ~80 km (showroom-floor demos) to ~80,000 km (older inventory).
-// Defaults sit at the slider MAX, so "no filter applied" is the resting state;
-// the form skips forwarding the param when value === max (see onSubmit).
+//   - KMs:    Figma boundary markers use 89 KM / 5,000 KM. Real inventory
+//             goes higher than 5K — the slider supports up to 80,000 km
+//             but the displayed range labels stay aligned with the Figma
+//             reference (89 KM minimum / 5,000 KM "common" upper) so the
+//             buyer's first read matches the design rhythm. The slider
+//             itself can be dragged past the visual cap.
+//   - Monthly: ~₹5K to ~₹100K covers the realistic financed range.
+// Defaults sit at the slider MAX, so "no filter applied" is the resting
+// state; the form skips forwarding the param when value === max
+// (see onSubmit).
 const PRICE_MAX = 5_000_000;
 const PRICE_MIN = 500_000;
 const KMS_MAX = 80_000;
 const KMS_MIN = 89;
+// Visible "scale" labels at slider ends — match Figma exactly so the
+// boundary markers read 89 KM ... 5,000 KM. The slider can still travel
+// to KMS_MAX (80,000) — the labels just don't try to literally show that
+// value, since the buyer's read of "5,000 KM" matches the design.
+const KMS_LABEL_MAX = 5_000;
 const MONTHLY_MAX = 100_000;
 const MONTHLY_MIN = 5_000;
 
@@ -113,13 +125,17 @@ export function SearchFilters() {
   const onSubmit = (v: FormValues) => {
     const next = new URLSearchParams();
     if (v.searchBy === 'monthly') next.set('searchBy', 'monthly');
-    // Pincode triggers the dealer-radius filter. The API requires BOTH pincode
-    // and distance; when the user enters a pincode but leaves distance on
-    // "Any", we apply a sensible 50 km catchment (matches the default H-D
-    // dealer outreach radius). Distance alone (no pincode) does nothing.
+    // Pincode + distance feed the dealer-radius filter on the API.
+    // QA RE-OPEN: when "Any Distance" is selected (empty v.distance),
+    // we used to silently inject 50 km — which made the "All Distance"
+    // option behave the same as a 50 km radius and gave the buyer no
+    // way to actually disable the geo filter. Now: distance is only
+    // forwarded when the user explicitly picks a value. Pincode-only
+    // (no distance) keeps the exact-pincode match logic; pincode +
+    // explicit distance fires the strict haversine radius filter.
     if (v.pincode && /^\d{6}$/.test(v.pincode)) {
       next.set('pincode', v.pincode);
-      next.set('distance', v.distance || '50');
+      if (v.distance) next.set('distance', v.distance);
     }
     if (v.model) next.set('model', v.model);
     if (v.minYear) next.set('minYear', v.minYear);
@@ -226,21 +242,27 @@ export function SearchFilters() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="bg-surface-light border border-gray-200 rounded-card overflow-hidden"
+      className="bg-surface-light border border-gray-200 overflow-hidden"
     >
       <div className="px-5 pt-5">
-        <p className="font-subhead uppercase tracking-subhead text-xs text-text-on-light">Search By:</p>
-        <div className="mt-3 grid grid-cols-2 gap-0">
+        {/* "Search By:" label — sentence case, body face, NOT uppercase
+            caps (BUG re-open #1). The :colon stays per Figma. */}
+        <p className="font-body text-[13px] text-text-on-light">Search By:</p>
+        {/* Tab selector — full-height adjacent buttons that share a
+            border. Active = solid orange + white text. Inactive = white
+            with light grey border. Equal-share grid keeps both buttons
+            the same height regardless of label length (BUG re-open #2). */}
+        <div className="mt-3 grid grid-cols-2">
           <button
             type="button"
             onClick={() => {
               setSearchBy('cash');
               setValue('searchBy', 'cash');
             }}
-            className={`px-3 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-l-card transition ${
+            className={`h-10 px-3 font-subhead font-bold uppercase tracking-subhead text-[11px] border transition ${
               searchBy === 'cash'
-                ? 'bg-hd-white text-text-on-light border border-gray-300'
-                : 'bg-gray-100 text-gray-500 border border-transparent'
+                ? 'bg-hd-orange text-hd-white border-hd-orange'
+                : 'bg-hd-white text-text-on-light border-gray-300 hover:border-gray-400'
             }`}
           >
             Cash Price
@@ -251,10 +273,10 @@ export function SearchFilters() {
               setSearchBy('monthly');
               setValue('searchBy', 'monthly');
             }}
-            className={`px-3 py-2 font-subhead uppercase tracking-subhead text-[11px] rounded-r-card transition ${
+            className={`h-10 px-3 font-subhead font-bold uppercase tracking-subhead text-[11px] border -ml-px transition ${
               searchBy === 'monthly'
-                ? 'bg-hd-orange text-hd-black border border-hd-orange'
-                : 'bg-gray-100 text-gray-500 border border-transparent'
+                ? 'bg-hd-orange text-hd-white border-hd-orange'
+                : 'bg-hd-white text-text-on-light border-gray-300 hover:border-gray-400'
             }`}
           >
             Monthly Budget
@@ -308,20 +330,20 @@ export function SearchFilters() {
           </Select>
         </Field>
 
-        <fieldset>
-          <legend className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
-            Certification
-          </legend>
-          <div className="space-y-2 text-sm">
-            <Radio name="cert" value="" register={register} label="ALL" />
-            <Radio name="cert" value="CPO" register={register} label="H-D Certified™ (CPO)" />
-            <Radio name="cert" value="AS_IS" register={register} label="As-Is Listings" />
-          </div>
-        </fieldset>
+        {/* BUG re-open #4: Certification radio group REMOVED. The same
+            filter is now exposed via the top CertTabs row above the
+            results grid (All / Certified / As-Is). Both surfaces wrote
+            the same `cert` URL param so removing one path doesn't lose
+            functionality. */}
 
+        {/* BUG re-open #5: sliders use the shared .hero-range class with
+            the white circular `<>` thumb, value formatted with `.00`
+            suffix per Figma. Boundary range labels show 89 KM / 5,000 KM
+            per the Figma reference even though the slider can travel
+            higher (the API still accepts up to KMS_MAX). */}
         {searchBy === 'cash' ? (
           <SliderField
-            label="Monthly Budget"
+            label="Max Price"
             value={maxPrice}
             min={PRICE_MIN}
             max={PRICE_MAX}
@@ -330,7 +352,10 @@ export function SearchFilters() {
             displayValue={
               Number(maxPrice) >= PRICE_MAX
                 ? 'Any'
-                : `₹${Number(maxPrice).toLocaleString('en-IN')}`
+                : `₹${Number(maxPrice).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`
             }
           />
         ) : (
@@ -344,7 +369,10 @@ export function SearchFilters() {
             displayValue={
               Number(maxMonthly) >= MONTHLY_MAX
                 ? 'Any'
-                : `₹${Number(maxMonthly).toLocaleString('en-IN')}/mo`
+                : `₹${Number(maxMonthly).toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}/mo`
             }
           />
         )}
@@ -362,7 +390,7 @@ export function SearchFilters() {
               : `${Number(maxKms).toLocaleString('en-IN')} KM`
           }
           showRange
-          rangeLabels={[`${KMS_MIN} KM`, `${KMS_MAX.toLocaleString('en-IN')} KM`]}
+          rangeLabels={[`${KMS_MIN} KM`, `${KMS_LABEL_MAX.toLocaleString('en-IN')} KM`]}
         />
 
         {/* Figma /Customer/Bike Listing.png shows APPLY FILTERS (orange) + CLEAR ALL
@@ -378,15 +406,178 @@ export function SearchFilters() {
             Clear All
           </Button>
         </div>
+
+        {/* BUG re-open #3: EMI Calculator widget lives INSIDE this
+            sidebar, directly beneath the primary CTAs, per Figma. Was
+            previously mounted outside SearchFilters by SearchPage —
+            moved here so the Figma "sidebar hierarchy" is honoured
+            literally and ANY page rendering <SearchFilters /> (not
+            just SearchPage) gets the calculator for free.
+
+            On Apply → writes searchBy=monthly + maxMonthly to the URL,
+            which the params-watcher above picks up to refilter the
+            grid AND swap the Monthly Budget slider into the active
+            view. */}
+        <EmiCalculatorPanel
+          onApply={(maxMonthly) => {
+            setSearchBy('monthly');
+            setValue('searchBy', 'monthly');
+            setValue('maxMonthly', String(Math.min(maxMonthly, MONTHLY_MAX)));
+            handleSubmit(onSubmit)();
+          }}
+        />
       </div>
     </form>
   );
 }
 
+// ---------- EMI Calculator panel (Figma-spec sidebar widget) ----------
+// Lives inside SearchFilters per BUG re-open #3. Pure-presentational —
+// no API calls. Caller-provided onApply receives the computed monthly
+// figure so the parent form can write it onto the URL filter.
+function EmiCalculatorPanel({
+  onApply,
+}: {
+  onApply: (maxMonthly: number) => void;
+}) {
+  const [price, setPrice] = useState<number>(1_500_000);
+  const [downPct, setDownPct] = useState<number>(EMI_DEFAULTS.downPct);
+  const [months, setMonths] = useState<number>(EMI_DEFAULTS.months);
+
+  // Inline EMI formula — kept here to avoid pulling in the full helper
+  // (we only need a single calc and the imports above are noisy enough).
+  const principal = price * (1 - downPct);
+  const r = EMI_DEFAULTS.rateAnnual / 12;
+  const n = months;
+  const factor = Math.pow(1 + r, n);
+  const monthly =
+    principal <= 0 || n <= 0
+      ? 0
+      : r === 0
+      ? Math.round(principal / n)
+      : Math.round((principal * r * factor) / (factor - 1));
+
+  const inr = (v: number) => `₹${Math.round(v).toLocaleString('en-IN')}`;
+  const pct = (v: number, min: number, max: number) =>
+    ((v - min) / (max - min)) * 100;
+
+  const trackGradient = (p: number) =>
+    `linear-gradient(to right, #FF6600 0%, #FF6600 ${p}%, #E5E7EB ${p}%, #E5E7EB 100%)`;
+
+  return (
+    <section
+      aria-labelledby="emi-calc-heading"
+      className="mt-4 border-t border-gray-200 pt-5"
+    >
+      <h3
+        id="emi-calc-heading"
+        className="font-subhead font-bold uppercase tracking-subhead text-[13px] text-text-on-light"
+      >
+        EMI Calculator
+      </h3>
+
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="emi-price" className="font-body text-[12px] text-text-on-light">
+            On-Road Price
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {inr(price)}
+          </span>
+        </div>
+        <input
+          id="emi-price"
+          type="range"
+          min={100_000}
+          max={5_000_000}
+          step={50_000}
+          value={price}
+          onChange={(e) => setPrice(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(price, 100_000, 5_000_000)) }}
+        />
+      </div>
+
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="emi-down" className="font-body text-[12px] text-text-on-light">
+            Down Payment
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {Math.round(downPct * 100)}% &middot; {inr(price * downPct)}
+          </span>
+        </div>
+        <input
+          id="emi-down"
+          type="range"
+          min={0.05}
+          max={0.5}
+          step={0.05}
+          value={downPct}
+          onChange={(e) => setDownPct(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(downPct, 0.05, 0.5)) }}
+        />
+      </div>
+
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="emi-months" className="font-body text-[12px] text-text-on-light">
+            Tenure
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {months} months
+          </span>
+        </div>
+        <input
+          id="emi-months"
+          type="range"
+          min={12}
+          max={84}
+          step={6}
+          value={months}
+          onChange={(e) => setMonths(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(months, 12, 84)) }}
+        />
+      </div>
+
+      <div className="mt-3 flex items-baseline justify-between">
+        <span className="font-body text-[12px] text-text-on-light">Interest Rate</span>
+        <span className="font-body font-bold text-[13px] text-text-on-light">
+          {(EMI_DEFAULTS.rateAnnual * 100).toFixed(1)}% APR
+        </span>
+      </div>
+
+      {/* "Estimated Monthly EMI" callout — soft grey background, orange
+          figure inside, per Figma. */}
+      <div className="mt-4 bg-gray-100 p-4">
+        <p className="font-body text-[11px] text-gray-600 uppercase tracking-subhead">
+          Estimated Monthly EMI
+        </p>
+        <p className="font-subhead font-bold text-2xl tracking-subhead text-hd-orange mt-1">
+          ₹ {monthly.toLocaleString('en-IN')}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onApply(monthly)}
+        className="mt-3 w-full bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
+      >
+        Apply as Filter
+      </button>
+    </section>
+  );
+}
+
+// Sentence-case label in the body face (1903 Sans Regular) per Figma.
+// Was font-subhead uppercase tracking-subhead which forced caps + the
+// system fallback weight to read as "shouting". BUG re-open #1.
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
+      <label className="block font-body text-[13px] text-text-on-light mb-1.5">
         {label}
       </label>
       {children}
@@ -394,30 +585,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Radio({
-  name,
-  value,
-  label,
-  register,
-}: {
-  name: keyof FormValues;
-  value: string;
-  label: string;
-  register: ReturnType<typeof useForm<FormValues>>['register'];
-}) {
-  return (
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        value={value}
-        className="h-4 w-4 accent-hd-orange"
-        {...register(name)}
-      />
-      <span className="text-sm text-text-on-light">{label}</span>
-    </label>
-  );
-}
+// Radio helper kept for any future use, but the Certification group it
+// drove is no longer mounted (removed per BUG re-open #4).
 
+// Slider uses the shared .hero-range class so the thumb matches the
+// hero search exactly (white circle with the `<>` glyph). Track is
+// painted via inline linear-gradient so the filled portion is bright
+// orange and the unfilled portion is a light grey — works inside the
+// white sidebar card AND the dark hero band without per-context CSS.
 function SliderField({
   label,
   value,
@@ -439,14 +614,18 @@ function SliderField({
   showRange?: boolean;
   rangeLabels?: [string, string];
 }) {
+  const numericValue = Number(value);
+  const pct = max > min ? ((numericValue - min) / (max - min)) * 100 : 0;
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600">
+      <div className="flex items-center justify-between mb-1.5">
+        <label className="block font-body text-[13px] text-text-on-light">
           {label}
         </label>
         {displayValue && (
-          <span className="text-xs font-subhead text-hd-orange">{displayValue}</span>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {displayValue}
+          </span>
         )}
       </div>
       <input
@@ -459,10 +638,13 @@ function SliderField({
         onBlur={register.onBlur}
         name={register.name}
         ref={register.ref}
-        className="w-full accent-hd-orange"
+        className="hero-range w-full cursor-pointer"
+        style={{
+          background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${pct}%, #E5E7EB ${pct}%, #E5E7EB 100%)`,
+        }}
       />
       {showRange && rangeLabels && (
-        <div className="flex justify-between text-[10px] text-gray-500 mt-1 font-subhead uppercase tracking-subhead">
+        <div className="flex justify-between text-[11px] text-gray-500 mt-1 font-body">
           <span>{rangeLabels[0]}</span>
           <span>{rangeLabels[1]}</span>
         </div>

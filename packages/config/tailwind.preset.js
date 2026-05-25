@@ -92,7 +92,18 @@ module.exports = {
       },
 
       maxWidth: {
+        // Standard content cap — works for 1366 / 1440 / 1600 laptops.
         container: '1280px',
+        // Wider cap for marketing surfaces (hero, dealer locator) on
+        // 1920+ displays so the content doesn't look orphaned in a
+        // narrow column with vast side margins.
+        'container-wide': '1440px',
+      },
+      screens: {
+        // Tailwind defaults: sm 640, md 768, lg 1024, xl 1280, 2xl 1536.
+        // Adding a custom "3xl" 1920 breakpoint so we can tune type
+        // / layout for ultra-wide displays separately from 2xl.
+        '3xl': '1920px',
       },
     },
   },

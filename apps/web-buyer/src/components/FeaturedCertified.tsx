@@ -24,23 +24,29 @@ export function FeaturedCertified() {
              big "FEATURED CERTIFIED" h2 with the second word in orange, then
              a body paragraph. The "View all" link sits in the top-right
              corner, aligned baseline with the h2 row. */}
+        {/* BUG_UI_005 #1: header in 1903 Sans (font-subhead) at a wider,
+            heavier cut — was font-headline Condensed which compressed
+            "FEATURED CERTIFIED" vertically. The eyebrow stays orange caps.
+            BUG_UI_005 #2: the View All link is now a proper outlined
+            button (dark charcoal border, transparent fill, sharp corners)
+            instead of a raw orange text link. */}
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+            <p className="font-subhead font-bold uppercase tracking-subhead text-[11px] text-hd-orange">
               Approved and Tested
             </p>
-            <h2 className="font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light mt-2">
+            <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light mt-2">
               Featured <span className="text-hd-orange">Certified</span>
             </h2>
           </div>
           <Link
             to="/search"
-            className="hidden sm:inline-flex font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:underline mt-7"
+            className="hidden sm:inline-flex items-center border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:bg-hd-black hover:text-hd-white transition mt-7"
           >
             View All Approved Used Stock →
           </Link>
         </div>
-        <p className="text-sm text-gray-700 max-w-2xl mb-8 leading-relaxed">
+        <p className="text-[15px] text-gray-700 max-w-3xl mb-8 leading-relaxed">
           Hand-picked Harley-Davidson&trade; motorcycles from our authorised dealer
           network — each one inspected, verified, and ready to ride.
         </p>

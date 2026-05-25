@@ -369,7 +369,7 @@ export function AddListingPage() {
         </h1>
         <Link
           to="/listings"
-          className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-700 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5 rounded-card"
+          className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-700 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5"
         >
           ← Back
         </Link>
@@ -428,7 +428,7 @@ export function AddListingPage() {
               : 'Vehicle details will be auto-fetched from the Torque DMS.'}
           </p>
           {fetchVin.error instanceof ApiError && (
-            <div className="mt-3 bg-danger/10 border border-danger rounded-card p-3 text-sm text-text-on-light">
+            <div className="mt-3 bg-danger/10 border border-danger p-3 text-sm text-text-on-light">
               <p className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
                 {fetchVin.error.code === 'VIN_NOT_ASSIGNED'
                   ? 'VIN not assigned to your dealership'
@@ -723,7 +723,7 @@ export function AddListingPage() {
             isn't ready to submit. Tells the dealer *exactly* what to do
             next instead of staring at a greyed-out button. */}
         {!formValid && (
-          <div className="bg-hd-orange/10 border-2 border-hd-orange rounded-card p-5">
+          <div className="bg-hd-orange/10 border-2 border-hd-orange p-5">
             <p className="font-subhead uppercase tracking-subhead text-sm text-hd-orange">
               ⚠ {missing.length} item{missing.length === 1 ? '' : 's'} left before you can submit
             </p>
@@ -744,7 +744,7 @@ export function AddListingPage() {
         <div className="flex justify-end gap-3 pt-2 flex-wrap">
           <Link
             to="/listings"
-            className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+            className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition"
           >
             Cancel
           </Link>
@@ -761,7 +761,7 @@ export function AddListingPage() {
                 }
               }}
               disabled={discard.isPending}
-              className="border border-danger px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-danger hover:bg-danger hover:text-hd-white transition rounded-card disabled:opacity-50"
+              className="border border-danger px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-danger hover:bg-danger hover:text-hd-white transition disabled:opacity-50"
             >
               {discard.isPending ? 'Discarding…' : 'Discard Draft'}
             </button>
@@ -800,7 +800,7 @@ function Section({
 }) {
   return (
     <section
-      className={`bg-hd-white border border-gray-200 rounded-card p-5 sm:p-6 transition ${
+      className={`bg-hd-white border border-gray-200 p-5 sm:p-6 transition ${
         highlight ? 'border-l-4 border-l-hd-orange' : ''
       } ${dim ? 'opacity-60 pointer-events-none' : ''}`}
       aria-disabled={dim}
@@ -837,7 +837,7 @@ function CertToggle({
     <div
       role="radiogroup"
       aria-label="Certification tag"
-      className="inline-flex border border-gray-300 rounded-card overflow-hidden text-xs font-subhead uppercase tracking-subhead w-full"
+      className="inline-flex border border-gray-300 overflow-hidden text-xs font-subhead uppercase tracking-subhead w-full"
     >
       {(
         [

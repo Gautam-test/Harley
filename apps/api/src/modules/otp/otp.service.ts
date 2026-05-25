@@ -39,16 +39,37 @@ const lockoutKey = (phone: string) => `otp:lockout:${phone}`;
 const resendKey = (phone: string) => `otp:resend:${phone}`;
 const resendCounterKey = (phone: string) => `otp:resend-count:${phone}`;
 const dailyCounterKey = (phone: string) => `otp:daily-count:${phone}`;
+// QA RE-OPEN: reverse index from (phone, purpose) → otpId so a client
+// that lost its otpId reference (modal unmounted between edit + resubmit)
+// can rejoin an in-flight OTP without triggering RESEND_TOO_SOON. Keyed
+// on purpose because the same phone can have one OTP for ENQUIRY and a
+// separate one for TRADE_IN concurrently.
+const activeOtpByPhoneKey = (phone: string, purpose: OtpPurpose) =>
+  `otp:active:${phone}:${purpose}`;
 
 export async function sendOtp(phone: string, purpose: OtpPurpose): Promise<{ otpId: string; expiresInSeconds: number }> {
   // Lockout check.
   const locked = await redis.get(lockoutKey(phone));
   if (locked) throw new HttpError(429, 'OTP_LOCKED', 'Too many failed attempts. Try again later.');
 
-  // Resend throttling — short-window (30s) and per-hour (3) windows keep
-  // legitimate flows snappy without letting a runaway script cycle SMS.
+  // QA RE-OPEN bug #4 / #6: when a caller re-asks for an OTP for the
+  // same (phone, purpose) within the resend window, return the EXISTING
+  // otpId instead of throwing OTP_RESEND_TOO_SOON. This unblocks the
+  // "Submit → Edit details → Resubmit" flow on the Sell Bike / Buyer
+  // Enquiry forms — the user still has the SMS code from the first
+  // send and just needs an otpId to verify against; no new SMS is
+  // sent, no rate-limit counter incremented. The original 30s window
+  // remains a hard SMS-spam guard for cases where the active OTP has
+  // expired or been verified (entry removed from activeOtpByPhoneKey).
   const recent = await redis.get(resendKey(phone));
   if (recent) {
+    const existingOtpId = await redis.get(activeOtpByPhoneKey(phone, purpose));
+    if (existingOtpId) {
+      const exists = await redis.get(otpKey(existingOtpId));
+      if (exists) {
+        return { otpId: existingOtpId, expiresInSeconds: TTL_SECONDS };
+      }
+    }
     throw new HttpError(429, 'OTP_RESEND_TOO_SOON', `Wait ${RESEND_WINDOW_SECONDS}s before resending`);
   }
   const counter = await redis.incr(resendCounterKey(phone));
@@ -77,6 +98,9 @@ export async function sendOtp(phone: string, purpose: OtpPurpose): Promise<{ otp
   const otpId = randomUUID();
   const payload: StoredOtp = { codeHash, phone, purpose, attempts: 0, createdAt: Date.now() };
   await redis.set(otpKey(otpId), JSON.stringify(payload), 'EX', TTL_SECONDS);
+  // Index entry — same TTL as the OTP so the reverse lookup expires
+  // naturally with the OTP itself.
+  await redis.set(activeOtpByPhoneKey(phone, purpose), otpId, 'EX', TTL_SECONDS);
 
   await smsProvider().sendOtp(phone, code);
 
@@ -97,6 +121,7 @@ export async function verifyOtp(otpId: string, code: string): Promise<VerifyResu
   if (stored.attempts >= MAX_ATTEMPTS) {
     await redis.set(lockoutKey(stored.phone), '1', 'EX', LOCKOUT_SECONDS);
     await redis.del(otpKey(otpId));
+    await redis.del(activeOtpByPhoneKey(stored.phone, stored.purpose));
     throw new HttpError(429, 'OTP_LOCKED', 'Too many attempts. Try again in 30 minutes.');
   }
 
@@ -116,6 +141,7 @@ export async function verifyOtp(otpId: string, code: string): Promise<VerifyResu
   }
 
   await redis.del(otpKey(otpId));
+  await redis.del(activeOtpByPhoneKey(stored.phone, stored.purpose));
 
   // PRD §6.1.4 AC2 — once verified in a session, do not re-prompt for same phone.
   // Issue a short-lived signed token the client carries with subsequent lead submits.
