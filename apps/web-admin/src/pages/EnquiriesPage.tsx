@@ -123,7 +123,7 @@ export function EnquiriesPage() {
           <button
             type="button"
             onClick={() => setStuckOnly((v) => !v)}
-            className={`inline-flex items-center gap-2 border rounded-card px-4 py-2 text-xs font-subhead uppercase tracking-subhead transition ${
+            className={`inline-flex items-center gap-2 border px-4 py-2 text-xs font-subhead uppercase tracking-subhead transition ${
               stuckOnly
                 ? 'bg-danger text-hd-white border-danger'
                 : 'bg-danger/10 text-danger border-danger/40 hover:bg-danger/20'
@@ -168,7 +168,7 @@ export function EnquiriesPage() {
 
       {/* Filter row — Kind moved out into the tab nav above; remaining
           filters (Status / Dealer / Search) stay in the same row layout. */}
-      <div className="bg-hd-white border border-gray-200 rounded-card p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="bg-hd-white border border-gray-200 p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Select
           value={status}
           onChange={(e) => setStatus(e.target.value as '' | LeadStatus)}
@@ -196,7 +196,7 @@ export function EnquiriesPage() {
       </div>
 
       {/* Results table */}
-      <div className="bg-hd-white border border-gray-200 rounded-card overflow-x-auto">
+      <div className="bg-hd-white border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
           {/* 8 cols collapsed → 5 by stacking related fields:
                 Lead    = name + bike (muted) underneath

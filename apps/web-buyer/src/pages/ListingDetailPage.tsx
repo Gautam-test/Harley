@@ -132,17 +132,21 @@ export function ListingDetailPage() {
           {/* Title row */}
           <div className="mt-10">
             <div className="flex flex-wrap items-center gap-3">
+              {/* CPO + As-Is badges aligned with the listing-card rebuild:
+                  both render as sharp black rectangles with white text so
+                  the buyer sees the same chrome on the grid AND the detail
+                  page. */}
               {data.certificationStatus === 'CPO' ? (
-                <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
                   H-D Certified
                 </span>
               ) : (
-                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
                   As-Is
                 </span>
               )}
             </div>
-            <h1 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light mt-3">
+            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-3 leading-tight">
               {heading}
             </h1>
             <p className="font-subhead uppercase tracking-subhead text-xs text-gray-600 mt-2">
@@ -153,51 +157,37 @@ export function ListingDetailPage() {
           {/* Spec rows + EMI calculator */}
           <div className="mt-8 grid lg:grid-cols-[1fr_360px] gap-8 items-start">
             <div>
-              {/* "At a glance" strip — facts that aren't already in the
-                  meta line (year/km/colour) or the H1, plus the inspection
-                  badge. Year + Colour + KM live in the metaLine above; the
-                  full spec sheet (Model Family, VIN, etc.) lives under the
-                  Specifications tab below. Splitting like this stops the
-                  same value from being shown 2-3 times on the page. */}
+              {/* QA NEW: single comprehensive spec highlights grid per
+                  Figma — YEAR, MODEL, CATEGORY, KMS, OWNERS, INSPECTION,
+                  MILEAGE, COLOUR, LOCATION, VEHICLE REGISTRATION. Five
+                  columns on lg+, two on mobile. The earlier 3-row stack
+                  was missing Model / Category / Mileage / Colour /
+                  Vehicle Registration. */}
               <SpecRow
                 items={[
-                  { label: 'Stock Code', value: stockCode },
+                  { label: 'Year', value: String(data.year) },
+                  { label: 'Model', value: data.modelName },
+                  { label: 'Category', value: data.modelFamily },
+                  { label: 'KMs', value: `${data.kmsDriven.toLocaleString('en-IN')} KM` },
                   {
                     label: 'Owners',
                     value: data.owners
                       ? data.owners === 1
-                        ? '1 (Single owner)'
+                        ? '1 (Single)'
                         : `${data.owners}`
                       : '—',
                   },
-                  // Mileage isn't on the API contract yet — show — until
-                  // the field exists on Listing.
-                  { label: 'Mileage (km/L)', value: '—' },
-                ]}
-              />
-              <SpecRow
-                items={[
                   {
                     label: 'Inspection',
-                    value: data.certificationStatus === 'CPO' ? 'Passed' : 'As-Is',
+                    value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'As-Is',
                   },
-                  { label: 'Listed On', value: listedOn },
-                  { label: 'Listing Status', value: 'Active' },
-                ]}
-              />
-              <SpecRow
-                items={[
+                  { label: 'Mileage', value: '—' },
+                  { label: 'Colour', value: data.colour },
                   {
                     label: 'Location',
-                    // Combine city + pincode + state so the buyer has the
-                    // full mailing context up-front. Falls back to city
-                    // only if the dealer record predates the pincode/state
-                    // columns.
-                    value: [data.city, data.pincode, data.state]
-                      .filter(Boolean)
-                      .join(' · '),
+                    value: [data.city, data.pincode].filter(Boolean).join(' · '),
                   },
-                  { label: 'Available For', value: 'Test Ride · Showroom Visit' },
+                  { label: 'Vehicle Registration', value: stockCode || '—' },
                 ]}
                 full
               />
@@ -239,37 +229,48 @@ export function ListingDetailPage() {
             </aside>
           </div>
 
-          {/* Inspection Passed banner */}
+          {/* QA NEW: 110 PT inspection banner restyle per Figma — orange
+              accent CARD on the left (large bold "110 PT" stacked over
+              "INSPECTION") sits next to the descriptive copy. Inspection
+              report download stays as a black secondary button on the
+              right. */}
           {data.certificationStatus === 'CPO' && (
-            <div className="mt-12 bg-hd-orange/10 border border-hd-orange/40 rounded-card p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
-              <span className="inline-flex items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-3 py-1.5 rounded-card whitespace-nowrap">
-                H-D Certified&trade; — Inspection Passed
-              </span>
-              <p className="text-sm text-gray-700">
+            <div className="mt-12 bg-surface-light border border-gray-200 grid md:grid-cols-[auto_1fr_auto] gap-0 items-stretch">
+              <div className="bg-hd-orange text-hd-white px-6 py-5 flex flex-col justify-center text-center min-w-[120px]">
+                <span className="font-subhead font-bold tracking-subhead text-3xl leading-none">
+                  110 PT
+                </span>
+                <span className="font-subhead font-bold tracking-subhead text-[11px] mt-1.5 uppercase">
+                  Inspection
+                </span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed px-6 py-5">
                 This motorcycle has passed the H-D Certified&trade; 110-Point inspection by an
                 authorised technician and qualifies for the 12-month mechanical &amp; electrical
                 guarantee, roadside assistance, and HOG membership.
               </p>
               {data.inspectionReportUrl && (
-                <a
-                  href={data.inspectionReportUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-125 transition whitespace-nowrap"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                <div className="px-5 py-5 flex items-center">
+                  <a
+                    href={data.inspectionReportUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-hd-black text-hd-white font-subhead font-bold uppercase tracking-subhead text-[11px] px-4 py-2.5 hover:brightness-125 transition whitespace-nowrap"
                   >
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                  </svg>
-                  Inspection report
-                </a>
+                    <svg
+                      className="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Inspection Report
+                  </a>
+                </div>
               )}
             </div>
           )}
@@ -282,7 +283,7 @@ export function ListingDetailPage() {
       <div className="bg-hd-white py-10 text-center border-t border-gray-200">
         <Link
           to="/search"
-          className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition rounded-card"
+          className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
         >
           View All Approved Used Stock
         </Link>
@@ -300,8 +301,13 @@ function SpecRow({
   items: { label: string; value: string }[];
   full?: boolean;
 }) {
+  // Column layout — 5 cols on lg+ when caller passes `full` so the
+  // consolidated spec highlights grid (Year / Model / Category / KMs /
+  // Owners / Inspection / Mileage / Colour / Location / Vehicle Reg)
+  // wraps as 5×2 on desktop. Other call sites still get the original
+  // 3-col / 4-col layout.
   const cols = full
-    ? 'grid-cols-2 md:grid-cols-2'
+    ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
     : items.length === 6
     ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
     : 'grid-cols-2 md:grid-cols-4';
@@ -339,7 +345,7 @@ function SpecsTable({ data }: { data: ListingDetail }) {
     ],
   ];
   return (
-    <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm bg-surface-light/60 border border-gray-200 rounded-card p-5">
+    <dl className="grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm bg-surface-light/60 border border-gray-200 p-5">
       {rows.map(([k, v]) => (
         <div key={k} className="flex justify-between border-b border-gray-200 pb-2 last:border-b-0">
           <dt className="text-gray-600">{k}</dt>
@@ -368,7 +374,7 @@ function DetailSkeleton() {
 function NotFound() {
   return (
     <div className="max-w-container mx-auto px-6 py-24 text-center">
-      <h1 className="font-headline text-5xl tracking-headline text-text-on-light">Listing Not Available</h1>
+      <h1 className="font-subhead font-bold text-5xl tracking-subhead uppercase text-text-on-light">Listing Not Available</h1>
       <p className="text-gray-600 mt-4">
         This motorcycle has been sold or removed. Browse other approved used motorcycles.
       </p>

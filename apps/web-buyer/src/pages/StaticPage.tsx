@@ -45,6 +45,7 @@ const ABOUT_CONTACT = {
 const FALLBACK_TITLES: Record<string, string> = {
   about: 'About H-D Certified',
   privacy: 'Privacy Policy',
+  cookies: 'Cookie Policy',
   terms: 'Terms & Conditions',
   faq: 'Frequently Asked Questions',
   contact: 'Contact Us',
@@ -56,6 +57,7 @@ const HERO_COPY: Record<string, { title: string; emphasis: string; image: string
   about: { title: 'Life. Liberty.', emphasis: 'Certified', image: HERO.streetGlide },
   faq: { title: 'Frequently', emphasis: 'Asked', image: HERO.sportster },
   privacy: { title: 'Privacy', emphasis: 'Policy', image: HERO.iron883 },
+  cookies: { title: 'Cookie', emphasis: 'Policy', image: HERO.iron883 },
   terms: { title: 'Terms &', emphasis: 'Conditions', image: HERO.iron883 },
   contact: { title: 'Contact', emphasis: 'Us', image: HERO.roadKing },
 };
@@ -154,7 +156,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         {contentKey === 'about' && (
           <>
             <section className="mt-14 pt-10 border-t border-gray-200">
-              <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
+              <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
                 Frequently Asked
               </h2>
               <div className="mt-8 space-y-3">
@@ -165,7 +167,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
             </section>
 
             <section className="mt-14 pt-10 border-t border-gray-200">
-              <h2 className="font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
+              <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
                 Contact
               </h2>
               <dl className="mt-5 space-y-2 text-sm">
@@ -214,7 +216,7 @@ function FaqItem({
   const [open, setOpen] = useState(Boolean(defaultOpen));
   return (
     <div
-      className={`border rounded-card transition ${
+      className={`border transition ${
         open ? 'border-hd-orange bg-hd-orange/5' : 'border-gray-200'
       }`}
     >

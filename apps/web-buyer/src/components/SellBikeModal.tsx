@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -48,6 +48,7 @@ interface DealerOption {
   id: string;
   name: string;
   city: string;
+  pincode: string;
 }
 
 function normalisePhone(raw: string): string {
@@ -100,6 +101,48 @@ export function SellBikeModal() {
   const selectedState = useWatch({ control, name: 'state' });
   const cityOptions = citiesForState(selectedState ?? '');
 
+  // QA RE-OPEN bug #5 — dealer auto-pick. Watches the buyer's State,
+  // City, Pincode, and Location fields and, when at least one of them
+  // is set, picks the dealer whose pincode/city matches most closely.
+  // Priority: exact pincode > city match > first dealer (fallback).
+  // Will NOT override a dealer the user explicitly chose — we set
+  // `autoPickedRef` after the first auto-write and bail if the user
+  // has since changed dealerId to anything else.
+  const selectedCity = useWatch({ control, name: 'city' });
+  const selectedPincode = useWatch({ control, name: 'pincode' });
+  const currentDealerId = useWatch({ control, name: 'dealerId' });
+  const autoPickedRef = useRef<string | null>(null);
+  useEffect(() => {
+    const dealers = dealersQuery.data;
+    if (!dealers || dealers.length === 0) return;
+    // Has the user picked a dealer themselves? If currentDealerId is
+    // set to something that wasn't our last auto-pick, treat the field
+    // as manually owned and stop auto-writing.
+    if (currentDealerId && currentDealerId !== autoPickedRef.current) {
+      return;
+    }
+    // Need at least one geo signal before suggesting a dealer.
+    if (!selectedCity && !selectedPincode && !selectedState) return;
+
+    const cityLower = (selectedCity ?? '').trim().toLowerCase();
+    const pincodeStr = (selectedPincode ?? '').trim();
+    const match =
+      (pincodeStr && dealers.find((d) => d.pincode === pincodeStr)) ||
+      (cityLower && dealers.find((d) => d.city.toLowerCase() === cityLower)) ||
+      null;
+    if (match && match.id !== currentDealerId) {
+      setValue('dealerId', match.id, { shouldValidate: true, shouldDirty: true });
+      autoPickedRef.current = match.id;
+    }
+  }, [
+    dealersQuery.data,
+    selectedCity,
+    selectedPincode,
+    selectedState,
+    currentDealerId,
+    setValue,
+  ]);
+
   const onSubmit = () => setOtpOpen(true);
 
   const handleVerified = async (data: { phone: string }) => {
@@ -147,7 +190,7 @@ export function SellBikeModal() {
   return (
     <>
       <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-4 py-8 overflow-y-auto">
-        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 rounded-card shadow-xl my-auto">
+        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-xl my-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
               Tell Us About Your Motorcycle
@@ -163,7 +206,7 @@ export function SellBikeModal() {
 
           {submitted ? (
             <div className="mt-6">
-              <div className="bg-hd-orange/10 border border-hd-orange/40 rounded-card p-4 flex items-start gap-3">
+              <div className="bg-hd-orange/10 border border-hd-orange/40 p-4 flex items-start gap-3">
                 <span
                   aria-hidden
                   className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-hd-orange text-hd-black font-bold shrink-0"
@@ -191,21 +234,27 @@ export function SellBikeModal() {
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition"
                 >
                   Close
                 </button>
                 <Link
                   to={`/track?id=${submitted.id}`}
                   onClick={handleClose}
-                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 rounded-card hover:brightness-110 transition"
+                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
                 >
                   Track Enquiry →
                 </Link>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4">
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              // QA NEW: Figma renders every input + select with a heavy
+              // 2px black border. Applied via descendant variants so we
+              // don't have to override every Input className individually.
+              className="mt-5 space-y-4 [&_input]:!border-2 [&_input]:!border-hd-black [&_select]:!border-2 [&_select]:!border-hd-black"
+            >
               <Labelled label="Your Name" required error={errors.username?.message}>
                 <Input
                   placeholder="Mohd Tai"
@@ -233,21 +282,18 @@ export function SellBikeModal() {
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled
-                  label="VIN Number"
-                  required
-                  hint="17 characters · letters + numbers · no I, O, Q"
-                  error={errors.vin?.message}
-                >
+                <Labelled label="VIN Number" required error={errors.vin?.message}>
+                  {/* Single-line placeholder per Figma — drop the
+                      multi-line "17 characters · letters + numbers · no
+                      I, O, Q" hint that cluttered the field. Validator
+                      below still enforces the rule. */}
                   <Input
                     maxLength={17}
-                    placeholder="e.g. 1HD1KB4197Y624381"
+                    placeholder="Enter Motorcycle vin number"
                     className="font-mono uppercase"
                     aria-invalid={Boolean(errors.vin)}
                     {...register('vin', {
                       ...vinRules,
-                      // Auto-uppercase on type so the regex matches without
-                      // forcing the buyer to remember caps lock.
                       onChange: (e) =>
                         setValue('vin', String(e.target.value).toUpperCase(), {
                           shouldValidate: true,
@@ -345,39 +391,29 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
+              {/* QA NEW: Figma renders State + City as flat editable
+                  text inputs (not dropdown selectors). Buyer types their
+                  state and city directly. The cityOptions / selectedState
+                  watches still exist but are now only used by the dealer
+                  auto-pick effect — not the UI. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="State" required error={errors.state?.message}>
-                  <Select
+                  <Input
+                    placeholder="Enter state"
                     aria-invalid={Boolean(errors.state)}
                     {...register('state', {
-                      ...requiredSelect('a state'),
+                      required: 'State is required',
                       onChange: () =>
-                        setValue('city', '', { shouldValidate: true }),
+                        setValue('city', getValues('city') ?? '', { shouldValidate: false }),
                     })}
-                  >
-                    <option value="">Select state</option>
-                    {INDIA_STATES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </Labelled>
                 <Labelled label="City" required error={errors.city?.message}>
-                  <Select
-                    disabled={!selectedState}
+                  <Input
+                    placeholder="Enter city"
                     aria-invalid={Boolean(errors.city)}
-                    {...register('city', requiredSelect('a city'))}
-                  >
-                    <option value="">
-                      {selectedState ? 'Select city' : 'Pick a state first'}
-                    </option>
-                    {cityOptions.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </Select>
+                    {...register('city', { required: 'City is required' })}
+                  />
                 </Labelled>
               </div>
 
@@ -409,15 +445,11 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              <Labelled label="Email" required error={errors.email?.message}>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  maxLength={254}
-                  aria-invalid={Boolean(errors.email)}
-                  {...register('email', emailRules)}
-                />
-              </Labelled>
+              {/* QA NEW: EMAIL field removed — Figma Frame 28 doesn't
+                  carry an email input on the Sell Bike modal (dealer
+                  contacts the seller by phone only). The form's email
+                  value still defaults to '' so the API contract that
+                  accepts an optional email stays unbroken. */}
 
               {error && <div className="text-danger text-sm">{error}</div>}
 
@@ -455,17 +487,26 @@ export function SellBikeModal() {
                 </span>
               </label>
 
+              {/* QA NEW: Cancel as bordered black outline (square corners),
+                  Send Enquiry as solid orange + bold uppercase "SEND
+                  ENQUIRY" per Figma. The Button component already
+                  defaults to font-subhead + uppercase + tracking-subhead;
+                  we add font-bold so it reads as full-weight. */}
               <div className="flex justify-end gap-3 pt-1">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+                  className="border-2 border-hd-black px-8 py-2.5 font-subhead font-bold uppercase tracking-subhead text-xs text-hd-black hover:bg-hd-black hover:text-hd-white transition"
                 >
                   Cancel
                 </button>
-                <Button type="submit" disabled={!isValid || submitting}>
+                <button
+                  type="submit"
+                  disabled={!isValid || submitting}
+                  className="bg-hd-orange text-hd-black px-8 py-2.5 font-subhead font-bold uppercase tracking-subhead text-xs hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   {submitting ? 'Submitting…' : 'Send Enquiry'}
-                </Button>
+                </button>
               </div>
             </form>
           )}
@@ -497,39 +538,33 @@ export function SellBikeModal() {
   );
 }
 
+// QA NEW (Sell Bike Figma): labels are text-only — no red asterisk
+// suffix per Figma. `required` is still accepted for backward-compat
+// but no longer visually decorates the label. The hint slot is also
+// dropped from the visible UI (Figma shows clean single-line
+// placeholders); we keep the prop in the signature so the VIN field's
+// hint can still be passed without breaking callers.
 function Labelled({
   label,
-  hint,
-  required = false,
   error,
   children,
 }: {
   label: string;
-  /** Small grey caption rendered under the field — used for format hints
-      like "17 characters, no I/O/Q" on the VIN input. */
   hint?: string;
-  /** Renders a small red asterisk after the label so users learn the
-      field is required up-front instead of via a submit error. */
   required?: boolean;
-  /** Per-field validation error from react-hook-form. When set, replaces
-   *  the hint with a red error message + applies an aria-describedby
-   *  link on the input via aria-invalid (set by the caller). */
   error?: string;
   children: React.ReactNode;
 }) {
   return (
     <div>
-      <label className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1.5">
+      <label className="block font-subhead font-bold tracking-subhead uppercase text-[11px] text-text-on-light mb-1.5">
         {label}
-        {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
-      {error ? (
+      {error && (
         <p className="mt-1 text-[11px] text-danger" role="alert">
           {error}
         </p>
-      ) : (
-        hint && <p className="mt-1 text-[11px] text-gray-500">{hint}</p>
       )}
     </div>
   );

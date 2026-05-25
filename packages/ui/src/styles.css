@@ -18,6 +18,14 @@
        sentence case. Brand spec p. 71. Tailwind's preflight already sets
        line-height: 1.5 on body, leaving font-weight inheritable. */
     font-weight: 400;
+    /* Belt-and-braces against horizontal scroll caused by negative-
+       margin layouts (e.g. overlapping feature cards on the home page).
+       Modals + drawers still position via fixed inset so they're not
+       constrained by this. */
+    overflow-x: hidden;
+  }
+  html {
+    overflow-x: hidden;
   }
 
   /* Brand rule (H-D 2026 guidelines, p. 71): headlines use 1903 Bold Condensed,
@@ -48,6 +56,61 @@
   .font-subhead {
     font-weight: 700;
   }
+}
+
+/* Hero search slider — Figma /Customer/Home.png shows a white circular
+   thumb carrying a "<>" glyph (BUG_UI_002 #5). Native range inputs don't
+   let you put HTML inside the thumb, so the chevrons are rendered via an
+   inline SVG background-image on the WebKit + Moz thumb pseudo-elements.
+   Track is intentionally NOT styled here — the React component paints it
+   via inline background: linear-gradient so the filled-portion colour
+   stays in sync with the value. */
+.hero-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+}
+.hero-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23111111' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 3 3 8 6 13'/><polyline points='10 3 13 8 10 13'/></svg>")
+    center / 12px no-repeat;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.hero-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23111111' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 3 3 8 6 13'/><polyline points='10 3 13 8 10 13'/></svg>")
+    center / 12px no-repeat;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.hero-range::-moz-range-track {
+  background: transparent;
+}
+.hero-range:focus-visible {
+  outline: none;
+}
+/* Keyboard-focus ring on the thumb — critical for a11y since the styled
+   thumb hides the browser's default focus indicator. */
+.hero-range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #FF6600;
+  outline-offset: 2px;
+}
+.hero-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid #FF6600;
+  outline-offset: 2px;
 }
 
 /* Hide native scrollbar UI while keeping the element scrollable. Used on

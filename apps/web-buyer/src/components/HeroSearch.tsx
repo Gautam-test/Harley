@@ -22,19 +22,13 @@ type FormValues = {
   pinCode: string;
   distance: string;
   family: string;
-  minYear: string;
   maxPrice: string; // store the slider value (₹) as string so URL params stay simple
   maxMonthly: string; // store the EMI-cap slider value (₹/month) as string
 };
 
-// Year options for the hero search Year dropdown — matches /search filter
-// sidebar so the buyer's hero-pick survives the jump to /search.
-const YEAR_OPTIONS = (() => {
-  const now = new Date().getFullYear();
-  const out: { value: string; label: string }[] = [{ value: '', label: 'Year (All)' }];
-  for (let y = now; y >= now - 8; y--) out.push({ value: String(y), label: `${y} or newer` });
-  return out;
-})();
+// Year filter removed from the hero search per BUG_UI_002 #4 — Figma is
+// a 3-input grid + slider + Search button. The Year filter still lives
+// on /search sidebar for power-users.
 
 const HERO_IMG = '/heros/home.jpg';
 
@@ -59,7 +53,11 @@ const MONTHLY_MIN = 5_000;
 const MONTHLY_MAX = 80_000;
 const MONTHLY_STEP = 1_000;
 
-const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+// BUG_UI_002 #5: Figma formats the slider amount with two decimal
+// places ("₹49,995.00"). Native en-IN locale renders without decimals,
+// so we explicitly request 2 fraction digits to match the design.
+const inr = (n: number) =>
+  `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export function HeroSearch() {
   const navigate = useNavigate();
@@ -69,7 +67,6 @@ export function HeroSearch() {
       pinCode: '',
       distance: '',
       family: '',
-      minYear: '',
       maxPrice: String(PRICE_MAX),
       maxMonthly: String(MONTHLY_MAX),
     },
@@ -80,7 +77,6 @@ export function HeroSearch() {
   const onSubmit = (v: FormValues) => {
     const params = new URLSearchParams();
     if (v.family) params.set('modelFamily', v.family);
-    if (v.minYear) params.set('minYear', v.minYear);
 
     if (searchBy === 'cash' && Number(v.maxPrice) < PRICE_MAX) {
       params.set('maxPrice', v.maxPrice);
@@ -141,26 +137,23 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        <div className="relative max-w-container mx-auto px-6 py-24 md:py-32 lg:py-40">
+        {/* Figma hero is more compact than this block was. Reduced vertical
+            padding from py-24/32/40 → py-16/20/24 so the search band sits
+            in view without scrolling on 1440-tall viewports. */}
+        <div className="relative max-w-container mx-auto px-6 py-16 md:py-20 lg:py-24">
           <div className="max-w-3xl">
-            {/* Headline matches Figma /Customer/Home.png: two-line stack
-                ("H-D CERTIFIED APPROVED" / "USED MOTORCYCLES") in the
-                H-D display face, leading-[0.95]. Sizes calibrated against
-                the Figma hero crop — the earlier lg:text-[88px] was
-                oversized and pushed the search band off-screen on 1440px
-                viewports. */}
-            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-4xl sm:text-5xl md:text-6xl lg:text-[64px]">
+            {/* Two-line stack per Figma. BUG_UI_002 #2: the ™ symbol was
+                missing — restored here on "CERTIFIED". */}
+            <h1 className="font-headline tracking-headline text-hd-white leading-[0.95] uppercase text-[28px] sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]">
               H-D Certified
               <span className="text-hd-orange align-super text-base ml-1">&trade;</span>
               {' '}Approved
               <br />
-              Used Motorcycles
+              Used Bikes
             </h1>
-            {/* Tagline in mixed case (not uppercase) per Figma — softer
-                treatment so it reads as a wordmark line beneath the
-                shouting headline rather than a second H1. Inter subhead
-                face, orange, ~30-40% of H1 size. */}
-            <p className="font-subhead text-hd-orange mt-4 text-xl md:text-2xl">
+            {/* BUG_UI_002 #2: Figma renders the tagline in white (#FFFFFF),
+                not orange — the orange treatment was the QA mismatch. */}
+            <p className="font-subhead text-hd-white mt-4 text-xl md:text-2xl">
               Ride With Confidence
             </p>
           </div>
@@ -185,7 +178,9 @@ export function HeroSearch() {
                   : 'text-text-secondary hover:text-hd-white'
               }`}
             >
-              Search by Price
+              {/* BUG_UI_002 #3: Figma label is "Search by cash Price"
+                  (lowercase 'c' on cash is intentional in spec). */}
+              Search by cash Price
               <Chevron open={searchBy === 'cash'} />
             </button>
             <button
@@ -202,9 +197,14 @@ export function HeroSearch() {
             </button>
           </div>
 
+          {/* BUG_UI_002 #4: Figma is a 3-input grid (Pin Code · Distance ·
+              Family) + Max Price slider + Search button. The extra Year
+              dropdown that lived here broke the 3-column rhythm and is
+              removed. (Year filter still lives on /search sidebar for
+              power-users.) */}
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] gap-3 items-end"
+            className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1.4fr_auto] gap-3 items-end"
           >
             <FieldLabel label="Pin Code">
               <Input
@@ -214,8 +214,16 @@ export function HeroSearch() {
                 {...register('pinCode')}
               />
             </FieldLabel>
+            {/* BUG_UI_002 #4 (per attached Figma screenshot): Distance
+                has a SOLID light-grey fill (not the white the other two
+                inputs use) so it reads as the "secondary / pre-filled"
+                filter sitting between Pin Code and Family. bg-gray-300
+                matches the Figma swatch closely. */}
             <FieldLabel label="Distance">
-              <Select {...register('distance')}>
+              <Select
+                className="bg-gray-300 text-gray-700 border-gray-300"
+                {...register('distance')}
+              >
                 <option value="">Any distance</option>
                 {DISTANCE_OPTIONS.map((d) => (
                   <option key={d.value} value={d.value}>
@@ -224,21 +232,13 @@ export function HeroSearch() {
                 ))}
               </Select>
             </FieldLabel>
-            <FieldLabel label="Models">
+            {/* BUG_UI_002 #4: Figma label is "Family" (not "Models"). */}
+            <FieldLabel label="Family">
               <Select {...register('family')}>
                 <option value="">Category (All)</option>
                 {HD_FAMILIES.map((f) => (
                   <option key={f} value={f}>
                     {f}
-                  </option>
-                ))}
-              </Select>
-            </FieldLabel>
-            <FieldLabel label="Year">
-              <Select {...register('minYear')}>
-                {YEAR_OPTIONS.map((y) => (
-                  <option key={y.value || 'any'} value={y.value}>
-                    {y.label}
                   </option>
                 ))}
               </Select>
@@ -282,10 +282,15 @@ export function HeroSearch() {
   );
 }
 
+// BUG_UI_002 attached-screenshot revision: Figma labels are sentence-case
+// (Pin Code / Distance / Family / Max Price), NOT uppercase. They sit in
+// the body face at ~13px / light weight, with the inputs immediately
+// below. The previous tracking-subhead + uppercase treatment shouted at
+// the buyer and didn't match the calm reference.
 function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block font-subhead uppercase tracking-subhead text-[10px] text-text-secondary mb-1.5">
+      <span className="block font-body text-[13px] text-hd-white mb-1.5">
         {label}
       </span>
       {children}
@@ -293,9 +298,10 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-// Slider with the current value displayed above the track. Figma shows
-// "Max Price" on the left and the live value (₹49,995.00) on the right
-// of the same line — using the same column layout here.
+// Slider with the current value displayed on the same row as the label,
+// right-aligned. Figma shows e.g. "Max Price ... ₹49,995.00" — the value
+// is in white (not orange) and bold-ish so it reads as a numeric badge,
+// not as a secondary caption.
 function SliderField({
   label,
   valueLabel,
@@ -316,11 +322,19 @@ function SliderField({
   return (
     <label className="block">
       <span className="flex items-baseline justify-between mb-1.5">
-        <span className="font-subhead uppercase tracking-subhead text-[10px] text-text-secondary">
+        <span className="font-body text-[13px] text-hd-white">
           {label}
         </span>
-        <span className="font-subhead text-sm text-hd-orange">{valueLabel}</span>
+        <span className="font-body font-bold text-sm text-hd-white">{valueLabel}</span>
       </span>
+      {/* Slider track painted as a gradient that fills orange up to the
+          current value and goes white (translucent) after. The native
+          accent-color path doesn't let the filled portion sit visually
+          flush with a custom thumb glyph, so we hand-paint the track via
+          a linear-gradient computed from value/(max-min). The custom
+          .hero-range class (defined in packages/ui/src/styles.css) styles
+          the WebKit + Moz thumbs as a 22×22 white disc with an inline
+          SVG showing the < > glyph Figma uses. */}
       <input
         type="range"
         min={min}
@@ -328,10 +342,14 @@ function SliderField({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        // Bare native slider with brand-orange accent. Tailwind v3 ships
-        // accent-color support so a single utility colours both the thumb
-        // and the filled portion of the track.
-        className="w-full h-2 accent-hd-orange cursor-pointer"
+        className="hero-range w-full cursor-pointer"
+        style={{
+          background: `linear-gradient(to right, #FF6600 0%, #FF6600 ${
+            ((value - min) / (max - min)) * 100
+          }%, rgba(255,255,255,0.25) ${
+            ((value - min) / (max - min)) * 100
+          }%, rgba(255,255,255,0.25) 100%)`,
+        }}
       />
     </label>
   );

@@ -37,7 +37,8 @@ export interface ListingCardData {
 //   │              View Details ›
 //   └────────────────────────┘
 export function ListingCardItem({ listing }: { listing: ListingCardData }) {
-  const stockCode = listing.vin?.slice(-5).toUpperCase() || '';
+  // BUG_UI_005 #5 dropped the stock-code chip + map-pin row from this
+  // card; both still surface on the listing detail page.
   const isSold = listing.status === 'SOLD';
   // SOLD cards stay in the grid for the 1-hour visibility window so a
   // buyer who was tracking this bike sees what happened, but the link is
@@ -55,11 +56,14 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
     : { to: `/listings/${listing.slug}` };
   return (
     <>
+    {/* BUG_UI_005 #3: sharp 90° corners — drops the rounded-card
+        treatment that gave the cards a "bubbly" feel. Border stays for
+        definition; hover orange-border is preserved. */}
     <Tag
       {...linkProps}
       data-testid="listing-card"
       data-listing-status={listing.status}
-      className={`group block text-left w-full bg-hd-white border border-gray-200 rounded-card overflow-hidden transition ${
+      className={`group block text-left w-full bg-hd-white border border-gray-200 overflow-hidden transition ${
         isSold ? 'opacity-90 cursor-pointer' : 'hover:border-hd-orange'
       }`}
     >
@@ -99,55 +103,44 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             </span>
           </div>
         )}
+        {/* BUG_UI_005 #4: CPO badge is a sharp BLACK rectangular label
+            with white text (was an orange capsule). As-Is keeps black
+            background but loses the rounded corners for consistency. */}
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (
-            <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+            <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
               H-D Certified
             </span>
           ) : (
-            <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-2.5 py-1 rounded-card">
+            <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
               As-Is
             </span>
           )}
         </div>
       </div>
+      {/* BUG_UI_005 #5: metadata simplified to the Figma format
+          ([Year] · [KM] · [Color]) directly above the price. The
+          location pin row, dealer + city + pincode line, stock code,
+          and "Indicative ex-showroom" caption are all dropped per the
+          ticket — the listing detail page still carries the full
+          disclosure for buyers who click through. */}
       <div className="p-4">
-        <h3 className="font-subhead uppercase tracking-subhead text-base text-text-on-light leading-tight">
+        <h3 className="font-subhead font-bold uppercase tracking-subhead text-base text-text-on-light leading-tight">
           {listing.modelName}
         </h3>
-        {/* Dropped the italic + bumped to 13px / gray-600 — the H-D brand
-            spec keeps body copy upright (italic is an emphasis cut, not a
-            default secondary-text styling) and the previous gray-500 12px
-            italic was borderline against the white card background. */}
-        <p className="flex items-center gap-1.5 text-[13px] text-gray-600 mt-2">
-          <MapPin />
-          <span className="truncate">
-            {listing.dealerName}
-            {(listing.city || listing.pincode) && (
-              <span className="text-gray-500">
-                {' · '}
-                {[listing.city, listing.pincode].filter(Boolean).join(' ')}
-              </span>
-            )}
-          </span>
-        </p>
-        <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
-          {[stockCode, listing.year, `${listing.kmsDriven.toLocaleString('en-IN')} KM`, listing.colour.toUpperCase()]
+        <p className="text-[12px] text-gray-600 mt-1.5 leading-relaxed">
+          {[
+            listing.year,
+            `${listing.kmsDriven.toLocaleString('en-IN')} KM`,
+            listing.colour ? listing.colour.toUpperCase() : null,
+          ]
             .filter(Boolean)
             .join(' · ')}
         </p>
         <div className="mt-3 flex items-baseline justify-between gap-2">
-          <div>
-            <span className="font-headline text-xl text-text-on-light tracking-headline">
-              ₹ {listing.price.toLocaleString('en-IN')}
-            </span>
-            {/* "Ex-showroom" caption — single line so the card stays
-                compact. Full disclaimer about RTO / insurance / on-road
-                surfaces on the listing detail price card. */}
-            <span className="block text-[10px] text-gray-500 leading-tight mt-0.5">
-              Indicative ex-showroom
-            </span>
-          </div>
+          <span className="font-headline text-xl text-text-on-light tracking-headline">
+            ₹ {listing.price.toLocaleString('en-IN')}
+          </span>
           {!isSold && (
             <span className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange group-hover:underline">
               View Details ›
@@ -218,8 +211,9 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
 }
 
 export function ListingCardSkeleton() {
+  // Matches ListingCardItem: sharp corners (no rounded-card) per BUG_UI_005 #3.
   return (
-    <div className="bg-hd-white border border-gray-200 rounded-card overflow-hidden">
+    <div className="bg-hd-white border border-gray-200 overflow-hidden">
       <div className="aspect-[4/3] bg-gray-200 animate-pulse" />
       <div className="p-4 space-y-3">
         <div className="h-3 w-40 bg-gray-200 animate-pulse" />
@@ -230,10 +224,4 @@ export function ListingCardSkeleton() {
   );
 }
 
-function MapPin() {
-  return (
-    <svg className="w-3 h-3 text-hd-orange shrink-0" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
-    </svg>
-  );
-}
+// MapPin glyph removed along with the location row (BUG_UI_005 #5).

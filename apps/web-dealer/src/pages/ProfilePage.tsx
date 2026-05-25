@@ -70,7 +70,7 @@ export function ProfilePage() {
 
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Identity card — name + reference IDs at a glance. */}
-        <section className="bg-hd-white border border-gray-200 rounded-card p-6 lg:col-span-2">
+        <section className="bg-hd-white border border-gray-200 p-6 lg:col-span-2">
           <h2 className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
             Identity
           </h2>
@@ -91,7 +91,7 @@ export function ProfilePage() {
         {/* Contact card — phone + email + address. The dealer's own
             communication channels, surfaced to the admin queue when a
             buyer enquiry routes here. */}
-        <section className="bg-hd-white border border-gray-200 rounded-card p-6">
+        <section className="bg-hd-white border border-gray-200 p-6">
           <h2 className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
             Contact
           </h2>
@@ -103,7 +103,7 @@ export function ProfilePage() {
 
         {/* Address card — full mailing address; mirrors what's on the
             dealer's listings + invoices. */}
-        <section className="bg-hd-white border border-gray-200 rounded-card p-6 lg:col-span-3">
+        <section className="bg-hd-white border border-gray-200 p-6 lg:col-span-3">
           <h2 className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
             Address
           </h2>

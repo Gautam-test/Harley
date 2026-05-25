@@ -86,20 +86,68 @@ const GENERAL_STAGES: { status: LeadTrackResult['status']; label: string; note: 
   { status: 'CLOSED', label: 'Closed', note: 'Enquiry wrapped up.' },
 ];
 
-const HOW_TO_STEPS = [
+// QA NEW: copy and titles updated per Figma. Step icons rendered as
+// SVG glyphs (chat bubble / location target / shipping box) — see
+// StepIcon below — instead of numbered circles.
+type StepIconKind = 'message' | 'target' | 'truck';
+const HOW_TO_STEPS: { icon: StepIconKind; title: string; body: string }[] = [
   {
+    icon: 'message',
     title: 'Get Your Tracking Number',
-    body: 'Order or enquiry IDs were sent via email after submission.',
+    body: "You'll Receive Your Tracking Number Via Email After Order Confirmation.",
   },
   {
+    icon: 'target',
     title: 'Enter Tracking ID',
-    body: 'Input your number in the search box above — orders or enquiries both work.',
+    body: 'Input Your Tracking Number In The Search Box Above.',
   },
   {
+    icon: 'truck',
     title: 'Check Status',
-    body: "View real-time updates of your motorcycle's journey to you.",
+    body: "View Real-Time Updates On Your Motorcycle's Journey To You.",
   },
 ];
+
+function StepIcon({ kind }: { kind: StepIconKind }) {
+  const common: React.SVGProps<SVGSVGElement> = {
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.75,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    className: 'w-8 h-8',
+    'aria-hidden': true,
+  };
+  switch (kind) {
+    case 'message':
+      // Chat bubble — "you'll receive your tracking number via email".
+      return (
+        <svg {...common}>
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+      );
+    case 'target':
+      // Location target — "enter tracking number".
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="6" />
+          <circle cx="12" cy="12" r="2" />
+        </svg>
+      );
+    case 'truck':
+      // Shipping truck — "check status".
+      return (
+        <svg {...common}>
+          <rect x="1" y="6" width="15" height="11" />
+          <polyline points="16 9 20 9 23 12 23 17 16 17" />
+          <circle cx="6" cy="20" r="2" />
+          <circle cx="18" cy="20" r="2" />
+        </svg>
+      );
+  }
+}
 
 type LookupResult =
   | { kind: 'order'; order: OrderTrackResult }
@@ -154,6 +202,24 @@ export function TrackPage() {
   const errorMsg =
     lookup.error instanceof ApiError ? lookup.error.message : lookup.error ? 'Lookup failed' : null;
 
+  // QA RE-OPEN bug #7: invalid Enquiry ID error must auto-clear after
+  // 30 seconds and restore the empty placeholder ("How to Track…")
+  // layout, instead of staying on screen indefinitely. Clear the URL
+  // ?id param too so the placeholder view is genuinely "first visit"
+  // — otherwise the auto-lookup effect would re-fire on every render.
+  useEffect(() => {
+    if (!errorMsg) return;
+    const t = window.setTimeout(() => {
+      lookup.reset();
+      setOrderId('');
+      const next = new URLSearchParams(params);
+      next.delete('id');
+      setParams(next);
+    }, 30_000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [errorMsg]);
+
   return (
     <>
       <Helmet>
@@ -164,26 +230,45 @@ export function TrackPage() {
         />
       </Helmet>
 
-      <PageHero title="Track Your" emphasis="Harley" image={HERO.panAmerica} size="lg">
+      {/* QA NEW: Track hero rebuild per Figma —
+            • Heading: "HARLEY-" white + "DAVIDSON" orange + ® mark
+            • Compact size ("sm" → less vertical padding)
+            • Breadcrumb HOME / TRACK
+            • Title-case input label "Order ID / Tracking Number"
+            • Polished placeholder "Enter Your Tracking Number"
+            • CTA "TRACK YOUR HARLEY-DAVIDSON®"
+            • Sharp container + input + CTA corners
+            • Solid full-opacity orange CTA */}
+      <PageHero
+        title="Harley-"
+        emphasis="Davidson®"
+        image={HERO.panAmerica}
+        size="sm"
+        breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Track' }]}
+      >
         <form
           onSubmit={onSubmit}
-          className="mx-auto max-w-2xl bg-hd-white border border-gray-200 p-3 grid sm:grid-cols-[1fr_auto] gap-2 shadow-2xl rounded-card text-left"
+          className="mx-auto max-w-2xl bg-hd-white border-2 border-hd-black p-3 grid sm:grid-cols-[1fr_auto] gap-2 shadow-2xl text-left"
         >
           <div>
-            <label className="block text-[10px] font-subhead uppercase tracking-subhead text-gray-500 px-2 pt-1">
-              Order ID or Enquiry ID
+            <label className="block text-[11px] font-body text-text-on-light px-2 pt-1">
+              Order ID / Tracking Number
             </label>
             <Input
-              placeholder="Enter order or enquiry ID"
+              placeholder="Enter Your Tracking Number"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              className="font-mono text-base !border-0 !shadow-none focus:!ring-0"
+              className="font-body text-base !border-0 !shadow-none focus:!ring-0"
               autoFocus
             />
           </div>
-          <Button type="submit" disabled={!orderId.trim() || lookup.isPending}>
-            {lookup.isPending ? 'Looking up…' : 'Track'}
-          </Button>
+          <button
+            type="submit"
+            disabled={!orderId.trim() || lookup.isPending}
+            className="bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 py-3 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {lookup.isPending ? 'Looking up…' : 'Track Your Harley-Davidson®'}
+          </button>
         </form>
       </PageHero>
 
@@ -191,16 +276,19 @@ export function TrackPage() {
       {!result && !errorMsg && (
         <section className="bg-hd-white py-16">
           <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
-              How to Track Your Motorcycle
+            <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
+              {/* QA NEW: heading per Figma — "Track Your Enquiry". */}
+              Track Your Enquiry
             </h2>
             <div className="mt-10 grid md:grid-cols-3 gap-8">
-              {HOW_TO_STEPS.map((s, i) => (
+              {HOW_TO_STEPS.map((s) => (
                 <div key={s.title} className="text-center">
-                  <div className="mx-auto h-12 w-12 rounded-full bg-hd-orange/10 border border-hd-orange/40 text-hd-orange font-headline tracking-headline flex items-center justify-center text-xl">
-                    {i + 1}
+                  {/* QA NEW: orange brand icon (chat / target / truck)
+                      replaces the previous numbered peach circle. */}
+                  <div className="mx-auto inline-flex items-center justify-center text-hd-orange">
+                    <StepIcon kind={s.icon} />
                   </div>
-                  <h3 className="mt-4 font-headline uppercase tracking-headline text-lg text-text-on-light">
+                  <h3 className="mt-4 font-subhead font-bold uppercase tracking-subhead text-lg text-text-on-light">
                     {s.title}
                   </h3>
                   <p className="text-sm text-gray-600 mt-2 leading-relaxed">{s.body}</p>
@@ -214,7 +302,7 @@ export function TrackPage() {
       {/* Error */}
       {errorMsg && (
         <div className="max-w-3xl mx-auto px-6 py-12">
-          <div className="bg-danger/10 border border-danger text-danger p-5 rounded-card">
+          <div className="bg-danger/10 border border-danger text-danger p-5">
             <p className="font-subhead uppercase tracking-subhead text-sm">Not found</p>
             <p className="text-sm mt-1">{errorMsg}</p>
             <p className="text-xs text-gray-600 mt-3">
@@ -238,7 +326,7 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
   return (
     <section className="bg-hd-white py-12">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
+        <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
           Track Your <span className="text-hd-orange">Order</span>
         </h2>
 
@@ -271,7 +359,7 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
             <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
               Current Status
             </p>
-            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-4 py-2 rounded-card">
+            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-4 py-2">
               {order.currentLabel}
             </span>
           </div>
@@ -317,7 +405,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
   return (
     <section className="bg-hd-white py-12">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
+        <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
           Track Your <span className="text-hd-orange">{headingType}</span>
         </h2>
 
@@ -347,7 +435,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
               Current Status
             </p>
             <span
-              className={`inline-flex mt-2 items-center font-subhead uppercase tracking-subhead text-xs px-4 py-2 rounded-card ${
+              className={`inline-flex mt-2 items-center font-subhead uppercase tracking-subhead text-xs px-4 py-2 ${
                 isDead
                   ? 'bg-danger text-hd-white'
                   : lead.status === 'SUCCESS' || lead.status === 'CONVERTED'
@@ -361,7 +449,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
         </div>
 
         {isDead ? (
-          <div className="mt-6 bg-danger/10 border border-danger/40 rounded-card p-5">
+          <div className="mt-6 bg-danger/10 border border-danger/40 p-5">
             <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
               Enquiry closed
             </p>
@@ -420,7 +508,7 @@ function Timeline({
             </span>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span
-                className={`font-headline tracking-headline uppercase text-base ${
+                className={`font-subhead font-bold tracking-subhead uppercase text-base ${
                   stage.reached ? 'text-text-on-light' : 'text-gray-400'
                 }`}
               >

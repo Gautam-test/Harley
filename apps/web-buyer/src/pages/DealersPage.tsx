@@ -71,7 +71,7 @@ export function DealersPage() {
           return (
             <li
               key={d.id}
-              className="bg-hd-white border border-gray-200 p-5 rounded-card shadow-sm hover:border-hd-orange transition"
+              className="bg-hd-white border border-gray-200 p-5 shadow-sm hover:border-hd-orange transition"
             >
               <div className="font-subhead text-text-on-light text-lg">{d.name}</div>
               <div className="text-sm text-gray-600 mt-1">

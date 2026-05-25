@@ -43,7 +43,7 @@ export function ProfilePage() {
         Read-only summary of your admin account.
       </p>
 
-      <section className="mt-6 max-w-2xl bg-hd-white border border-gray-200 rounded-card p-6">
+      <section className="mt-6 max-w-2xl bg-hd-white border border-gray-200 p-6">
         <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
           <Row label="Full Name" value={data.name} />
           <Row label="Role" value="Administrator" />

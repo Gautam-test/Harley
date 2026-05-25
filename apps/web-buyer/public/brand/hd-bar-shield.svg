@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 72" role="img" aria-label="Harley-Davidson Motor Cycles">
+  <title>Harley-Davidson Motor Cycles</title>
+  <!--
+    Hand-authored Bar & Shield mark (orange band over the shield, with
+    "MOTOR" curved across the top and "CYCLES" curved across the bottom).
+    The proportions match the Figma header export (Customer/Header.png) —
+    96×72 viewBox so the parent container can scale via `h-10 w-auto` or
+    similar without pixelation. We intentionally don't use the licensed
+    Harley-Davidson trademark glyph (would require brand-team sign-off
+    for digital usage); the geometric mark + caption captures the visual
+    silhouette without reproducing the trademark.
+  -->
+  <defs>
+    <clipPath id="shield-clip">
+      <path d="M48 6 L84 12 L84 36 C84 52 70 64 48 66 C26 64 12 52 12 36 L12 12 Z"/>
+    </clipPath>
+  </defs>
+  <!-- Shield outline -->
+  <path d="M48 6 L84 12 L84 36 C84 52 70 64 48 66 C26 64 12 52 12 36 L12 12 Z"
+        fill="#111111" stroke="#ffffff" stroke-width="1.5"/>
+  <!-- Orange horizontal band centred on the shield -->
+  <rect x="12" y="30" width="72" height="14" fill="#FF6600" clip-path="url(#shield-clip)"/>
+  <!-- "MOTOR" curved across the top of the shield -->
+  <path id="top-arc" d="M16 22 Q48 6 80 22" fill="none"/>
+  <text font-family="'1903 Sans Condensed', '1903 Sans', Impact, sans-serif" font-weight="700" font-size="9" fill="#ffffff" letter-spacing="0.5">
+    <textPath href="#top-arc" startOffset="50%" text-anchor="middle">MOTOR</textPath>
+  </text>
+  <!-- HARLEY-DAVIDSON wordmark across the orange band -->
+  <text x="48" y="40" text-anchor="middle"
+        font-family="'1903 Sans Condensed', '1903 Sans', Impact, sans-serif"
+        font-weight="700" font-size="7" fill="#ffffff" letter-spacing="0.5">HARLEY-DAVIDSON</text>
+  <!-- "CYCLES" curved across the bottom of the shield -->
+  <path id="bot-arc" d="M18 50 Q48 64 78 50" fill="none"/>
+  <text font-family="'1903 Sans Condensed', '1903 Sans', Impact, sans-serif" font-weight="700" font-size="9" fill="#ffffff" letter-spacing="0.5">
+    <textPath href="#bot-arc" startOffset="50%" text-anchor="middle">CYCLES</textPath>
+  </text>
+</svg>

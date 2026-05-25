@@ -52,7 +52,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-surface-light flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-hd-white border border-gray-200 p-8 shadow-sm rounded-card">
+      <div className="w-full max-w-md bg-hd-white border border-gray-200 p-8 shadow-sm">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
           H-D <span className="text-hd-orange">ADMIN</span>
         </h1>
@@ -79,7 +79,7 @@ export function LoginPage() {
             />
           </div>
           {sessionExpired && !error && (
-            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card font-subhead uppercase tracking-subhead text-xs">
+            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 font-subhead uppercase tracking-subhead text-xs">
               Session timed out
             </div>
           )}

@@ -62,72 +62,90 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
     let dealerIdFilter: { in: string[] } | undefined;
     let pincodeFallback: { searchedPincode: string; nearestPincode: string } | null = null;
     if (q.pincode && q.distance) {
-      // Step 1 — exact match
+      // QA RE-OPEN: distance filter must be authoritative when explicitly
+      // supplied. Previously this block ran an "exact pincode first"
+      // shortcut — if a dealer existed at the exact pincode, the
+      // distance filter was IGNORED and that dealer's bikes always
+      // returned regardless of how narrow the radius was. The QA report
+      // ("returns records outside the selected range") traces to that
+      // override path.
+      //
+      // New rule: when BOTH pincode AND distance are present, run the
+      // haversine radius filter strictly. Every dealer within radius —
+      // including the exact-pincode dealer if applicable — is matched
+      // by the same single rule. No silent shortcut, no overridden
+      // distance.
+      const buyerCoord = pincodeCoord(q.pincode);
+      if (!buyerCoord) {
+        // Unresolvable pincode (unmapped 3-digit prefix, 000000, etc.).
+        dealerIdFilter = { in: ['__none__'] };
+      } else {
+        const dealers = (await prisma.dealer.findMany({
+          where: { status: 'ACTIVE' },
+          select: { id: true, pincode: true, latitude: true, longitude: true },
+        })) as Array<{
+          id: string;
+          pincode: string;
+          latitude: number | null;
+          longitude: number | null;
+        }>;
+        const withinRange = dealers
+          .filter((d) => d.latitude != null && d.longitude != null)
+          .map((d) => ({
+            id: d.id,
+            pincode: d.pincode,
+            distance: distanceKm(buyerCoord, {
+              lat: d.latitude as number,
+              lng: d.longitude as number,
+            }),
+          }))
+          .filter((d) => d.distance <= (q.distance as number))
+          .sort((a, b) => a.distance - b.distance);
+
+        if (withinRange.length === 0) {
+          dealerIdFilter = { in: ['__none__'] };
+        } else {
+          const inRangeIds = withinRange.map((d) => d.id);
+          const inRangeStock = await prisma.listing.count({
+            where: { dealerId: { in: inRangeIds }, status: 'ACTIVE' },
+          });
+          if (inRangeStock === 0) {
+            dealerIdFilter = { in: ['__none__'] };
+          } else {
+            dealerIdFilter = { in: inRangeIds };
+            // Pincode-fallback notice only fires when NO exact-pincode
+            // dealer is in the radius result set. If the buyer's exact
+            // pincode IS represented in withinRange, there's no need to
+            // explain "showing nearest" — the buyer's pincode is in
+            // the result.
+            const exactInRange = withinRange.some(
+              (d) => d.pincode === q.pincode,
+            );
+            if (!exactInRange) {
+              pincodeFallback = {
+                searchedPincode: q.pincode,
+                nearestPincode: withinRange[0]!.pincode,
+              };
+            }
+          }
+        }
+      }
+    } else if (q.pincode) {
+      // Pincode without distance: keep the original exact-match-first
+      // behaviour so a buyer who typed "122001" still sees that
+      // dealership's bikes if there's no explicit radius restriction.
+      // Falls back to the unbounded result set (no dealer filter) when
+      // exact match has no stock — caller can broaden via filters.
       const exactDealers = (await prisma.dealer.findMany({
         where: { status: 'ACTIVE', pincode: q.pincode },
         select: { id: true },
       })) as Array<{ id: string }>;
-      let exactWithStock: string[] = [];
       if (exactDealers.length > 0) {
         const ids = exactDealers.map((d) => d.id);
         const listingCount = await prisma.listing.count({
           where: { dealerId: { in: ids }, status: 'ACTIVE' },
         });
-        if (listingCount > 0) exactWithStock = ids;
-      }
-
-      if (exactWithStock.length > 0) {
-        dealerIdFilter = { in: exactWithStock };
-      } else {
-        // Step 2 — distance fallback
-        const buyerCoord = pincodeCoord(q.pincode);
-        if (buyerCoord) {
-          const dealers = (await prisma.dealer.findMany({
-            where: { status: 'ACTIVE' },
-            select: { id: true, pincode: true, latitude: true, longitude: true },
-          })) as Array<{
-            id: string;
-            pincode: string;
-            latitude: number | null;
-            longitude: number | null;
-          }>;
-          const withinRange = dealers
-            .filter((d) => d.latitude != null && d.longitude != null)
-            .map((d) => ({
-              id: d.id,
-              pincode: d.pincode,
-              distance: distanceKm(buyerCoord, {
-                lat: d.latitude as number,
-                lng: d.longitude as number,
-              }),
-            }))
-            .filter((d) => d.distance <= (q.distance as number))
-            .sort((a, b) => a.distance - b.distance);
-
-          if (withinRange.length > 0) {
-            // Verify at least one of the dealers in range has stock — if none
-            // do, surface the empty state instead of an empty "showing nearest"
-            // notice that would point at zero bikes.
-            const inRangeIds = withinRange.map((d) => d.id);
-            const inRangeStock = await prisma.listing.count({
-              where: { dealerId: { in: inRangeIds }, status: 'ACTIVE' },
-            });
-            if (inRangeStock > 0) {
-              dealerIdFilter = { in: inRangeIds };
-              pincodeFallback = {
-                searchedPincode: q.pincode,
-                nearestPincode: withinRange[0]!.pincode,
-              };
-            } else {
-              dealerIdFilter = { in: ['__none__'] };
-            }
-          } else {
-            dealerIdFilter = { in: ['__none__'] };
-          }
-        } else {
-          // Step 3 — unresolvable pincode (e.g. 000000)
-          dealerIdFilter = { in: ['__none__'] };
-        }
+        if (listingCount > 0) dealerIdFilter = { in: ids };
       }
     }
 

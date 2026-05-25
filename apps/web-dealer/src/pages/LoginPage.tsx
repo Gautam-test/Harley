@@ -169,12 +169,12 @@ export function LoginPage() {
             </div>
 
             {sessionExpired && !error && (
-              <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 rounded-card font-subhead uppercase tracking-subhead text-xs">
+              <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 font-subhead uppercase tracking-subhead text-xs">
                 Session timed out
               </div>
             )}
             {error && (
-              <div className="text-danger text-sm bg-danger/10 border border-danger/30 px-3 py-2 rounded-card">
+              <div className="text-danger text-sm bg-danger/10 border border-danger/30 px-3 py-2">
                 {error}
               </div>
             )}

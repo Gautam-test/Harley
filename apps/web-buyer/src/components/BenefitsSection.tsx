@@ -6,56 +6,63 @@
 
 import { HOG_BENEFITS_URL } from '../lib/constants';
 
-type FeatureIcon = 'clipboard' | 'shield' | 'odometer' | 'gear' | 'sos' | 'hog';
-
 interface FeatureRow {
   title: string;
   body: string;
   bullets?: string[];
   image: string;
-  icon: FeatureIcon;
+  /** Path under /brand/benefits/ to the brand-supplied SVG icon.
+   *  Each SVG already carries the orange circular ring + transparent
+   *  fill — no wrapper/background needed. */
+  iconSrc: string;
   cta?: { label: string; href: string };
 }
 
+// QA RE-OPEN: brand-supplied SVG icons mapped 1:1 to the matrix
+// supplied by the design team. Previously each row rendered a
+// hand-drawn `FeatureGlyph` inside a bulky orange square; the matrix
+// flagged that as a mismatch. The new assets in /brand/benefits/
+// carry their own orange circular wireframe ring, so we render them
+// straight as <img>.
 const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
-    icon: 'clipboard',
+    iconSrc: '/brand/benefits/check-110pt.svg',
     body:
       "Inspection of the technical condition of the motorcycle is the same for all authorised dealers. A know-how is a part of 110 points covering the whole operation of the motorcycle. A detailed record signed by the performing technician is available to the customer from each inspection. Only ones that have been done over a roadtest are then right to be classed as H-D Certified™ and qualify for the other benefits associated with these certified used motorcycles.",
     image: 'https://images.medialinksonline.com/8825026x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: 'History Check / HPI Check / Insurance Database',
-    icon: 'shield',
+    iconSrc: '/brand/benefits/history-check.svg',
     body:
       "In the H-D Certified™ motorcycles are offered at a fixed and transparent price. Cross-checked against the national HPI / insurance database — no outstanding finance, theft markers or hidden write-offs. Every certified motorcycle comes with the verification report shared in writing.",
     image: 'https://images.medialinksonline.com/8822481x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: 'Kilometer Verification Check',
-    icon: 'odometer',
+    iconSrc: '/brand/benefits/kilometer-verification.svg',
     body:
       'An online check is performed to verify the records that the KM declared on the motorcycle is correct and confirmed in writing. Every odometer reading is independently corroborated against the motorcycle\'s service history.',
     image: 'https://images.medialinksonline.com/8825071x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
-    icon: 'gear',
+    iconSrc: '/brand/benefits/guarantee-12mo.svg',
     body:
       'Once the motorcycle has been H-D Certified™ we back this with a minimum 12-month guarantee. It can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     image: 'https://images.medialinksonline.com/8825049x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month Roadside Assistance',
-    icon: 'sos',
+    iconSrc: '/brand/benefits/roadside-assistance.svg',
     body:
       'In addition to the 12 month guarantee we provide Roadside Assistance (the Roadside assistance package provider is an Authorised Vehicle Assist). Recovery and Onward Travel if required 24/7, should you accidentally pundoction from the Roadside package is also extended.',
     image: 'https://images.medialinksonline.com/8757963x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month HOG Membership',
-    icon: 'hog',
+    iconSrc: '/brand/benefits/hog-membership.svg',
     body:
       'As an H-D Certified™ owner you will receive the first 12 months\' membership of the Harley Owners Group. From here you will have the choice of renewing your membership.',
     image: 'https://images.medialinksonline.com/8225108x1600x1000xFFFFFFxH.jpg',
@@ -87,22 +94,27 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // py-10 outer, mt-4 between heading and body, mt-6 between
         // "What" and "Overview" blocks. text-[13px] body keeps the
         // paragraph tight to the headline.
-        // QA Bug 21 (Figma parity on benefits/overview):
-        //   – outer padding bumped (py-14 → py-16/20) so the section
-        //     breathes against the dark hero band above and the alternating
-        //     feature rows below.
-        //   – max-width widened (max-w-3xl → max-w-4xl) so horizontal
-        //     gutters on desktop match the rest of the home rhythm.
-        //   – body copy raised to text-[15px]/text-base so it reads as
-        //     long-form rather than caption text.
-        //   – section headings step up to text-3xl/4xl, matching the
-        //     Figma hierarchy between hero H1 and section H2.
+        // BUG_UI_003 revisions (Figma /Customer/Home.png + crops):
+        //   • Wider container (max-w-3xl → max-w-6xl) so body copy uses
+        //     the full canvas like the Figma reference instead of being
+        //     compressed into a narrow central column.
+        //   • Body text LEFT-aligned (was text-center) — Figma flows the
+        //     paragraphs as standard long-form copy across wide rows,
+        //     not as centered marketing pitches.
+        //   • Headings switched to font-subhead (1903 Sans, the "clean
+        //     wide geometric" cut) instead of font-headline (1903 Sans
+        //     Condensed). Headline-condensed was visually too compressed
+        //     for these section titles per BUG_UI_003 #4.
+        //   • Bullets: dropped orange list-disc markers entirely per
+        //     BUG_UI_003 #3 ("unauthorized orange bullet points
+        //     injected"). The list now renders as a clean unbulleted
+        //     stack, indented at pl-0 with each item spaced for scan.
         <section className="bg-hd-white py-14 md:py-16 lg:py-20">
-          <div className="max-w-4xl mx-auto px-6 md:px-8 text-center">
-            <h2 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light leading-tight">
-              What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
+          <div className="max-w-6xl mx-auto px-6 md:px-10">
+            <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
+              What Are The Benefits Of H-D Certified&trade; Approved Used Bikes?
             </h2>
-            <p className="mt-6 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
               When you own any Harley-Davidson motorcycle the expectations are sky high,
               justifiably of course. Choose a H-D Certified&trade; Approved Used
               Harley-Davidson and you can rest assured that they have been rigorously checked
@@ -116,11 +128,11 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
           </div>
 
-          <div className="max-w-4xl mx-auto px-6 md:px-8 mt-10 md:mt-14 text-center">
-            <h3 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light leading-tight">
+          <div className="max-w-6xl mx-auto px-6 md:px-10 mt-12 md:mt-16">
+            <h3 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl lg:text-[32px] text-text-on-light leading-tight">
               Overview Of H-D Certified&trade; — Ride With Confidence
             </h3>
-            <p className="mt-6 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            <p className="mt-5 text-[15px] md:text-base text-gray-700 leading-relaxed">
               The desire of H-D Certified&trade; is to become the go to place for all customers
               wanting to purchase a pre-owned Harley-Davidson motorcycle. The program provides
               customers with the confidence that the pre-owned motorcycle they purchase is of high
@@ -133,13 +145,10 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
-            {/* Bullets render as plain sentence-case body text per Figma
-                /Customer/Home.png — earlier change to uppercase subhead
-                caps was an overcorrection. Keep the orange list-marker
-                for the brand accent, otherwise inherit the surrounding
-                paragraph rhythm so the list reads as continuation of
-                the overview copy above it. */}
-            <ul className="mt-4 max-w-2xl mx-auto text-left list-disc pl-6 marker:text-hd-orange space-y-1.5 text-[15px] md:text-base text-gray-700 leading-relaxed">
+            {/* BUG_UI_003 #3: removed the orange list-disc markers per
+                Figma; the list is a clean unbulleted stack with minimal
+                indentation, each item on its own line. */}
+            <ul className="mt-4 max-w-3xl text-[15px] md:text-base text-gray-700 leading-relaxed space-y-1.5">
               {OVERVIEW_BULLETS.map((b) => (
                 <li key={b}>{b}</li>
               ))}
@@ -167,15 +176,30 @@ function FeatureSection({
   reverse: boolean;
   index: number;
 }) {
-  // Alternate between transparent and white-card so the rows visually separate.
+  // BUG_UI_004 — overlapping asymmetric grid:
+  //
+  //   • Images are square-edged (no border-radius), full-bleed in their
+  //     column. Drops the rounded-card treatment that gave the rows a
+  //     "bubbly" feel against the rugged H-D voice.
+  //   • Text tile sits in a raised white card with a soft drop shadow,
+  //     intentionally OVERLAPPING the image edge on the opposite side
+  //     of the row (margin-left/-right negative pulls it back into the
+  //     image gutter). On mobile the overlap collapses to a clean stack.
+  //   • Icons rendered inside a thin circular outline (no fill), the
+  //     "minimalist wireframe" treatment Figma specifies.
+  //   • Headings now use font-subhead (1903 Sans, regular weight) rather
+  //     than font-headline (1903 Sans Condensed); the condensed cut was
+  //     too vertically compressed for these card titles.
   return (
-    <section className={index % 2 === 0 ? 'py-10 md:py-12' : 'py-10 md:py-12 bg-hd-white'}>
+    <section className={`py-10 md:py-14 ${index % 2 === 1 ? 'bg-hd-white' : 'bg-surface-light'}`}>
       <div
-        className={`max-w-container mx-auto px-6 grid lg:grid-cols-2 gap-8 lg:gap-14 items-center ${
+        className={`max-w-container mx-auto px-6 grid lg:grid-cols-2 gap-0 items-center ${
           reverse ? 'lg:[&>*:first-child]:order-2' : ''
         }`}
       >
-        <div className="aspect-[4/3] bg-gray-200 overflow-hidden rounded-card">
+        {/* Image column — square-edged per Figma; aspect 4/3 keeps the
+            bike framing consistent across rows. */}
+        <div className="aspect-[4/3] overflow-hidden">
           <img
             src={feature.image}
             alt=""
@@ -183,22 +207,42 @@ function FeatureSection({
             className="w-full h-full object-cover"
           />
         </div>
-        <div>
+        {/* Text card — raised, drop-shadowed, overlaps the image gutter
+            on lg+ via negative margin pulled INTO the image. Sign of
+            the margin flips with `reverse` so the overlap always
+            extends into the adjacent image column, never out into the
+            page gutter. */}
+        <div
+          className={`bg-hd-white shadow-xl lg:shadow-2xl p-6 md:p-8 lg:p-10 relative lg:z-10 ${
+            reverse
+              ? 'lg:-mr-16 lg:[&]:order-1'
+              : 'lg:-ml-16'
+          }`}
+        >
           <div className="flex items-start gap-4">
-            <span className="shrink-0 h-10 w-10 md:h-12 md:w-12 inline-flex items-center justify-center rounded-card bg-hd-orange text-hd-white">
-              <FeatureGlyph icon={feature.icon} />
-            </span>
-            <div>
-              <h3 className="font-headline tracking-headline uppercase text-xl md:text-2xl text-text-on-light leading-tight">
+            {/* Brand-supplied SVG (already a 72×72 orange-ringed circle
+                with a transparent fill). Sized down to ~56-64px to sit
+                comfortably next to the headline. */}
+            <img
+              src={feature.iconSrc}
+              alt=""
+              aria-hidden
+              className="shrink-0 h-14 w-14 md:h-16 md:w-16"
+              width={64}
+              height={64}
+              decoding="async"
+            />
+            <div className="min-w-0">
+              <h3 className="font-subhead font-bold tracking-subhead uppercase text-lg md:text-xl text-text-on-light leading-tight">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-700 mt-3 leading-relaxed">{feature.body}</p>
+              <p className="text-[15px] text-gray-700 mt-3 leading-relaxed">{feature.body}</p>
               {feature.cta && (
                 <a
                   href={feature.cta.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block mt-5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-5 py-2.5 hover:brightness-110 transition rounded-card text-xs"
+                  className="inline-block mt-5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-5 py-2.5 hover:brightness-110 transition text-xs"
                 >
                   {feature.cta.label} ↗
                 </a>
@@ -211,78 +255,6 @@ function FeatureSection({
   );
 }
 
-// Figma /Customer/Home.png — each feature row carries a small rounded-square
-// orange tile with a white pictogram (clipboard / shield / odometer / gear /
-// SOS / HOG). Stroke-only line icons read clearly at the 24px size used in
-// the design.
-function FeatureGlyph({ icon }: { icon: FeatureIcon }) {
-  const stroke: React.SVGProps<SVGSVGElement> = {
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2,
-    strokeLinecap: 'round',
-    strokeLinejoin: 'round',
-    className: 'w-6 h-6',
-    'aria-hidden': true,
-  };
-  switch (icon) {
-    case 'clipboard':
-      return (
-        <svg {...stroke}>
-          <rect x="6" y="4" width="12" height="16" rx="2" />
-          <path d="M9 4h6v3H9z" />
-          <path d="M9 11h6M9 15h4" />
-        </svg>
-      );
-    case 'shield':
-      return (
-        <svg {...stroke}>
-          <path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6l8-3z" />
-          <path d="M9 12l2 2 4-4" />
-        </svg>
-      );
-    case 'odometer':
-      return (
-        <svg {...stroke}>
-          <path d="M3 14a9 9 0 0118 0" />
-          <path d="M12 14l4-4" />
-          <circle cx="12" cy="14" r="1" fill="currentColor" />
-          <path d="M3 14h2M19 14h2M12 5v2" />
-        </svg>
-      );
-    case 'gear':
-      return (
-        <svg {...stroke}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
-        </svg>
-      );
-    case 'sos':
-      return (
-        <svg {...stroke}>
-          <circle cx="12" cy="12" r="9" />
-          <path d="M8 12c0-1 .8-2 2-2s2 1 2 2-.8 2-2 2c-1.2 0-2 1-2 2" />
-          <path d="M16 10v4M14 10h4M14 14h4" />
-        </svg>
-      );
-    case 'hog':
-      // HOG = simple bar logotype since there's no licensed mark — Figma uses
-      // a simple HOG glyph in the same orange tile.
-      return (
-        <svg viewBox="0 0 32 24" className="w-7 h-5" aria-hidden>
-          <text
-            x="16"
-            y="17"
-            textAnchor="middle"
-            fontFamily="Inter, sans-serif"
-            fontWeight="700"
-            fontSize="11"
-            fill="currentColor"
-          >
-            HOG
-          </text>
-        </svg>
-      );
-  }
-}
+// QA RE-OPEN: FeatureGlyph component removed. Benefit icons are now
+// brand-supplied SVGs stored in /public/brand/benefits/ and rendered
+// inline via <img> (see FeatureSection above).

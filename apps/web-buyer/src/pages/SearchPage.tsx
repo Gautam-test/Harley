@@ -11,6 +11,8 @@ import {
   ListingCardSkeleton,
   type ListingCardData,
 } from '../components/ListingCard';
+// EMI Calculator was previously mounted at this layer; it now lives
+// inside SearchFilters per the Figma sidebar hierarchy.
 
 interface SearchResponse {
   results: ListingCardData[];
@@ -48,6 +50,19 @@ export function SearchPage() {
   // filter column — pressing it scrolls them back to it. Avoids the cramped
   // inner-scroll sidebar UX while keeping filters reachable on long pages.
   const [showFiltersFab, setShowFiltersFab] = useState(false);
+  // Mobile slide-over drawer state. Below lg the sidebar is hidden from
+  // the inline layout and lives in this drawer instead so phone/tablet
+  // users can still filter.
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  useEffect(() => {
+    // Close drawer if viewport grows past lg (phone rotates to tablet,
+    // mobile-to-desktop window resize, etc.).
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setMobileFiltersOpen(false);
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   useEffect(() => {
     const onScroll = () => {
       const aside = document.getElementById('search-filters');
@@ -90,31 +105,55 @@ export function SearchPage() {
         <meta name="description" content="Search Certified Pre-Owned Harley-Davidson motorcycles from authorised Indian dealers." />
       </Helmet>
 
+      {/* BUG_UI_008: breadcrumb "HOME / SEARCH STOCK" above headline, and
+          Figma-correct Title Case subtitle. Note: the brand-supplied
+          "shipping containers + bike lineup" hero photo isn't in the
+          asset pack yet — keeping the existing search-stock.jpg until
+          ops drops the new shot into public/heros/. Marked in the
+          ticket so it's traceable. */}
       <PageHero
         title="Search"
         emphasis="Stock"
-        subtitle="Every H-D Certified™ motorcycle is inspected, verified, and backed by an authorized Harley-Davidson dealer."
+        breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Search Stock' }]}
+        subtitle="Every H-D Certified™ Motorcycle Is Inspected, Verified, And Backed By An Authorized Harley-Davidson® Dealer."
         image={HERO.searchStock}
         size="lg"
       />
 
       <div className="bg-surface-light text-text-on-light min-h-screen">
-        <div className="max-w-container mx-auto px-6 py-10 grid lg:grid-cols-[300px_1fr] gap-6">
-          {/* Filter column scrolls with the page — natural reading order,
-              no nested scrollbar. A "Filters" floating button (below) brings
-              the user back to the top of this column when they've scrolled
-              past it on long result pages. */}
-          <aside id="search-filters" className="h-fit">
-            <p className="font-subhead uppercase tracking-subhead text-xs text-text-on-light mb-3">
-              Search By:
-            </p>
+        {/* Mobile "Filters" trigger — visible only below lg where the
+            sidebar collapses out of the layout. Tapping opens the
+            slide-over drawer below. */}
+        <div className="lg:hidden max-w-container mx-auto px-4 sm:px-6 pt-4">
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            className="w-full inline-flex items-center justify-center gap-2 bg-hd-black text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-4 py-3 hover:brightness-110 transition"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="7" y1="12" x2="17" y2="12" />
+              <line x1="10" y1="18" x2="14" y2="18" />
+            </svg>
+            Filters
+          </button>
+        </div>
+
+        <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10 grid lg:grid-cols-[300px_1fr] gap-6">
+          {/* Desktop sidebar — hidden below lg. Mobile users get the
+              full-screen slide-over drawer rendered after this div. */}
+          <aside id="search-filters" className="hidden lg:block h-fit">
             <SearchFilters />
           </aside>
 
           <section>
-            <div className="flex items-baseline justify-between mb-2 flex-wrap gap-3">
-              <h2 className="font-subhead text-2xl md:text-3xl text-text-on-light">
-                H-D Certified Used Motorcycle Stocklist
+            {/* BUG_UI_009 #1: heading restored to the Figma form with the
+                ™ symbol and rendered in font-subhead (1903 Sans, wider
+                cut) at a bumped size. font-headline (Condensed) was
+                visually compressing the row. */}
+            <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+              <h2 className="font-subhead font-bold tracking-subhead uppercase text-xl md:text-2xl lg:text-[28px] text-text-on-light leading-tight">
+                H-D Certified&trade; Used Motorcycle Stocklist
               </h2>
               <div className="flex items-center gap-3">
                 <span className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
@@ -133,10 +172,22 @@ export function SearchPage() {
                 </Select>
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-6">
+
+            {/* QA RE-OPEN (Search Stock Figma): paragraph sits BETWEEN
+                the heading-row and the CertTabs per the design — was
+                previously rendered AFTER the tabs which inverted the
+                Figma rhythm. */}
+            <p className="text-sm text-gray-600 mb-5">
               Please use the filters on the left to refine the H-D Certified CPO stock and find your
               next Harley-Davidson.
             </p>
+
+            {/* Top filter tab row — three buttons that map to the same
+                `cert` URL param. */}
+            <CertTabs
+              active={(params.get('cert') as '' | 'CPO' | 'AS_IS') ?? ''}
+              onChange={(v) => setParam('cert', v)}
+            />
 
             {isError && (
               <div className="text-danger bg-danger/10 border border-danger px-4 py-3 rounded-card">
@@ -212,9 +263,47 @@ export function SearchPage() {
         </div>
       </div>
 
+      {/* Mobile filter drawer — full-height slide-over from the left.
+          Hosts the SearchFilters component (same instance you'd see on
+          desktop). Closes on backdrop tap, on the inner ✕, and on every
+          successful URL filter change (auto-apply triggers setParams →
+          we close here so the buyer sees the updated grid). */}
+      {mobileFiltersOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          <button
+            type="button"
+            aria-label="Close filters"
+            onClick={() => setMobileFiltersOpen(false)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Search filters"
+            className="relative bg-surface-light w-[88%] max-w-sm h-full overflow-y-auto shadow-2xl"
+          >
+            <div className="sticky top-0 z-10 bg-hd-black text-hd-white px-4 py-3 flex items-center justify-between">
+              <span className="font-subhead font-bold uppercase tracking-subhead text-sm">
+                Filters
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(false)}
+                aria-label="Close"
+                className="text-hd-white hover:text-hd-orange"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-3">
+              <SearchFilters />
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* Floating "Back to filters" button — appears only when filters are
-          off-screen above. Common pattern in e-commerce search; avoids the
-          jankiness of nested scrollbars. */}
+          off-screen above (desktop only — mobile uses the drawer above). */}
       {showFiltersFab && (
         <button
           type="button"
@@ -223,7 +312,7 @@ export function SearchPage() {
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
           aria-label="Back to filters"
-          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-3 rounded-full shadow-2xl hover:brightness-110 transition"
+          className="hidden lg:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-3 rounded-full shadow-2xl hover:brightness-110 transition"
         >
           <svg
             className="w-4 h-4"
@@ -243,6 +332,55 @@ export function SearchPage() {
         </button>
       )}
     </>
+  );
+}
+
+// EmiCalculatorPanel moved into SearchFilters during the BUG re-open
+// pass — the Figma reference places it inside the sidebar hierarchy
+// beneath the Apply Filters CTA, not as a standalone sibling component
+// on the page.
+
+// BUG_UI_009 #4: top filter tabs above the grid. Drives the same `cert`
+// URL param the sidebar radio uses, so the two stay in sync no matter
+// which surface the buyer touches. Labels match the Figma exactly.
+function CertTabs({
+  active,
+  onChange,
+}: {
+  active: '' | 'CPO' | 'AS_IS';
+  onChange: (v: string) => void;
+}) {
+  const tabs: { id: '' | 'CPO' | 'AS_IS'; label: string }[] = [
+    { id: '', label: 'All Pre-Owned Motorcycles' },
+    { id: 'CPO', label: 'Certified Pre-Owned' },
+    { id: 'AS_IS', label: 'As-Is Pre-Owned Motorcycles' },
+  ];
+  return (
+    <nav
+      className="flex items-end gap-1 mb-6 border-b border-gray-200 overflow-x-auto scrollbar-hide"
+      role="tablist"
+      aria-label="Filter listings by certification"
+    >
+      {tabs.map((t) => {
+        const isActive = t.id === active;
+        return (
+          <button
+            key={t.id || 'all'}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(t.id)}
+            className={`px-4 py-2.5 text-sm font-subhead font-bold uppercase tracking-subhead border-b-2 -mb-px transition whitespace-nowrap ${
+              isActive
+                ? 'border-hd-orange text-text-on-light'
+                : 'border-transparent text-gray-500 hover:text-text-on-light'
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 

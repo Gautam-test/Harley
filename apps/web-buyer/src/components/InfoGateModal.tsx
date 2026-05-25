@@ -301,18 +301,15 @@ export function InfoGateModal({
         setError(null);
       })
       .catch((e) => {
-        // Server-side 30s rate limit — happens when the modal remounts
-        // (e.g. Edit details → resubmit) within the window. The previous
-        // OTP we sent is still valid on the server (5-min TTL), but we
-        // lost the otpId when the modal unmounted; surface a friendlier
-        // hint rather than the raw "Wait 30s before resending" so the
-        // buyer knows to wait and try again rather than thinking it's an
-        // error in the form. Arm the visible cooldown so the Resend
-        // button shows the remaining seconds.
+        // QA RE-OPEN bug #4/#6: the server now returns the existing
+        // otpId on the Edit→Resubmit path instead of throwing
+        // OTP_RESEND_TOO_SOON, so the modal lands cleanly on verify
+        // with a usable otpId and the user enters the SMS code they
+        // already received. OTP_RESEND_TOO_SOON now only fires when
+        // the user explicitly taps Resend before the 30s window
+        // elapses — surfaced as a Resend-button countdown only, never
+        // as a blocking error or popup.
         if (e instanceof ApiError && e.code === 'OTP_RESEND_TOO_SOON') {
-          // Only show the cooldown countdown when the user explicitly clicked
-          // Resend (lastSentAt is set from a prior successful send this session).
-          // On the initial auto-send the modal opens clean — no countdown.
           if (lastSentAt !== null) {
             setResendCooldown(30);
           }
@@ -597,7 +594,7 @@ export function InfoGateModal({
       <div
         className={`bg-hd-white border-t-4 border-hd-orange ${
           isBuyerEnquiry && step === 'collect' ? 'max-w-xl' : 'max-w-md'
-        } w-full p-4 sm:p-6 rounded-card shadow-xl my-auto`}
+        } w-full p-4 sm:p-6 shadow-xl my-auto`}
       >
         <div className="flex items-baseline justify-between">
           <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
@@ -645,7 +642,7 @@ export function InfoGateModal({
               />
             </Labelled>
 
-            <div className={isBuyerEnquiry ? 'grid grid-cols-2 gap-3' : ''}>
+            <div className={isBuyerEnquiry ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : ''}>
               <Labelled label="Phone Number" required error={errors.phone?.message} show={isBuyerEnquiry}>
                 <Controller
                   control={control}
@@ -921,7 +918,7 @@ export function InfoGateModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
+                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition"
                 >
                   Cancel
                 </button>
@@ -944,7 +941,7 @@ export function InfoGateModal({
           // form for a clear blocking-message panel and keep only the
           // Edit details / Close affordance so the user has a way out.
           <div className="mt-6 space-y-4">
-            <div className="bg-warning/10 border border-warning/40 rounded-card p-4">
+            <div className="bg-warning/10 border border-warning/40 p-4">
               <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
                 {sendBlocked.title}
               </p>
@@ -980,18 +977,15 @@ export function InfoGateModal({
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="text-center text-2xl tracking-[0.5em] font-mono"
             />
-            {/* Soft notice when the modal lands on verify step but the
-                /otp/send request hasn't completed (or returned without
-                an otpId — happens on OTP_RESEND_TOO_SOON when the buyer
-                re-opens the modal within 30s of the previous send). The
-                Verify button is disabled in that state; this banner
-                tells them why so they tap Resend Code instead of
-                clicking Verify and getting the misleading "OTP not yet
-                sent" error. */}
-            {!otpId && !busy && !error && (
-              <div className="text-amber-900 text-xs bg-amber-50 border border-amber-200 px-3 py-2 rounded">
-                Waiting on the OTP to send. If you don&rsquo;t receive it shortly, tap{' '}
-                <strong>Resend code</strong> below.
+            {/* QA RE-OPEN bug #2: polished, persistent notice — stays
+                visible from the moment the OTP send fires (busy) all
+                the way through the verify step. Only hidden when an
+                error has surfaced (error path takes precedence). Copy
+                exactly matches the QA spec text. */}
+            {!error && (
+              <div className="text-amber-900 text-[13px] bg-amber-50 border border-amber-200 px-3 py-2.5 leading-relaxed">
+                OTP has been sent to your mobile number. If you don&rsquo;t receive it
+                shortly, tap <strong>Resend code</strong> below.
               </div>
             )}
             {error && (

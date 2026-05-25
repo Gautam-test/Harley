@@ -1,18 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 80" preserveAspectRatio="xMinYMid meet" role="img" aria-label="H-D Certified">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 64" preserveAspectRatio="xMinYMid meet" role="img" aria-label="H-D Certified">
   <title>H-D Certified</title>
   <!--
-    Light variant of the H-D Certified™ wordmark — for dark headers.
-    Hand-authored to stay crisp at any size; the EPS preview was a 430px
-    raster that pixelated when upscaled. Brand colours: white glyphs +
-    PMS 165C orange dash + ™.
+    Light variant of the H-D Certified wordmark — for dark headers.
+    QA BUG_UI_001 revisions:
+      • Removed the orange "TM" superscript at brand request (not in Figma).
+      • Widened letter-spacing to 0.1em equivalent (~6px at fs=60).
+      • Tightened the viewBox aspect ratio (500x64 ≈ 7.8:1) so the parent
+        `h-9 w-auto` rule scales the wordmark proportionally instead of
+        squashing it vertically into a 5.375:1 box (the previous 430x80
+        viewBox forced an off-aspect upscale on every breakpoint).
+      • viewBox width widened so the wider letter-spacing on "CERTIFIED"
+        doesn't clip on the right edge.
+      • Font weight 500 (Medium) per H-D 2026 guidelines for the wordmark
+        cut — 700 read as too heavy next to the lighter nav.
+      • Glyph face starts with "1903 Sans Condensed" but ALSO accepts
+        plain "1903 Sans" so deployments without the condensed cut still
+        render in-family rather than falling through to Bebas Neue.
   -->
-  <g fill="#ffffff" font-family="'1903 Sans Condensed', 'Bebas Neue', Oswald, Impact, sans-serif" font-weight="700" font-size="62" letter-spacing="2">
-    <text x="0" y="60">H</text>
-    <text x="92" y="60">D</text>
-    <text x="170" y="60">CERTIFIED</text>
+  <g fill="#ffffff"
+     font-family="'1903 Sans Condensed', '1903 Sans', 'Bebas Neue', Oswald, Impact, sans-serif"
+     font-weight="500"
+     font-size="60"
+     letter-spacing="6">
+    <text x="0" y="48">H</text>
+    <text x="96" y="48">D</text>
+    <text x="184" y="48">CERTIFIED</text>
   </g>
-  <!-- Orange dash between H and D, vertically centered on the cap-height -->
-  <rect x="44" y="30" width="40" height="10" fill="#FF6600"/>
-  <!-- TM superscript in orange -->
-  <text x="406" y="22" font-family="Arial, sans-serif" font-weight="700" font-size="14" fill="#FF6600">™</text>
+  <!-- Brand-orange dash between H and D, vertically centered on cap-height. -->
+  <rect x="48" y="22" width="40" height="8" fill="#FF6600"/>
 </svg>

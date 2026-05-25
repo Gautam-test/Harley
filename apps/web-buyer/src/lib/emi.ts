@@ -15,12 +15,15 @@ export const EMI_DEFAULTS = {
   rateAnnual: 0.105,
 } as const;
 
-/** Standard EMI formula. Returns rupees per month rounded to a whole number. */
+/** Standard EMI formula. Returns rupees per month rounded to a whole
+ *  number. Parameters explicitly typed `number` so callers (e.g. the
+ *  PLP EMI calculator widget with sliders) can pass arbitrary values
+ *  without TS pinning them to the EMI_DEFAULTS literal types. */
 export function approxEmi(
   price: number,
-  downPct = EMI_DEFAULTS.downPct,
-  months = EMI_DEFAULTS.months,
-  rateAnnual = EMI_DEFAULTS.rateAnnual,
+  downPct: number = EMI_DEFAULTS.downPct,
+  months: number = EMI_DEFAULTS.months,
+  rateAnnual: number = EMI_DEFAULTS.rateAnnual,
 ): number {
   const principal = price * (1 - downPct);
   if (principal <= 0 || months <= 0) return 0;

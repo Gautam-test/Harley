@@ -186,7 +186,7 @@ export function LeadDetailPage() {
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       <Link
         to={`/enquiries/${kind}`}
-        className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5 rounded-card"
+        className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5"
       >
         ← Back to {KIND_BACK_LABEL[kind]}
       </Link>
@@ -195,7 +195,7 @@ export function LeadDetailPage() {
         {/* Main column */}
         <div className="space-y-6 min-w-0">
           {/* Lead header */}
-          <header className="bg-hd-white border border-gray-200 rounded-card p-6">
+          <header className="bg-hd-white border border-gray-200 p-6">
             <div className="flex flex-wrap items-baseline gap-3 text-xs">
               <span className="font-mono text-text-on-light">
                 {formatLeadId(kind as LeadKind, lead.id, lead.createdAt)}
@@ -232,14 +232,14 @@ export function LeadDetailPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href={`tel:${lead.phone.replace(/\s+/g, '')}`}
-                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:brightness-110 transition"
+                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
               >
                 <Icon path="M3 5a2 2 0 012-2h2.5a1 1 0 011 .76l1 4a1 1 0 01-.27.95l-1.5 1.5a11 11 0 005 5l1.5-1.5a1 1 0 01.95-.27l4 1a1 1 0 01.76 1V19a2 2 0 01-2 2A18 18 0 013 5z" />
                 Call
               </a>
               <a
                 href={`mailto:${lead.email}?subject=Re: Your H-D Certified Enquiry ${formatLeadId(kind as LeadKind, lead.id, lead.createdAt)}`}
-                className="inline-flex items-center gap-1.5 border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:bg-hd-black hover:text-hd-white transition"
+                className="inline-flex items-center gap-1.5 border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:bg-hd-black hover:text-hd-white transition"
               >
                 <Icon path="M3 7l9 6 9-6M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7l2-2h14l2 2" />
                 Email
@@ -251,7 +251,7 @@ export function LeadDetailPage() {
                     formatLeadId(kind as LeadKind, lead.id, lead.createdAt),
                   );
                 }}
-                className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 rounded-card hover:border-hd-black hover:text-hd-black transition"
+                className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:border-hd-black hover:text-hd-black transition"
               >
                 <Icon path="M8 4h10a2 2 0 012 2v10M16 8H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2z" />
                 Copy Ref
@@ -260,7 +260,7 @@ export function LeadDetailPage() {
           </header>
 
           {/* Pipeline */}
-          <section className="bg-hd-white border border-gray-200 rounded-card p-6">
+          <section className="bg-hd-white border border-gray-200 p-6">
             <h2 className="font-headline tracking-headline uppercase text-lg">Pipeline</h2>
 
             {/* Terminal banner — DEAD / LOST are not pipeline stages, so when
@@ -269,7 +269,7 @@ export function LeadDetailPage() {
                 dealer can still see how far the lead got before being closed,
                 and can reset the status from the dropdown below. */}
             {isTerminal && (
-              <div className="mt-4 bg-danger/10 border border-danger/40 rounded-card p-4">
+              <div className="mt-4 bg-danger/10 border border-danger/40 p-4">
                 <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
                   Lead marked {LEAD_STAGE_LABELS[lead.status]}
                 </p>
@@ -382,7 +382,7 @@ export function LeadDetailPage() {
               about the current stage + comments. Default to expanded so
               first-time viewers see the full trail; clicking the chevron
               collapses to just the count. */}
-          <section className="bg-hd-white border border-gray-200 rounded-card p-6">
+          <section className="bg-hd-white border border-gray-200 p-6">
             <button
               type="button"
               onClick={() => setActivityExpanded((v) => !v)}
@@ -504,7 +504,7 @@ export function LeadDetailPage() {
           </section>
 
           {/* Comments */}
-          <section className="bg-hd-white border border-gray-200 rounded-card p-6">
+          <section className="bg-hd-white border border-gray-200 p-6">
             <h2 className="font-headline tracking-headline uppercase text-lg">Comments</h2>
 
             <div className="mt-4 space-y-3">
@@ -517,7 +517,7 @@ export function LeadDetailPage() {
               {comments.data?.map((c) => (
                 <article
                   key={c.id}
-                  className="border border-gray-200 rounded-card p-4 bg-surface-light"
+                  className="border border-gray-200 p-4 bg-surface-light"
                 >
                   <header className="flex items-center justify-between text-xs">
                     <span className="font-subhead uppercase tracking-subhead text-text-on-light">
@@ -588,7 +588,7 @@ export function LeadDetailPage() {
                 <img
                   src={lead.listing.images[0]}
                   alt=""
-                  className="w-full aspect-[16/10] object-cover rounded-card"
+                  className="w-full aspect-[16/10] object-cover"
                 />
               )}
               <div className="mt-3">
@@ -647,7 +647,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="bg-hd-white border border-gray-200 rounded-card p-5">
+    <section className="bg-hd-white border border-gray-200 p-5">
       <h3 className="font-headline tracking-headline uppercase text-base text-text-on-light">
         {title}
       </h3>
