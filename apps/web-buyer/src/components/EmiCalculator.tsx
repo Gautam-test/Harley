@@ -1,264 +1,171 @@
 import { useState } from 'react';
-import { Button } from '@hd-cpo/ui';
+import { EMI_DEFAULTS } from '../lib/emi';
 
-// PRD §6.1.5 — purely client-side amortisation. No data saved.
-function emi(principal: number, ratePctYearly: number, months: number): number {
+// QA Figma overhaul: replaces the previous "Finance Estimate" widget
+// (large monthly callout + 10/20/30/50 down-payment chips + 24/36/48/60/72/
+// 84 tenure chips + Email-This-Estimate button + principal/interest split
+// bar) with the clean "EMI CALCULATOR" the Figma spec calls for —
+// On-Road Price / Down Payment / Tenure / Interest Rate sliders + a single
+// "Estimated Monthly EMI" callout inside a soft grey box.
+//
+// `bikeLabel` is kept on the prop signature so the listing-detail caller
+// doesn't need to change; it's no longer rendered.
+function emiCalc(principal: number, ratePctYearly: number, months: number): number {
   if (months === 0 || principal === 0) return 0;
   const r = ratePctYearly / 12 / 100;
-  if (r === 0) return principal / months;
+  if (r === 0) return Math.round(principal / months);
   const f = Math.pow(1 + r, months);
-  return (principal * r * f) / (f - 1);
+  return Math.round((principal * r * f) / (f - 1));
 }
 
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
 
-const DOWN_PRESETS = [10, 20, 30, 50];
-const TENURE_PRESETS = [24, 36, 48, 60, 72, 84];
+const trackGradient = (pct: number) =>
+  `linear-gradient(to right, #FF6600 0%, #FF6600 ${pct}%, #E5E7EB ${pct}%, #E5E7EB 100%)`;
+const pct = (v: number, min: number, max: number) =>
+  max > min ? ((v - min) / (max - min)) * 100 : 0;
 
-export function EmiCalculator({ price, bikeLabel }: { price: number; bikeLabel?: string }) {
-  const [downPct, setDownPct] = useState(20);
-  const [tenure, setTenure] = useState(60);
-  const [rate, setRate] = useState(10.5);
+interface EmiCalculatorProps {
+  /** Bike's on-road price — seeds the On-Road Price slider. */
+  price: number;
+  /** Optional human-readable bike label (kept for API back-compat; unused). */
+  bikeLabel?: string;
+}
 
-  const downPayment = (price * downPct) / 100;
-  const loan = price - downPayment;
-  const monthly = emi(loan, rate, tenure);
-  const total = monthly * tenure;
-  const interest = total - loan;
-  const totalWithDown = total + downPayment;
+export function EmiCalculator({ price }: EmiCalculatorProps) {
+  // Seed price from the listing; let the buyer adjust if they're
+  // budgeting against a different number.
+  const [onRoadPrice, setOnRoadPrice] = useState<number>(price);
+  const [downPct, setDownPct] = useState<number>(EMI_DEFAULTS.downPct);
+  const [tenure, setTenure] = useState<number>(EMI_DEFAULTS.months);
+  const [rate, setRate] = useState<number>(EMI_DEFAULTS.rateAnnual * 100);
 
-  // Visual split bar — principal vs interest (the loan portion only).
-  const interestPct = total > 0 ? (interest / total) * 100 : 0;
-  const principalPct = 100 - interestPct;
-
-  const years = Math.floor(tenure / 12);
-  const months = tenure % 12;
-  const tenureLabel =
-    years > 0 && months > 0
-      ? `${years}y ${months}m`
-      : years > 0
-      ? `${years} year${years > 1 ? 's' : ''}`
-      : `${tenure} months`;
+  const downPayment = onRoadPrice * downPct;
+  const loan = Math.max(0, onRoadPrice - downPayment);
+  const monthly = emiCalc(loan, rate, tenure);
 
   return (
-    <div className="bg-hd-white border border-gray-200 shadow-sm rounded-card overflow-hidden">
-      {/* Header */}
-      <header className="px-5 py-4 border-b border-gray-200 flex items-baseline justify-between">
-        <h3 className="font-subhead uppercase tracking-subhead text-text-on-light text-sm">
-          Finance Estimate
+    <section
+      aria-labelledby="emi-calc-pdp-heading"
+      className="bg-hd-white border border-gray-200 p-5"
+    >
+      <div className="flex items-baseline justify-between">
+        <h3
+          id="emi-calc-pdp-heading"
+          className="font-subhead font-bold uppercase tracking-subhead text-text-on-light text-sm"
+        >
+          EMI Calculator
         </h3>
-        <span className="text-[10px] font-subhead uppercase tracking-subhead text-gray-400">
+        <span className="font-body text-[10px] uppercase tracking-subhead text-gray-400">
           Indicative
         </span>
-      </header>
+      </div>
 
-      {/* Big EMI display + breakdown bar */}
-      <section className="px-5 pt-5 pb-4 bg-surface-light/40">
-        <p className="text-[10px] font-subhead uppercase tracking-subhead text-gray-500">
-          Monthly EMI
-        </p>
-        <p className="font-headline text-4xl text-hd-orange mt-1 leading-none">
-          {inr(monthly)}
-        </p>
-        <p className="text-xs text-gray-600 mt-1">
-          for <strong className="text-text-on-light">{tenureLabel}</strong> at{' '}
-          <strong className="text-text-on-light">{rate}%</strong> p.a.
-        </p>
-
-        {/* Principal vs interest split bar */}
-        <div className="mt-4">
-          <div
-            className="flex h-2 overflow-hidden rounded-full bg-gray-200"
-            role="img"
-            aria-label={`Principal ${Math.round(principalPct)}%, interest ${Math.round(interestPct)}%`}
-          >
-            <div
-              className="bg-hd-orange transition-all"
-              style={{ width: `${principalPct}%` }}
-            />
-            <div
-              className="bg-hd-black transition-all"
-              style={{ width: `${interestPct}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-2 text-[10px] font-subhead uppercase tracking-subhead">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-hd-orange rounded-sm" />
-              <span className="text-gray-600">Principal</span>
-              <span className="text-text-on-light">{inr(loan)}</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-gray-600">Interest</span>
-              <span className="text-text-on-light">{inr(interest)}</span>
-              <span className="w-2 h-2 bg-hd-black rounded-sm" />
-            </span>
-          </div>
+      {/* On-Road Price */}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="pdp-emi-price" className="font-body text-[12px] text-text-on-light">
+            On-Road Price
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {inr(onRoadPrice)}
+          </span>
         </div>
-      </section>
+        <input
+          id="pdp-emi-price"
+          type="range"
+          min={100_000}
+          max={5_000_000}
+          step={50_000}
+          value={onRoadPrice}
+          onChange={(e) => setOnRoadPrice(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(onRoadPrice, 100_000, 5_000_000)) }}
+        />
+      </div>
 
-      {/* Controls */}
-      <div className="px-5 py-5 space-y-5 border-t border-gray-200">
-        <Slider
-          label="Down payment"
-          metric={`${downPct}% · ${inr(downPayment)}`}
-          min={0}
-          max={90}
-          step={5}
+      {/* Down Payment */}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="pdp-emi-down" className="font-body text-[12px] text-text-on-light">
+            Down Payment
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {Math.round(downPct * 100)}% &middot; {inr(downPayment)}
+          </span>
+        </div>
+        <input
+          id="pdp-emi-down"
+          type="range"
+          min={0.05}
+          max={0.5}
+          step={0.05}
           value={downPct}
-          onChange={setDownPct}
-        >
-          <Chips
-            values={DOWN_PRESETS}
-            current={downPct}
-            onPick={setDownPct}
-            format={(v) => `${v}%`}
-          />
-        </Slider>
+          onChange={(e) => setDownPct(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(downPct, 0.05, 0.5)) }}
+        />
+      </div>
 
-        <Slider
-          label="Tenure"
-          metric={tenureLabel}
+      {/* Tenure */}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="pdp-emi-tenure" className="font-body text-[12px] text-text-on-light">
+            Tenure
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {tenure} months
+          </span>
+        </div>
+        <input
+          id="pdp-emi-tenure"
+          type="range"
           min={12}
           max={84}
           step={6}
           value={tenure}
-          onChange={setTenure}
-        >
-          <Chips
-            values={TENURE_PRESETS}
-            current={tenure}
-            onPick={setTenure}
-            format={(v) => `${v}m`}
-          />
-        </Slider>
+          onChange={(e) => setTenure(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(tenure, 12, 84)) }}
+        />
+      </div>
 
-        <Slider
-          label="Interest rate"
-          metric={`${rate}% p.a.`}
+      {/* Interest Rate */}
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="pdp-emi-rate" className="font-body text-[12px] text-text-on-light">
+            Interest Rate
+          </label>
+          <span className="font-body font-bold text-[13px] text-text-on-light">
+            {rate.toFixed(1)}% p.a.
+          </span>
+        </div>
+        <input
+          id="pdp-emi-rate"
+          type="range"
           min={5}
           max={20}
           step={0.1}
           value={rate}
-          onChange={setRate}
+          onChange={(e) => setRate(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(rate, 5, 20)) }}
         />
       </div>
 
-      {/* Totals */}
-      <dl className="px-5 py-4 bg-surface-light/40 border-t border-gray-200 grid grid-cols-2 gap-y-2 text-sm">
-        <dt className="text-gray-600">Loan amount</dt>
-        <dd className="text-right text-text-on-light">{inr(loan)}</dd>
-
-        <dt className="text-gray-600">Total interest</dt>
-        <dd className="text-right text-text-on-light">{inr(interest)}</dd>
-
-        <dt className="font-subhead uppercase tracking-subhead text-text-on-light text-xs pt-2 border-t border-gray-200">
-          Total payable
-        </dt>
-        <dd className="text-right pt-2 border-t border-gray-200 font-subhead text-text-on-light">
-          {inr(totalWithDown)}
-        </dd>
-      </dl>
-
-      {/* Footer */}
-      <footer className="px-5 py-4 border-t border-gray-200">
-        <p className="text-[11px] text-gray-500 leading-relaxed">
-          Indicative only. Actual rates and approval determined by lender. EMI
-          calculator does not constitute a loan offer.
+      {/* Estimated Monthly EMI callout — soft grey panel + orange figure
+          per Figma. */}
+      <div className="mt-5 bg-gray-100 p-4">
+        <p className="font-body text-[11px] uppercase tracking-subhead text-gray-600">
+          Estimated Monthly EMI
         </p>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="w-full mt-3"
-          onClick={() => {
-            const subject = `H-D Certified — EMI estimate${bikeLabel ? ` for ${bikeLabel}` : ''}`;
-            const lines = [
-              bikeLabel ? `Motorcycle: ${bikeLabel}` : null,
-              `On-road price: ${inr(price)}`,
-              `Down payment (${downPct}%): ${inr(downPayment)}`,
-              `Loan amount: ${inr(loan)}`,
-              `Tenure: ${tenureLabel}`,
-              `Interest rate: ${rate}% p.a.`,
-              ``,
-              `Monthly EMI: ${inr(monthly)}`,
-              `Total interest: ${inr(interest)}`,
-              `Total payable (including down payment): ${inr(totalWithDown)}`,
-              ``,
-              `Indicative only. Actual rates and approval determined by lender.`,
-              `Generated from H-D Certified — Approved Used Motorcycles.`,
-            ].filter(Boolean);
-            const body = lines.join('\n');
-            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-          }}
-        >
-          Email This Estimate
-        </Button>
-      </footer>
-    </div>
-  );
-}
-
-interface SliderProps {
-  label: string;
-  metric: string;
-  min: number;
-  max: number;
-  step: number;
-  value: number;
-  onChange: (n: number) => void;
-  children?: React.ReactNode;
-}
-
-function Slider({ label, metric, min, max, step, value, onChange, children }: SliderProps) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between mb-2">
-        <label className="text-[10px] font-subhead uppercase tracking-subhead text-gray-600">
-          {label}
-        </label>
-        <span className="text-xs font-subhead text-text-on-light">{metric}</span>
+        <p className="font-subhead font-bold text-3xl tracking-subhead text-hd-orange mt-1 leading-none">
+          {inr(monthly)}
+        </p>
+        <p className="text-[10px] text-gray-500 mt-2 leading-snug">
+          Indicative only. Actual rates and approval determined by the lender.
+        </p>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-hd-orange cursor-pointer"
-        aria-label={label}
-      />
-      {children && <div className="mt-2">{children}</div>}
-    </div>
-  );
-}
-
-interface ChipsProps {
-  values: number[];
-  current: number;
-  onPick: (n: number) => void;
-  format: (v: number) => string;
-}
-
-function Chips({ values, current, onPick, format }: ChipsProps) {
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {values.map((v) => {
-        const active = current === v;
-        return (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onPick(v)}
-            className={`px-2.5 py-1 text-[10px] font-subhead uppercase tracking-subhead border transition ${
-              active
-                ? 'bg-hd-black text-hd-white border-hd-black'
-                : 'bg-hd-white text-gray-700 border-gray-300 hover:border-hd-orange hover:text-hd-orange'
-            }`}
-          >
-            {format(v)}
-          </button>
-        );
-      })}
-    </div>
+    </section>
   );
 }
