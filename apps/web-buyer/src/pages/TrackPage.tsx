@@ -239,16 +239,23 @@ export function TrackPage() {
             • CTA "TRACK YOUR HARLEY-DAVIDSON®"
             • Sharp container + input + CTA corners
             • Solid full-opacity orange CTA */}
+      {/* QA latest: headline is "TRACK YOUR HARLEY-DAVIDSON®" with
+          "TRACK YOUR" white + "HARLEY-DAVIDSON®" orange. The bg image
+          should be the outdoor 2-bike river/mountain shot; the
+          panAmerica asset is the closest in-pack stand-in for that
+          mood (single bike but lifestyle outdoor) until brand drops
+          the exact dual-bike asset. Container border dropped — Figma
+          shows the white widget sitting natively on the photo. */}
       <PageHero
-        title="Harley-"
-        emphasis="Davidson®"
+        title="Track Your"
+        emphasis="Harley-Davidson®"
         image={HERO.panAmerica}
         size="sm"
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Track' }]}
       >
         <form
           onSubmit={onSubmit}
-          className="mx-auto max-w-2xl bg-hd-white border-2 border-hd-black p-3 grid sm:grid-cols-[1fr_auto] gap-2 shadow-2xl text-left"
+          className="mx-auto max-w-2xl bg-hd-white p-3 grid sm:grid-cols-[1fr_auto] gap-2 shadow-2xl text-left"
         >
           <div>
             <label className="block text-[11px] font-body text-text-on-light px-2 pt-1">
@@ -326,17 +333,19 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
   return (
     <section className="bg-hd-white py-12">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
-          Track Your <span className="text-hd-orange">Order</span>
+        {/* QA latest: heading is solid black, 16px, wide 1903 Sans —
+            no two-tone orange split per Figma. */}
+        <h2 className="font-subhead font-bold tracking-subhead uppercase text-[16px] text-hd-black">
+          Track Your Order
         </h2>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:items-start border-b border-gray-200 pb-5">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:items-start border-b border-gray-200 pb-5">
           <div>
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
-              Order ID
-            </p>
+            {/* QA latest: field labels in Title Case body face (not
+                uppercase tracking-subhead) per Figma. */}
+            <p className="font-body text-[12px] text-gray-500">Order ID</p>
             <p className="font-mono text-lg text-text-on-light mt-1">{order.orderId}</p>
-            <p className="font-subhead uppercase tracking-subhead text-base mt-3 text-text-on-light">
+            <p className="font-body text-base mt-3 text-text-on-light">
               {order.bikeLabel}
             </p>
             <p className="text-xs text-gray-600 mt-1">
@@ -344,8 +353,8 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
             </p>
             {order.estimatedDelivery && (
               <p className="text-xs text-gray-600 mt-2">
-                Estimated Delivery —{' '}
-                <span className="text-hd-orange font-subhead uppercase tracking-subhead">
+                Estimated Delivery:{' '}
+                <span className="text-hd-orange font-body font-bold">
                   {new Date(order.estimatedDelivery).toLocaleDateString('en-IN', {
                     year: 'numeric',
                     month: 'long',
@@ -356,10 +365,9 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
             )}
           </div>
           <div className="md:text-right">
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
-              Current Status
-            </p>
-            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-4 py-2">
+            <p className="font-body text-[12px] text-gray-500">Current Status</p>
+            {/* Sharp 0px badge corners per Figma. */}
+            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-4 py-2">
               {order.currentLabel}
             </span>
           </div>
@@ -405,17 +413,18 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
   return (
     <section className="bg-hd-white py-12">
       <div className="max-w-3xl mx-auto px-6">
-        <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
-          Track Your <span className="text-hd-orange">{headingType}</span>
+        {/* QA latest: heading is solid black, 16px, wide 1903 Sans —
+            no two-tone orange split per Figma. */}
+        <h2 className="font-subhead font-bold tracking-subhead uppercase text-[16px] text-hd-black">
+          Track Your {headingType}
         </h2>
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:items-start border-b border-gray-200 pb-5">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 md:items-start border-b border-gray-200 pb-5">
           <div>
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
-              Enquiry ID
-            </p>
+            {/* Title Case labels per Figma. */}
+            <p className="font-body text-[12px] text-gray-500">Enquiry ID</p>
             <p className="font-mono text-lg text-text-on-light mt-1">{id}</p>
-            <p className="font-subhead uppercase tracking-subhead text-base mt-3 text-text-on-light">
+            <p className="font-body text-base mt-3 text-text-on-light">
               {lead.context}
             </p>
             {lead.dealerName && (
@@ -424,18 +433,16 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
               </p>
             )}
             <p className="text-xs text-gray-600 mt-2">
-              Last update —{' '}
-              <span className="font-subhead uppercase tracking-subhead">
+              Last Update:{' '}
+              <span className="font-body font-bold">
                 {updatedAt.toLocaleDateString('en-IN', { dateStyle: 'medium' })}
               </span>
             </p>
           </div>
           <div className="md:text-right">
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
-              Current Status
-            </p>
+            <p className="font-body text-[12px] text-gray-500">Current Status</p>
             <span
-              className={`inline-flex mt-2 items-center font-subhead uppercase tracking-subhead text-xs px-4 py-2 ${
+              className={`inline-flex mt-2 items-center font-subhead font-bold uppercase tracking-subhead text-xs px-4 py-2 ${
                 isDead
                   ? 'bg-danger text-hd-white'
                   : lead.status === 'SUCCESS' || lead.status === 'CONVERTED'
@@ -494,17 +501,26 @@ function Timeline({
                 }`}
               />
             )}
+            {/* QA latest: double-ring timeline node per Figma —
+                active state = open orange boundary ring + filled
+                orange inner dot. Reached (past) = solid orange disc.
+                Inactive = open grey ring only. */}
             <span
               aria-hidden
-              className={`absolute left-0 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+              className={`absolute left-0 top-1 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 bg-hd-white ${
                 stage.isCurrent
-                  ? 'bg-hd-orange border-hd-orange text-hd-black'
+                  ? 'border-hd-orange'
                   : stage.reached
-                  ? 'bg-hd-orange/20 border-hd-orange text-hd-orange'
-                  : 'bg-hd-white border-gray-300 text-gray-400'
+                  ? 'border-hd-orange'
+                  : 'border-gray-300'
               }`}
             >
-              {stage.reached ? '●' : '○'}
+              {stage.isCurrent && (
+                <span className="block h-2.5 w-2.5 rounded-full bg-hd-orange" />
+              )}
+              {!stage.isCurrent && stage.reached && (
+                <span className="block h-3 w-3 rounded-full bg-hd-orange" />
+              )}
             </span>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span

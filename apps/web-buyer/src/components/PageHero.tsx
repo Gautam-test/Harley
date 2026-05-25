@@ -80,14 +80,15 @@ export function PageHero({
 }: PageHeroProps) {
   const padY =
     size === 'lg' ? 'py-24 md:py-28' : size === 'sm' ? 'py-14 md:py-16' : 'py-20 md:py-24';
-  // QA BUG_UI_027: marquee headline (`lg` size — e.g. "SEARCH STOCK")
-  // capped at exactly 60px on desktop per Figma spec. Scales smoothly
-  // from 30px (phone) → 48px (sm) → 56px (md) → 60px (lg+).
+  // QA latest: BOTH "lg" (Search Stock marquee) and "sm" (Track
+  // Enquiry compact hero) headlines hit exactly 60px on desktop per
+  // Figma. The visual difference is in vertical padding (sm = py-14,
+  // lg = py-24+), not in the headline size itself.
   const titleSize =
     size === 'lg'
       ? 'text-[30px] sm:text-5xl md:text-[56px] lg:text-[60px]'
       : size === 'sm'
-      ? 'text-[26px] sm:text-3xl md:text-5xl'
+      ? 'text-[28px] sm:text-4xl md:text-5xl lg:text-[60px]'
       : 'text-3xl sm:text-4xl md:text-6xl';
 
   return (
@@ -111,18 +112,18 @@ export function PageHero({
       />
       <div className={`relative max-w-container mx-auto px-6 text-center ${padY}`}>
         {breadcrumbs && breadcrumbs.length > 0 && (
-          // QA BUG_UI_027: breadcrumb gets explicit mb-8 so it sits
-          // comfortably ABOVE the H1 with clear whitespace separation,
-          // not compressed against the title.
+          // QA latest: tight breadcrumb — no space gap around the
+          // slash element ("HOME/TRACK") per Figma. Current page
+          // label in brand orange, others white with hover-orange.
           <nav
             aria-label="Breadcrumb"
             className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] md:text-xs mb-8"
           >
-            <ol className="inline-flex items-center justify-center flex-wrap gap-x-2 text-hd-white">
+            <ol className="inline-flex items-center justify-center flex-wrap text-hd-white">
               {breadcrumbs.map((bc, i) => {
                 const isLast = i === breadcrumbs.length - 1;
                 return (
-                  <li key={`${bc.label}-${i}`} className="inline-flex items-center gap-x-2">
+                  <li key={`${bc.label}-${i}`} className="inline-flex items-center">
                     {bc.to && !isLast ? (
                       <Link to={bc.to} className="hover:text-hd-orange transition">
                         {bc.label}
@@ -130,7 +131,7 @@ export function PageHero({
                     ) : (
                       <span className={isLast ? 'text-hd-orange' : ''}>{bc.label}</span>
                     )}
-                    {!isLast && <span aria-hidden className="text-hd-white/60">/</span>}
+                    {!isLast && <span aria-hidden className="mx-1 text-hd-orange">/</span>}
                   </li>
                 );
               })}
