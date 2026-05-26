@@ -257,19 +257,28 @@ export function TrackPage() {
         titlePx={56}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Track' }]}
       >
+        {/* QA latest Track Enquiry search container:
+            • Input field gets a 1.5px solid #000000 black border + sharp
+              corners (was borderless inside the card)
+            • Tracking number placeholder shows a sample 16-digit value
+              ("9876543212345678") per Figma
+            • Track CTA height matched to the input (both h-12) so the
+              two columns line up cleanly and the button can't read
+              taller / shorter than the input
+            • Button keeps the vibrant #FF5500 fill + bold black text */}
         <form
           onSubmit={onSubmit}
-          className="mx-auto max-w-2xl bg-hd-white p-3 grid sm:grid-cols-[1fr_auto] gap-2 text-left"
+          className="mx-auto max-w-2xl bg-hd-white p-3 grid sm:grid-cols-[1fr_auto] gap-2 items-end text-left"
         >
           <div>
-            <label className="block text-[11px] font-body text-text-on-light px-2 pt-1">
+            <label className="block text-[11px] font-body text-text-on-light px-1 pt-1 pb-1">
               Order ID / Tracking Number
             </label>
             <Input
-              placeholder="Enter Your Tracking Number"
+              placeholder="9876543212345678"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              className="font-body text-base !border-0 !shadow-none focus:!ring-0"
+              className="font-body text-base h-12 !border-[1.5px] !border-hd-black !rounded-none focus:!ring-0"
               autoFocus
             />
           </div>
@@ -277,7 +286,7 @@ export function TrackPage() {
             type="submit"
             disabled={!orderId.trim() || lookup.isPending}
             style={{ backgroundColor: '#FF5500' }}
-            className="text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 py-3 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+            className="h-12 text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {lookup.isPending ? 'Looking up…' : 'Track Your Harley-Davidson®'}
           </button>

@@ -349,6 +349,10 @@ export function SearchFilters() {
             suffix per Figma. Boundary range labels show 89 KM / 5,000 KM
             per the Figma reference even though the slider can travel
             higher (the API still accepts up to KMS_MAX). */}
+        {/* QA latest: when the slider sits at its max, show the EXPLICIT
+            cap (e.g. "₹ 50,00,000") instead of the vague "Any" fallback
+            — per Figma the buyer needs to see the boundary value so the
+            filter range is legible at a glance. */}
         {searchBy === 'cash' ? (
           <SliderField
             label="Max Price"
@@ -357,14 +361,10 @@ export function SearchFilters() {
             max={PRICE_MAX}
             step={50000}
             register={register('maxPrice')}
-            displayValue={
-              Number(maxPrice) >= PRICE_MAX
-                ? 'Any'
-                : `₹${Number(maxPrice).toLocaleString('en-IN', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}`
-            }
+            displayValue={`₹${Number(maxPrice).toLocaleString('en-IN', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
           />
         ) : (
           <SliderField
@@ -374,14 +374,10 @@ export function SearchFilters() {
             max={MONTHLY_MAX}
             step={500}
             register={register('maxMonthly')}
-            displayValue={
-              Number(maxMonthly) >= MONTHLY_MAX
-                ? 'Any'
-                : `₹${Number(maxMonthly).toLocaleString('en-IN', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}/mo`
-            }
+            displayValue={`₹${Number(maxMonthly).toLocaleString('en-IN', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}/mo`}
           />
         )}
 
@@ -392,11 +388,7 @@ export function SearchFilters() {
           max={KMS_MAX}
           step={1000}
           register={register('maxKms')}
-          displayValue={
-            Number(maxKms) >= KMS_MAX
-              ? 'Any'
-              : `${Number(maxKms).toLocaleString('en-IN')} KM`
-          }
+          displayValue={`${Number(maxKms).toLocaleString('en-IN')} KM`}
           showRange
           rangeLabels={[`${KMS_MIN} KM`, `${KMS_LABEL_MAX.toLocaleString('en-IN')} KM`]}
         />
@@ -433,9 +425,14 @@ function EmiCalculatorPanel() {
   const [price, setPrice] = useState<number>(1_500_000);
   const [downPct, setDownPct] = useState<number>(EMI_DEFAULTS.downPct);
   const [months, setMonths] = useState<number>(EMI_DEFAULTS.months);
+  // QA latest: Interest Rate is now an interactive slider, not a
+  // hardcoded static read-out. Range 5%-15% (realistic Indian auto-loan
+  // band), 0.1% step. Seeded from EMI_DEFAULTS so the initial figure
+  // matches what other surfaces (hero, sidebar Monthly Budget) compute.
+  const [rateAnnualPct, setRateAnnualPct] = useState<number>(EMI_DEFAULTS.rateAnnual * 100);
 
   const principal = price * (1 - downPct);
-  const r = EMI_DEFAULTS.rateAnnual / 12;
+  const r = rateAnnualPct / 100 / 12;
   const n = months;
   const factor = Math.pow(1 + r, n);
   const monthly =
@@ -534,11 +531,26 @@ function EmiCalculatorPanel() {
         />
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between">
-        <span className="font-body text-[12px] text-gray-500">Interest Rate</span>
-        <span className="font-body text-[13px] text-text-on-light">
-          {(EMI_DEFAULTS.rateAnnual * 100).toFixed(1)}% APR
-        </span>
+      <div className="mt-3">
+        <div className="flex items-baseline justify-between">
+          <label htmlFor="emi-rate" className="font-body text-[12px] text-gray-500">
+            Interest Rate
+          </label>
+          <span className="font-body text-[13px] text-text-on-light">
+            {rateAnnualPct.toFixed(1)}% APR
+          </span>
+        </div>
+        <input
+          id="emi-rate"
+          type="range"
+          min={5}
+          max={15}
+          step={0.1}
+          value={rateAnnualPct}
+          onChange={(e) => setRateAnnualPct(Number(e.target.value))}
+          className="hero-range w-full cursor-pointer mt-2"
+          style={{ background: trackGradient(pct(rateAnnualPct, 5, 15)) }}
+        />
       </div>
 
       {/* Estimated Monthly EMI callout — bigger figure per QA. */}
