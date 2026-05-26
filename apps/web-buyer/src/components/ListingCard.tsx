@@ -105,17 +105,21 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             </span>
           </div>
         )}
-        {/* BUG_UI_005 #4: CPO badge is a sharp BLACK rectangular label
-            with white text (was an orange capsule). As-Is keeps black
-            background but loses the rounded corners for consistency. */}
+        {/* QA latest: sharp rectangular badge. CPO = solid black fill;
+            AS-IS = same shell but the wordmark is split AS · IS by an
+            internal orange dash separator so the badge reads as a
+            structured two-part label rather than a single
+            hyphenated word. */}
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (
             <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
               H-D Certified
             </span>
           ) : (
-            <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-              As-Is
+            <span className="inline-flex items-center gap-1.5 bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+              <span>AS</span>
+              <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
+              <span>IS</span>
             </span>
           )}
         </div>
@@ -134,11 +138,16 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           {listing.modelName}
         </h3>
 
-        {/* Dealer location row with orange pin */}
+        {/* QA latest: pin marker = solid circular orange disc with a
+            thin white inner dot (replaces the teardrop pin). Renders
+            as a small bullet badge to the left of the dealer name. */}
         <p className="flex items-center gap-1.5 text-[12px] text-gray-600 mt-2">
-          <svg className="w-3 h-3 text-hd-orange shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M12 2a7 7 0 00-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 00-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
-          </svg>
+          <span
+            aria-hidden
+            className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-hd-orange shrink-0"
+          >
+            <span className="w-[4px] h-[4px] rounded-full bg-hd-white" />
+          </span>
           <span className="truncate">{listing.dealerName}</span>
         </p>
 

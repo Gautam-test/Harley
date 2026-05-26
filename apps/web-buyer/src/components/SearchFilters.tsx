@@ -50,13 +50,15 @@ const YEAR_OPTIONS = (() => {
 // (see onSubmit).
 const PRICE_MAX = 5_000_000;
 const PRICE_MIN = 500_000;
-const KMS_MAX = 80_000;
+// QA latest: Km Driven upper cap raised to 500,000 KM per Figma label.
+// Previously KMS_MAX=80,000 with a visually-aligned 5,000 KM cap label —
+// the cap-label spec changed to 500,000 KM so the slider itself now has
+// to travel that far. Both the underlying max and the displayed boundary
+// marker share the same number to avoid the "drag hits an invisible
+// wall" surprise.
+const KMS_MAX = 500_000;
 const KMS_MIN = 89;
-// Visible "scale" labels at slider ends — match Figma exactly so the
-// boundary markers read 89 KM ... 5,000 KM. The slider can still travel
-// to KMS_MAX (80,000) — the labels just don't try to literally show that
-// value, since the buyer's read of "5,000 KM" matches the design.
-const KMS_LABEL_MAX = 5_000;
+const KMS_LABEL_MAX = 500_000;
 const MONTHLY_MAX = 100_000;
 const MONTHLY_MIN = 5_000;
 
@@ -242,7 +244,8 @@ export function SearchFilters() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="bg-surface-light border border-gray-200 overflow-hidden"
+      className="border border-gray-200 overflow-hidden"
+      style={{ backgroundColor: '#F6F6F6' }}
     >
       <div className="px-5 pt-5">
         {/* QA BUG_UI_028: Title Case "Search By:" header, muted grey,
@@ -284,7 +287,12 @@ export function SearchFilters() {
         </div>
       </div>
 
-      <div className="p-5 space-y-5 bg-hd-white mt-4 border-t border-gray-200">
+      {/* QA latest: inner panel inherits the #F6F6F6 wrapper fill so
+          the whole "Search By" sidebar above the EMI Calculator reads
+          as one continuous light-grey block per Figma. Was previously
+          split (grey top + white inputs panel) which broke the visual
+          rhythm. */}
+      <div className="p-5 space-y-5 mt-4 border-t border-gray-200">
         <Field label="Pincode">
           <Input placeholder="Enter your pincode" inputMode="numeric" maxLength={6} {...register('pincode')} />
         </Field>
@@ -382,7 +390,7 @@ export function SearchFilters() {
           value={maxKms}
           min={KMS_MIN}
           max={KMS_MAX}
-          step={500}
+          step={1000}
           register={register('maxKms')}
           displayValue={
             Number(maxKms) >= KMS_MAX
@@ -461,7 +469,11 @@ function EmiCalculatorPanel() {
           <label htmlFor="emi-price" className="font-body text-[12px] text-gray-500">
             On-Road Price
           </label>
-          <span className="font-body text-[13px] text-text-on-light">
+          {/* QA latest: On-Road Price value is the headline figure in
+              the calc — pulled up to a bold 14px subhead so it visually
+              dominates the slider row (it's the input the buyer most
+              often eyeballs while dragging the slider). */}
+          <span className="font-subhead font-bold text-[14px] text-text-on-light">
             {inr(price)}
           </span>
         </div>

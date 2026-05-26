@@ -120,7 +120,11 @@ export function SearchPage() {
         size="lg"
       />
 
-      <div className="bg-surface-light text-text-on-light min-h-screen">
+      {/* QA latest: Search Stock body fill = #FFFFFF (was the soft grey
+          surface-light). The grey now only appears inside the sidebar
+          panel above the EMI Calculator; the main results column reads
+          as a clean white canvas per Figma. */}
+      <div className="bg-hd-white text-text-on-light min-h-screen">
         {/* Mobile "Filters" trigger — visible only below lg where the
             sidebar collapses out of the layout. Tapping opens the
             slide-over drawer below. */}

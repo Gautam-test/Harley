@@ -112,31 +112,26 @@ export function HeroSearch() {
 
   return (
     <>
-      <section className="relative bg-hd-black overflow-hidden">
-        {/* QA latest: brand accent flag — orange asymmetric flag
-            silhouette (clip-path angled bottom-right tip) with the
-            H-D Bar & Shield mark inset into a small white card flush
-            with the corner. The orange wraps around two edges of the
-            white card so the composition reads as a corporate flag
-            pinned to the page, not a floating rectangle. */}
+      <section
+        className="relative bg-hd-black overflow-hidden"
+        style={{ height: '650px' }}
+      >
+        {/* QA latest: brand accent flag — provided Flag.svg vector
+            (asymmetric vertical flag with H-D corporate emblem inset
+            into the top white panel). Native aspect 85×627 ≈ 0.135 :1
+            so the flag drops vertically from the top of the hero on
+            its own. Height fills the 650px hero on desktop; scales
+            down on smaller breakpoints. Hidden on the smallest
+            phones (<sm) to keep the headline + search legible. */}
         <div className="absolute top-0 left-0 z-10 hidden sm:block pointer-events-none">
-          <div className="relative">
-            <div
-              aria-hidden
-              className="bg-hd-orange w-28 h-28 md:w-32 md:h-32"
-              style={{ clipPath: 'polygon(0 0, 100% 0, 100% 60%, 60% 100%, 0 100%)' }}
-            />
-            <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-hd-white p-2 md:p-2.5 shadow-md">
-              <img
-                src="/brand/hd-bar-shield.svg"
-                alt="Harley-Davidson"
-                className="w-14 h-14 md:w-16 md:h-16"
-                width={64}
-                height={64}
-                decoding="async"
-              />
-            </div>
-          </div>
+          <img
+            src="/brand/hd-flag.svg"
+            alt="H-D Bar & Shield flag"
+            className="h-[420px] sm:h-[480px] md:h-[560px] lg:h-[650px] w-auto"
+            width={85}
+            height={627}
+            decoding="async"
+          />
         </div>
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -162,23 +157,24 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        {/* QA latest: hero needs slightly more vertical breathing
-            room so the headline + subhead + brand flag don't feel
-            squashed against the search band. Bumped from py-16/20/24
-            → py-20/24/28. */}
-        <div className="relative max-w-container mx-auto px-6 py-20 md:py-24 lg:py-28">
-          <div className="max-w-3xl">
-            {/* QA latest: headline pinned to 36px on desktop (down
-                from 40px) — wide 1903 Sans bold. Compact mobile
-                scaling preserved. */}
-            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[26px] sm:text-3xl md:text-[32px] lg:text-[36px]">
+        {/* QA latest: hero is now a fixed 650px shell. Content sits
+            vertically centred via h-full + flex so the headline +
+            subhead read as the focal block regardless of viewport
+            below the 650px lock. */}
+        <div className="relative max-w-container mx-auto px-6 h-full flex items-center">
+          <div className="max-w-4xl">
+            {/* QA latest: headline locked to 32px on desktop per
+                Figma — wide 1903 Sans bold, single-line at lg+.
+                whitespace-nowrap on lg+ enforces the one-line spec;
+                smaller breakpoints still wrap naturally. */}
+            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[32px] lg:whitespace-nowrap">
               H-D Certified
               <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
               {' '}Approved Used Motorcycles
             </h1>
-            {/* QA latest: subhead font-weight 500 (Medium) per Figma
-                — was bold (700). Still 28px Title Case. */}
-            <p className="font-subhead font-medium text-hd-white mt-6 text-[20px] sm:text-2xl md:text-[28px]">
+            {/* QA latest: subhead locked to 22px per Figma (was 28px),
+                still font-weight 500 (Medium), Title Case. */}
+            <p className="font-subhead font-medium text-hd-white mt-5 text-[16px] sm:text-lg md:text-[20px] lg:text-[22px]">
               Ride With Confidence
             </p>
           </div>
