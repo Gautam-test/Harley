@@ -105,22 +105,33 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             </span>
           </div>
         )}
-        {/* QA latest: sharp rectangular badge. CPO = solid black fill;
-            AS-IS = same shell but the wordmark is split AS · IS by an
-            internal orange dash separator so the badge reads as a
-            structured two-part label rather than a single
-            hyphenated word. */}
+        {/* QA BUG_UI_047: badges are now the brand-supplied SVG vector
+            assets (geometric black plate with the wordmark + internal
+            orange dash). Rendered as <img> directly so the typography,
+            kerning, and orange dash are pixel-identical to Figma —
+            previously the inline HTML version slipped on letter
+            spacing + dash positioning. SVGs:
+              • hd-certified-badge.svg — 152×20 black plate, "H-D" + orange dash + "CERTIFIED"
+              • as-is-badge.svg        — 52×27 black plate, "AS" + orange dash + "IS" */}
         <div className="absolute top-3 left-3">
           {listing.certificationStatus === 'CPO' ? (
-            <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-              H-D Certified
-            </span>
+            <img
+              src="/brand/badges/hd-certified-badge.svg"
+              alt="H-D Certified"
+              className="h-5 w-auto"
+              width={152}
+              height={20}
+              decoding="async"
+            />
           ) : (
-            <span className="inline-flex items-center gap-1.5 bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-              <span>AS</span>
-              <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
-              <span>IS</span>
-            </span>
+            <img
+              src="/brand/badges/as-is-badge.svg"
+              alt="As-Is"
+              className="h-5 w-auto"
+              width={52}
+              height={27}
+              decoding="async"
+            />
           )}
         </div>
       </div>

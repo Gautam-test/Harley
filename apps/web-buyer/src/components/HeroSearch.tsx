@@ -114,7 +114,7 @@ export function HeroSearch() {
     <>
       <section
         className="relative bg-hd-black overflow-hidden"
-        style={{ height: '650px' }}
+        style={{ height: '480px' }}
       >
         {/* QA latest: brand accent flag — provided Flag.svg vector
             (asymmetric vertical flag with H-D corporate emblem inset
@@ -127,7 +127,7 @@ export function HeroSearch() {
           <img
             src="/brand/hd-flag.svg"
             alt="H-D Bar & Shield flag"
-            className="h-[420px] sm:h-[480px] md:h-[560px] lg:h-[650px] w-auto"
+            className="h-[360px] sm:h-[400px] md:h-[440px] lg:h-[480px] w-auto"
             width={85}
             height={627}
             decoding="async"
@@ -163,17 +163,16 @@ export function HeroSearch() {
             below the 650px lock. */}
         <div className="relative max-w-container mx-auto px-6 h-full flex items-center">
           <div className="max-w-4xl">
-            {/* QA latest: headline locked to 32px on desktop per
-                Figma — wide 1903 Sans bold, single-line at lg+.
-                whitespace-nowrap on lg+ enforces the one-line spec;
-                smaller breakpoints still wrap naturally. */}
-            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[32px] lg:whitespace-nowrap">
+            {/* QA BUG_UI_044: headline locked to 34px on desktop per
+                Figma (was 32px). Wide 1903 Sans Bold. Single-line at
+                lg+ via whitespace-nowrap. */}
+            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap">
               H-D Certified
               <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
               {' '}Approved Used Motorcycles
             </h1>
-            {/* QA latest: subhead locked to 22px per Figma (was 28px),
-                still font-weight 500 (Medium), Title Case. */}
+            {/* QA latest: subhead 22px per Figma, font-weight 500
+                (Medium), Title Case. */}
             <p className="font-subhead font-medium text-hd-white mt-5 text-[16px] sm:text-lg md:text-[20px] lg:text-[22px]">
               Ride With Confidence
             </p>

@@ -239,23 +239,27 @@ export function TrackPage() {
             • CTA "TRACK YOUR HARLEY-DAVIDSON®"
             • Sharp container + input + CTA corners
             • Solid full-opacity orange CTA */}
-      {/* QA latest: headline is "TRACK YOUR HARLEY-DAVIDSON®" with
-          "TRACK YOUR" white + "HARLEY-DAVIDSON®" orange. The bg image
-          should be the outdoor 2-bike river/mountain shot; the
-          panAmerica asset is the closest in-pack stand-in for that
-          mood (single bike but lifestyle outdoor) until brand drops
-          the exact dual-bike asset. Container border dropped — Figma
-          shows the white widget sitting natively on the photo. */}
+      {/* QA BUG_UI_043:
+            • Headline locked to 56px (was 60px via size='sm' default)
+            • Hero canvas locked to exactly 380px height
+            • Background swapped to brand-supplied /heros/track-bg.svg
+              (outdoor mountain trail) — was the panAmerica placeholder
+            • White search-box card has zero outer frame (drop shadow
+              removed; relied on box-shadow before)
+            • CTA button uses the vibrant #FF5500 brand fill (not the
+              hd-orange #FF6600 pastel) with bold black text */}
       <PageHero
         title="Track Your"
         emphasis="Harley-Davidson®"
-        image={HERO.panAmerica}
+        image={HERO.track}
         size="sm"
+        heightPx={380}
+        titlePx={56}
         breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Track' }]}
       >
         <form
           onSubmit={onSubmit}
-          className="mx-auto max-w-2xl bg-hd-white p-3 grid sm:grid-cols-[1fr_auto] gap-2 shadow-2xl text-left"
+          className="mx-auto max-w-2xl bg-hd-white p-3 grid sm:grid-cols-[1fr_auto] gap-2 text-left"
         >
           <div>
             <label className="block text-[11px] font-body text-text-on-light px-2 pt-1">
@@ -272,7 +276,8 @@ export function TrackPage() {
           <button
             type="submit"
             disabled={!orderId.trim() || lookup.isPending}
-            className="bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 py-3 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+            style={{ backgroundColor: '#FF5500' }}
+            className="text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 py-3 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {lookup.isPending ? 'Looking up…' : 'Track Your Harley-Davidson®'}
           </button>

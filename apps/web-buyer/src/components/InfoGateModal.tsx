@@ -54,6 +54,21 @@ interface InfoGateModalProps {
     bikeModel?: string;
     dealerId?: string;
   };
+  /**
+   * QA RE-OPEN bug #2 (Edit→Resubmit OTP_RESEND_TOO_SOON):
+   * When the parent modal (SellBikeModal) lets the user toggle back to
+   * the enquiry form and then re-submit, this modal unmounts + remounts.
+   * Without an existing-session reference the remount fires a fresh
+   * /otp/send for the same phone within 30s and the server returns
+   * OTP_RESEND_TOO_SOON. If the parent persists the (otpId, sentAt)
+   * pair from the first send and passes it back here on remount, we
+   * skip the /otp/send entirely and the user just enters the SMS code
+   * they already received.
+   */
+  existingOtp?: { otpId: string; sentAt: number } | null;
+  /** Notify parent of a successful /otp/send so it can persist the
+   *  (otpId, sentAt) across the Edit→Resubmit lifecycle (see above). */
+  onSent?: (session: { otpId: string; sentAt: number }) => void;
   onVerified: (data: {
     phone: string;
     name: string;
@@ -100,6 +115,8 @@ export function InfoGateModal({
   purpose,
   context,
   prefilled,
+  existingOtp,
+  onSent,
   onVerified,
   onClose,
 }: InfoGateModalProps) {
@@ -126,7 +143,11 @@ export function InfoGateModal({
         }
       : null,
   );
-  const [otpId, setOtpId] = useState<string | null>(null);
+  // QA RE-OPEN bug #2: seed otpId from the parent-preserved session so
+  // Edit→Resubmit on the SellBikeModal lands here with a usable otpId
+  // instead of firing a fresh /otp/send that the server rejects with
+  // OTP_RESEND_TOO_SOON.
+  const [otpId, setOtpId] = useState<string | null>(existingOtp?.otpId ?? null);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,9 +201,12 @@ export function InfoGateModal({
   // Timestamp of the most recent successful /otp/send so the client can
   // throttle Resend clicks without hitting the server's 30-second rate
   // limit (which would surface as the red "Wait 30s before resending"
-  // error on the verify step). Survives the verify step's lifetime but
-  // not modal remount.
-  const [lastSentAt, setLastSentAt] = useState<number | null>(null);
+  // error on the verify step). Seeded from the parent-preserved
+  // session (QA bug #2) so a remount inside the 30-second window
+  // immediately knows it's within the cooldown.
+  const [lastSentAt, setLastSentAt] = useState<number | null>(
+    existingOtp?.sentAt ?? null,
+  );
 
   // When the server says we're out of OTP attempts for this phone (per-
   // hour cap, daily cap, or lockout after too many failed verifications),
@@ -296,9 +320,14 @@ export function InfoGateModal({
       body: JSON.stringify({ phone, purpose }),
     })
       .then((res) => {
+        const sentAt = Date.now();
         setOtpId(res.otpId);
-        setLastSentAt(Date.now());
+        setLastSentAt(sentAt);
         setError(null);
+        // QA bug #2: hand the session back to the parent so a later
+        // Edit→Resubmit can re-mount this modal with the same otpId
+        // (avoids the new-mount → /otp/send → OTP_RESEND_TOO_SOON loop).
+        onSent?.({ otpId: res.otpId, sentAt });
       })
       .catch((e) => {
         // QA RE-OPEN bug #4/#6: the server now returns the existing
@@ -395,12 +424,25 @@ export function InfoGateModal({
         setStep('collect');
         setProfile(null);
       }
-      setOtpId(null);
+      // QA bug #2 (Edit→Resubmit): when the parent passes a still-valid
+      // existingOtp session, seed otpId + lastSentAt from it instead of
+      // nuking them — that way the auto-send effect short-circuits
+      // (otpId already set) and the user lands on a usable verify form
+      // immediately. Without this branch the remount cleared otpId,
+      // fired /otp/send within the 30s window, and the server's
+      // OTP_RESEND_TOO_SOON response left the modal in a broken state
+      // (no otpId, Verify button disabled).
+      if (existingOtp) {
+        setOtpId(existingOtp.otpId);
+        setLastSentAt(existingOtp.sentAt);
+      } else {
+        setOtpId(null);
+        setLastSentAt(null);
+      }
       setCode('');
       setError(null);
       setSendBlocked(null);
       setBusy(false);
-      setLastSentAt(null);
       setResendCooldown(0);
     } else if (!open && wasOpen.current) {
       wasOpen.current = false;

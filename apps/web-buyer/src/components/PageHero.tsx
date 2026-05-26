@@ -30,6 +30,11 @@ export const HERO = {
   // raster; HTTP gzip + browser cache amortise it after first visit.
   searchStock: '/heros/search-stock-bg.svg',
   sellBike: '/heros/sell-bike.jpg',
+  // QA BUG_UI_043: brand-supplied Track.svg — outdoor scenic mountain
+  // trail landscape backdrop with the dark overlay baked in. Replaces
+  // the panAmerica studio shot the Track Enquiry hero was using as a
+  // placeholder while the brand asset was pending.
+  track: '/heros/track-bg.svg',
 
   // CDN studio shots (per-bike, used for inner pages).
   streetGlide: 'https://images.medialinksonline.com/8825026x2200x1100xFFFFFFxH.jpg',
@@ -67,6 +72,13 @@ interface PageHeroProps {
   breadcrumbs?: BreadcrumbItem[];
   /** Optional content rendered below the headline (e.g. a search form). */
   children?: ReactNode;
+  /** Optional desktop pixel height override (Figma-spec heroes that
+   *  must be locked to an exact canvas height — e.g. Track Enquiry
+   *  380px per BUG_UI_043). Mobile still flows naturally. */
+  heightPx?: number;
+  /** Optional desktop headline size override (e.g. Track Enquiry
+   *  needs 56px per BUG_UI_043; the 'sm' default jumps to 60px). */
+  titlePx?: number;
 }
 
 export function PageHero({
@@ -77,22 +89,39 @@ export function PageHero({
   size = 'md',
   breadcrumbs,
   children,
+  heightPx,
+  titlePx,
 }: PageHeroProps) {
   const padY =
     size === 'lg' ? 'py-24 md:py-28' : size === 'sm' ? 'py-14 md:py-16' : 'py-20 md:py-24';
   // QA latest: BOTH "lg" (Search Stock marquee) and "sm" (Track
   // Enquiry compact hero) headlines hit exactly 60px on desktop per
   // Figma. The visual difference is in vertical padding (sm = py-14,
-  // lg = py-24+), not in the headline size itself.
-  const titleSize =
-    size === 'lg'
-      ? 'text-[30px] sm:text-5xl md:text-[56px] lg:text-[60px]'
-      : size === 'sm'
-      ? 'text-[28px] sm:text-4xl md:text-5xl lg:text-[60px]'
-      : 'text-3xl sm:text-4xl md:text-6xl';
+  // lg = py-24+), not in the headline size itself. `titlePx` overrides
+  // when a specific page (e.g. Track Enquiry 56px) needs a different
+  // desktop size without falling out of the standard scaling ladder —
+  // applied via inline style below (Tailwind JIT can't synthesise
+  // `text-[${px}px]` from a runtime template literal).
+  const titleSize = titlePx
+    ? 'text-[26px] sm:text-4xl md:text-5xl'
+    : size === 'lg'
+    ? 'text-[30px] sm:text-5xl md:text-[56px] lg:text-[60px]'
+    : size === 'sm'
+    ? 'text-[28px] sm:text-4xl md:text-5xl lg:text-[60px]'
+    : 'text-3xl sm:text-4xl md:text-6xl';
+
+  // When a hard height is requested, drop the symmetric padY (the
+  // wrapper centres content via flex below) so we hit the Figma
+  // pixel-perfect canvas. Mobile still gets a sensible min-height.
+  const heightStyle = heightPx
+    ? { minHeight: `${heightPx}px`, height: `${heightPx}px` }
+    : undefined;
 
   return (
-    <section className="relative bg-hd-black overflow-hidden">
+    <section
+      className="relative bg-hd-black overflow-hidden"
+      style={heightStyle}
+    >
       {/* QA BUG_UI_027: the brand-supplied search-stock-bg.svg has its
           own dark gradient baked in (90% opacity), so we removed the
           previous `opacity-50` photo dimming + softened the overlay so
@@ -110,7 +139,11 @@ export function PageHero({
         }}
         aria-hidden
       />
-      <div className={`relative max-w-container mx-auto px-6 text-center ${padY}`}>
+      <div
+        className={`relative max-w-container mx-auto px-6 text-center ${
+          heightPx ? 'h-full flex flex-col items-center justify-center py-8' : padY
+        }`}
+      >
         {breadcrumbs && breadcrumbs.length > 0 && (
           // QA latest: tight breadcrumb — no space gap around the
           // slash element ("HOME/TRACK") per Figma. Current page
@@ -140,6 +173,15 @@ export function PageHero({
         )}
         <h1
           className={`font-subhead font-bold ${titleSize} tracking-subhead uppercase text-hd-white leading-[0.95]`}
+          // Apply the lg+ pixel override via inline media-query-free
+          // style so Tailwind JIT doesn't need to know about it. On
+          // mobile/tablet the `titleSize` classes (text-[26px] /
+          // sm:text-4xl / md:text-5xl) still drive the scaling.
+          style={
+            titlePx
+              ? ({ fontSize: 'clamp(26px, 4.5vw, ' + titlePx + 'px)' } as React.CSSProperties)
+              : undefined
+          }
         >
           {title} <span className="text-hd-orange">{emphasis}</span>
         </h1>

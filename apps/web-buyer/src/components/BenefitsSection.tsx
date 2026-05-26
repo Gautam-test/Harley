@@ -18,51 +18,50 @@ interface FeatureRow {
   cta?: { label: string; href: string };
 }
 
-// QA RE-OPEN: brand-supplied SVG icons mapped 1:1 to the matrix
-// supplied by the design team. Previously each row rendered a
-// hand-drawn `FeatureGlyph` inside a bulky orange square; the matrix
-// flagged that as a mismatch. The new assets in /brand/benefits/
-// carry their own orange circular wireframe ring, so we render them
-// straight as <img>.
+// QA BUG_UI_045: brand-supplied 1.svg through 6.svg mapped 1:1 by the
+// design team to the 6 value-prop blocks. Each SVG is a 72x72
+// orange-ringed circle with the icon glyph inside — render straight
+// as <img>. (Prior generic names history-check.svg etc. retained on
+// disk as a fallback in case the spec renumbers later.)
 const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
-    iconSrc: '/brand/benefits/check-110pt.svg',
+    iconSrc: '/brand/benefits/1.svg',
     body:
       "Inspection of the technical condition of the motorcycle is the same for all authorised dealers. A know-how is a part of 110 points covering the whole operation of the motorcycle. A detailed record signed by the performing technician is available to the customer from each inspection. Only ones that have been done over a roadtest are then right to be classed as H-D Certified™ and qualify for the other benefits associated with these certified used motorcycles.",
     image: 'https://images.medialinksonline.com/8825026x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: 'History Check / HPI Check / Insurance Database',
-    iconSrc: '/brand/benefits/history-check.svg',
+    iconSrc: '/brand/benefits/2.svg',
     body:
       "In the H-D Certified™ motorcycles are offered at a fixed and transparent price. Cross-checked against the national HPI / insurance database — no outstanding finance, theft markers or hidden write-offs. Every certified motorcycle comes with the verification report shared in writing.",
     image: 'https://images.medialinksonline.com/8822481x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: 'Kilometer Verification Check',
-    iconSrc: '/brand/benefits/kilometer-verification.svg',
+    iconSrc: '/brand/benefits/3.svg',
     body:
       'An online check is performed to verify the records that the KM declared on the motorcycle is correct and confirmed in writing. Every odometer reading is independently corroborated against the motorcycle\'s service history.',
     image: 'https://images.medialinksonline.com/8825071x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
-    iconSrc: '/brand/benefits/guarantee-12mo.svg',
+    iconSrc: '/brand/benefits/4.svg',
     body:
       'Once the motorcycle has been H-D Certified™ we back this with a minimum 12-month guarantee. It can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     image: 'https://images.medialinksonline.com/8825049x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month Roadside Assistance',
-    iconSrc: '/brand/benefits/roadside-assistance.svg',
+    iconSrc: '/brand/benefits/5.svg',
     body:
       'In addition to the 12 month guarantee we provide Roadside Assistance (the Roadside assistance package provider is an Authorised Vehicle Assist). Recovery and Onward Travel if required 24/7, should you accidentally pundoction from the Roadside package is also extended.',
     image: 'https://images.medialinksonline.com/8757963x1600x1000xFFFFFFxH.jpg',
   },
   {
     title: '12 Month HOG Membership',
-    iconSrc: '/brand/benefits/hog-membership.svg',
+    iconSrc: '/brand/benefits/6.svg',
     body:
       'As an H-D Certified™ owner you will receive the first 12 months\' membership of the Harley Owners Group. From here you will have the choice of renewing your membership.',
     image: 'https://images.medialinksonline.com/8225108x1600x1000xFFFFFFxH.jpg',
@@ -188,13 +187,24 @@ function FeatureSection({
         }`}
       >
         {/* Image column — square-edged per Figma; aspect 4/3 keeps the
-            bike framing consistent across rows. */}
-        <div className="aspect-[4/3] overflow-hidden">
+            bike framing consistent across rows. QA BUG_UI_045 root
+            cause: when the external CDN photo 404'd the row reserved
+            no height and the visible page appeared to "halt early"
+            after the 2nd row. Fallback to a local placeholder + bg
+            colour on the wrapper guarantees every row paints. */}
+        <div className="aspect-[4/3] overflow-hidden bg-gray-200">
           <img
             src={feature.image}
             alt=""
             loading="lazy"
             className="w-full h-full object-cover"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (!img.dataset.fellBack) {
+                img.dataset.fellBack = '1';
+                img.src = '/brand/listing-placeholder.svg';
+              }
+            }}
           />
         </div>
         {/* Text card — raised, drop-shadowed, overlaps the image gutter

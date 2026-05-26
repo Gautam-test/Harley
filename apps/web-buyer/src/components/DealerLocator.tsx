@@ -36,7 +36,22 @@ export function DealerLocator() {
     queryKey: ['public-dealers'],
     queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=5000'),
   });
-  const visible = useMemo(() => data?.slice(0, VISIBLE_DEALERS) ?? [], [data]);
+  // QA: enforce ascending-distance ordering on the CLIENT as well.
+  // The API already sorts by distance but a regression there (or a
+  // future caller passing in dealers already sorted alphabetically)
+  // would still cause "663.8 KM AWAY" to render above a closer
+  // dealer. Belt-and-braces: sort here too, push nulls to the back
+  // (legacy seed without coords), then slice the top 3.
+  const visible = useMemo(() => {
+    if (!data) return [];
+    const sorted = [...data].sort((a, b) => {
+      if (a.distanceKm == null && b.distanceKm == null) return 0;
+      if (a.distanceKm == null) return 1;
+      if (b.distanceKm == null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+    return sorted.slice(0, VISIBLE_DEALERS);
+  }, [data]);
 
   // Default-select the first dealer once data arrives. Subsequent loads
   // keep the user's selection if it's still in the list, otherwise fall

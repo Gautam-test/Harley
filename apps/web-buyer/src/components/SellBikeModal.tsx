@@ -90,6 +90,17 @@ export function SellBikeModal() {
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  // QA RE-OPEN bug #2: preserve the (otpId, sentAt) from the first
+  // /otp/send across the Edit-Details → Resubmit lifecycle. The OTP
+  // modal unmounts when the user taps Edit Details; without this
+  // session preserved here, the remount fires a fresh /otp/send within
+  // the server's 30-second window and returns OTP_RESEND_TOO_SOON,
+  // leaving the modal with no otpId and a disabled Verify button.
+  // Cleared on successful verify, on close, and when the user edits
+  // the phone number (since a different phone needs its own OTP).
+  const [otpSession, setOtpSession] = useState<{ otpId: string; sentAt: number } | null>(
+    null,
+  );
 
   const dealersQuery = useQuery({
     queryKey: ['public-dealers-options', 'sell-bike'],
@@ -147,6 +158,9 @@ export function SellBikeModal() {
 
   const handleVerified = async (data: { phone: string }) => {
     setOtpOpen(false);
+    // OTP just consumed server-side — the session is no longer valid
+    // for re-use, drop it so any future submit starts a fresh /otp/send.
+    setOtpSession(null);
     setSubmitting(true);
     setError(null);
     try {
@@ -172,6 +186,28 @@ export function SellBikeModal() {
     }
   };
 
+  // If the user edits the phone after the OTP modal opened once, the
+  // preserved otpSession is for the OLD phone and must NOT be reused —
+  // the server keys the active-OTP cache by phone, not by browser
+  // session. Clear it so the next Send Enquiry fires a fresh /otp/send
+  // for the new number.
+  const watchedPhone = useWatch({ control, name: 'phone' });
+  const sessionPhoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!otpSession) {
+      sessionPhoneRef.current = null;
+      return;
+    }
+    if (sessionPhoneRef.current === null) {
+      sessionPhoneRef.current = watchedPhone;
+      return;
+    }
+    if (watchedPhone !== sessionPhoneRef.current) {
+      setOtpSession(null);
+      sessionPhoneRef.current = null;
+    }
+  }, [watchedPhone, otpSession]);
+
   const handleClose = () => {
     closeSellBike();
     // Reset for the next time the modal opens — start with a clean form
@@ -182,6 +218,9 @@ export function SellBikeModal() {
       setSubmitted(null);
       setError(null);
       setOtpOpen(false);
+      // Closing the whole modal also drops the OTP session — a fresh
+      // open should start a fresh send-OTP cycle.
+      setOtpSession(null);
     }, 200);
   };
 
@@ -449,11 +488,22 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              {/* QA NEW: EMAIL field removed — Figma Frame 28 doesn't
-                  carry an email input on the Sell Bike modal (dealer
-                  contacts the seller by phone only). The form's email
-                  value still defaults to '' so the API contract that
-                  accepts an optional email stays unbroken. */}
+              {/* QA RE-OPEN: Email is REQUIRED by the trade-in lead API
+                  (tradeInLeadInput uses z.string().email()). Removing
+                  this field previously caused the post-OTP submit to
+                  fail with "Invalid request payload" + "email: Invalid
+                  email" because the form was sending email: ''. Field
+                  restored so the dealer can also reach the seller by
+                  email. */}
+              <Labelled label="Email" required error={errors.email?.message}>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  maxLength={254}
+                  aria-invalid={Boolean(errors.email)}
+                  {...register('email', emailRules)}
+                />
+              </Labelled>
 
               {error && <div className="text-danger text-sm">{error}</div>}
 
@@ -534,6 +584,11 @@ export function SellBikeModal() {
             location: getValues('location'),
             dealerId: getValues('dealerId'),
           }}
+          // QA RE-OPEN bug #2: pass-through the preserved OTP session
+          // so a remount within the 30-second server window reuses the
+          // existing otpId instead of triggering OTP_RESEND_TOO_SOON.
+          existingOtp={otpSession}
+          onSent={(session) => setOtpSession(session)}
           onVerified={handleVerified}
           onClose={() => setOtpOpen(false)}
         />
