@@ -58,6 +58,14 @@
   }
 }
 
+/* QA latest: hero search field placeholders use the exact Figma swatch
+   #6B6B6B. Scoped to elements inside the .hero-search-band wrapper so
+   the rest of the site keeps Tailwind's gray-400 default. */
+.hero-search-band ::placeholder {
+  color: #6B6B6B !important;
+  opacity: 1;
+}
+
 /* Hero search slider — Figma /Customer/Home.png shows a white circular
    thumb carrying a "<>" glyph (BUG_UI_002 #5). Native range inputs don't
    let you put HTML inside the thumb, so the chevrons are rendered via an

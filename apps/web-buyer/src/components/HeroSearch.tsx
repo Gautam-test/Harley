@@ -113,30 +113,26 @@ export function HeroSearch() {
   return (
     <>
       <section className="relative bg-hd-black overflow-hidden">
-        {/* QA latest: brand badge is a sharp asymmetric orange + white
-            block flush against the top-left corner, with the H-D
-            shield mark riding the seam between the two halves. Reads
-            as a corner sticker rather than a floating rectangle. The
-            orange triangle slab (clip-path) sits behind a white square
-            tile holding the shield SVG. */}
+        {/* QA latest: brand accent flag — orange asymmetric flag
+            silhouette (clip-path angled bottom-right tip) with the
+            H-D Bar & Shield mark inset into a small white card flush
+            with the corner. The orange wraps around two edges of the
+            white card so the composition reads as a corporate flag
+            pinned to the page, not a floating rectangle. */}
         <div className="absolute top-0 left-0 z-10 hidden sm:block pointer-events-none">
           <div className="relative">
-            {/* Orange asymmetric slab — angled bottom-right cut so it
-                feels like a sticker layered onto the photo. */}
             <div
               aria-hidden
-              className="bg-hd-orange w-24 h-24 md:w-28 md:h-28"
-              style={{ clipPath: 'polygon(0 0, 100% 0, 100% 70%, 70% 100%, 0 100%)' }}
+              className="bg-hd-orange w-28 h-28 md:w-32 md:h-32"
+              style={{ clipPath: 'polygon(0 0, 100% 0, 100% 60%, 60% 100%, 0 100%)' }}
             />
-            {/* White inset tile holding the shield. Sits flush against
-                the top-left so the orange wraps around two sides. */}
-            <div className="absolute top-0 left-0 bg-hd-white p-2.5 md:p-3 shadow-md">
+            <div className="absolute top-2 left-2 md:top-3 md:left-3 bg-hd-white p-2 md:p-2.5 shadow-md">
               <img
                 src="/brand/hd-bar-shield.svg"
                 alt="Harley-Davidson"
-                className="w-12 h-12 md:w-14 md:h-14"
-                width={56}
-                height={56}
+                className="w-14 h-14 md:w-16 md:h-16"
+                width={64}
+                height={64}
                 decoding="async"
               />
             </div>
@@ -166,25 +162,23 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        {/* Figma hero is more compact than this block was. Reduced vertical
-            padding from py-24/32/40 → py-16/20/24 so the search band sits
-            in view without scrolling on 1440-tall viewports. */}
-        <div className="relative max-w-container mx-auto px-6 py-16 md:py-20 lg:py-24">
+        {/* QA latest: hero needs slightly more vertical breathing
+            room so the headline + subhead + brand flag don't feel
+            squashed against the search band. Bumped from py-16/20/24
+            → py-20/24/28. */}
+        <div className="relative max-w-container mx-auto px-6 py-20 md:py-24 lg:py-28">
           <div className="max-w-3xl">
-            {/* QA latest: headline exactly 40px on desktop (wide 1903
-                Sans). Lets the full string fit cleanly on one line at
-                lg+ — the prior lg:text-6xl wrapped to 3 cramped lines
-                per the QA report. Scales down on mobile via
-                text-[26px] / text-3xl steps. No <br/> — let the line
-                wrap naturally based on container width. */}
-            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[26px] sm:text-3xl md:text-[36px] lg:text-[40px]">
+            {/* QA latest: headline pinned to 36px on desktop (down
+                from 40px) — wide 1903 Sans bold. Compact mobile
+                scaling preserved. */}
+            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[26px] sm:text-3xl md:text-[32px] lg:text-[36px]">
               H-D Certified
               <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
               {' '}Approved Used Motorcycles
             </h1>
-            {/* QA latest: subhead exactly 28px Title Case in 1903 Sans
-                wide cut. mt-6 for breathing room beneath the heading. */}
-            <p className="font-subhead font-bold text-hd-white mt-6 text-[20px] sm:text-2xl md:text-[28px]">
+            {/* QA latest: subhead font-weight 500 (Medium) per Figma
+                — was bold (700). Still 28px Title Case. */}
+            <p className="font-subhead font-medium text-hd-white mt-6 text-[20px] sm:text-2xl md:text-[28px]">
               Ride With Confidence
             </p>
           </div>
@@ -194,30 +188,39 @@ export function HeroSearch() {
       {/* Search band — sits below the hero photo. Figma /Customer/Home.png
           uses a charcoal grey (not pure black) so the white input fields
           contrast clearly against the band without the inputs disappearing. */}
-      <section className="bg-surface-2 border-y border-surface-1">
+      {/* QA latest: search band sub-container — premium glassmorphism
+          treatment per Figma. Translucent dark fill (rgba(0,0,0,0.6))
+          + heavy backdrop blur so the photo bleeds through subtly.
+          Falls back to plain dark fill in browsers without
+          backdrop-filter support. */}
+      <section
+        className="hero-search-band border-y border-surface-1"
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
+        }}
+      >
         <div className="max-w-container mx-auto px-6 py-5">
-          {/* Cash / Monthly tab toggle — Figma puts these directly above
-              the input row as text-with-chevron toggles. The active label
-              is orange; the inactive one is muted white. */}
+          {/* Cash / Monthly tab toggle — font-weight 500 (Medium) per
+              Figma; active = orange, inactive = white/70. */}
           <div className="flex items-center gap-6 mb-4">
             <button
               type="button"
               onClick={() => setSearchBy('cash')}
-              className={`inline-flex items-center gap-1 font-subhead text-sm transition ${
+              className={`inline-flex items-center gap-1 font-subhead font-medium text-sm transition ${
                 searchBy === 'cash'
                   ? 'text-hd-orange'
                   : 'text-hd-white/70 hover:text-hd-white'
               }`}
             >
-              {/* BUG_UI_002 #3: Figma label is "Search by cash Price"
-                  (lowercase 'c' on cash is intentional in spec). */}
               Search by cash Price
               <Chevron open={searchBy === 'cash'} />
             </button>
             <button
               type="button"
               onClick={() => setSearchBy('monthly')}
-              className={`inline-flex items-center gap-1 font-subhead text-sm transition ${
+              className={`inline-flex items-center gap-1 font-subhead font-medium text-sm transition ${
                 searchBy === 'monthly'
                   ? 'text-hd-orange'
                   : 'text-hd-white/70 hover:text-hd-white'
@@ -251,8 +254,11 @@ export function HeroSearch() {
                 filter sitting between Pin Code and Family. bg-gray-300
                 matches the Figma swatch closely. */}
             <FieldLabel label="Distance">
+              {/* QA latest: Distance dropdown background = exact
+                  Figma swatch #C0C0C0 (silver-grey). */}
               <Select
-                className="bg-gray-300 text-gray-700 border-gray-300"
+                style={{ backgroundColor: '#C0C0C0', borderColor: '#C0C0C0' }}
+                className="text-gray-700"
                 {...register('distance')}
               >
                 <option value="">Any distance</option>

@@ -2,22 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useMatch } from 'react-router-dom';
 import { useSellBikeStore } from '../store/sellBike';
 
-// Top-nav typography — per Figma BUG_UI_001 the active link text MUST
-// remain pure white (#FFFFFF); the orange underline is the only signal
-// for the active route. Earlier builds flipped both the text colour AND
-// the underline to orange, which read as a "selected state" but
-// destroyed the brand's "white wordmark / orange accent" rhythm. Font
-// weight stays at 500 (Medium) — heavier than body, lighter than the
-// 700 the header was using.
+// QA latest: nav text strictly text-hd-white (#FFFFFF), font-weight
+// 400 (Regular) in 1903 Sans wide, 14px. Active link gets the orange
+// underline; text stays white. Earlier 500-weight + tracking-subhead
+// caps treatment dropped — per Figma the nav reads as light corporate
+// type, not as bold subheads.
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
-  `font-subhead font-medium uppercase tracking-subhead text-sm transition pb-1 border-b-2 text-hd-white ${
+  `font-subhead font-normal uppercase tracking-subhead text-[14px] transition pb-1 border-b-2 text-hd-white ${
     isActive
       ? 'border-hd-orange'
       : 'border-transparent hover:border-hd-orange/60'
   }`;
 
 const navButtonClasses =
-  'font-subhead font-medium uppercase tracking-subhead text-sm transition pb-1 border-b-2 border-transparent text-hd-white hover:border-hd-orange/60';
+  'font-subhead font-normal uppercase tracking-subhead text-[14px] transition pb-1 border-b-2 border-transparent text-hd-white hover:border-hd-orange/60';
 
 // Mobile drawer — same white-text / orange-underline-equivalent treatment
 // using a left orange border for the active row instead of a bottom one.
@@ -61,24 +59,21 @@ export function SiteHeader() {
 
   return (
     <header className="bg-hd-black border-b border-surface-2 sticky top-0 z-40">
-      {/* QA BUG_UI_001: bar height bumped 64 → 80px so the nav has the
-          breathing room Figma calls for ("premium padding values"). Logo
-          + links cross-axis-center inside the taller container; the
-          wordmark itself stays at h-9 so it doesn't outgrow the bar. */}
-      <div className="max-w-container mx-auto px-6 h-20 flex items-center justify-between">
-        {/* QA latest: brand-supplied H-D CERTIFIED wordmark — 295×21
-            natural viewBox (~14:1 aspect). Rendered at h-6 (24px) so
-            width ≈ 337px — fits comfortably on the left of the nav
-            without overpowering it. Width attribute matches the
-            computed display width so the browser reserves correct
-            layout space before the SVG loads. */}
+      {/* QA latest: tighter header bar — h-14 (56px) instead of h-20
+          per Figma "sleek narrow navigation". Logo size scaled down
+          to h-4 (16px) so it sits cleanly inside the slimmer bar. */}
+      <div className="max-w-container mx-auto px-6 h-14 flex items-center justify-between">
+        {/* QA latest: logo scaled down to h-4 (16px tall) so it
+            sits proportionally inside the slimmer h-14 bar. Width
+            ≈ 225px from the 295×21 natural aspect — fits the left
+            without crowding the right-hand nav. */}
         <Link to="/" className="flex items-center group" aria-label="H-D Certified — home">
           <img
             src="/brand/hd-certified-wordmark-light.svg"
             alt="H-D Certified"
-            className="h-6 w-auto"
-            width={337}
-            height={24}
+            className="h-4 w-auto"
+            width={225}
+            height={16}
             decoding="async"
           />
         </Link>
@@ -152,9 +147,9 @@ export function SiteHeader() {
             type="button"
             aria-label="Close menu backdrop"
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 top-20 z-30 bg-hd-black/60 lg:hidden"
+            className="fixed inset-0 top-14 z-30 bg-hd-black/60 lg:hidden"
           />
-          <nav className="lg:hidden fixed inset-x-0 top-20 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
+          <nav className="lg:hidden fixed inset-x-0 top-14 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
             <NavLink to="/" className={drawerLinkClasses} end>
               Home
             </NavLink>
