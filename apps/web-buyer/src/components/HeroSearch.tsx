@@ -157,16 +157,23 @@ export function HeroSearch() {
           aria-hidden
         />
 
-        {/* QA latest: hero is now a fixed 650px shell. Content sits
-            vertically centred via h-full + flex so the headline +
-            subhead read as the focal block regardless of viewport
-            below the 650px lock. */}
+        {/* QA latest: vertically-centred content. The text block
+            below carries the explicit Figma dimensions (990 x 56 for
+            the headline row) and gets extra left padding on lg+ so
+            it clears the brand flag pinned at the top-left edge. */}
         <div className="relative max-w-container mx-auto px-6 h-full flex items-center">
-          <div className="max-w-4xl">
-            {/* QA BUG_UI_044: headline locked to 34px on desktop per
-                Figma (was 32px). Wide 1903 Sans Bold. Single-line at
-                lg+ via whitespace-nowrap. */}
-            <h1 className="font-subhead font-bold tracking-subhead text-hd-white leading-[1.05] uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap">
+          {/* lg:pl-[25px] — 40% reduction from 41px per QA (41 → 25px).
+              Below lg the flag is hidden so no extra padding is needed. */}
+          <div className="w-full lg:pl-[25px]">
+            {/* QA latest: headline row pinned to exactly 990x56 on
+                lg+ per Figma — w-[990px] with max-w-full so smaller
+                viewports gracefully wrap, h-[56px] + leading-[56px]
+                gives a 56px row height that perfectly accommodates
+                the 34px wide-1903-Sans Bold glyphs without clipping
+                ascenders/descenders. */}
+            <h1
+              className="font-subhead font-bold tracking-subhead text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
+            >
               H-D Certified
               <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
               {' '}Approved Used Motorcycles
