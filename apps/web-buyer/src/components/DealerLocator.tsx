@@ -80,7 +80,11 @@ export function DealerLocator() {
 
   return (
     <section
-      className="bg-surface-light py-20 border-t border-gray-200"
+      // QA latest: pb-0 — drop the previous 80px bottom padding so
+      // the dealer cards anchor flush against the black footer below.
+      // The QA flagged the trailing light-grey gutter as unauthorised
+      // whitespace breaking the visual flow into the footer.
+      className="bg-surface-light pt-20 pb-0 border-t border-gray-200"
       aria-labelledby="dealer-locator-heading"
     >
       <div className="max-w-container mx-auto px-6">

@@ -35,6 +35,12 @@ export const HERO = {
   // the panAmerica studio shot the Track Enquiry hero was using as a
   // placeholder while the brand asset was pending.
   track: '/heros/track-bg.svg',
+  // QA latest (About page): brand-supplied About.svg — wide scenic
+  // outdoor adventure route with twin touring motorcycles parked by
+  // water. Replaces the iron883 indoor studio shot used as the
+  // placeholder. Same dark-gradient bake as the other hero assets so
+  // the headline stays legible.
+  about: '/heros/about-bg.svg',
 
   // CDN studio shots (per-bike, used for inner pages).
   streetGlide: 'https://images.medialinksonline.com/8825026x2200x1100xFFFFFFxH.jpg',

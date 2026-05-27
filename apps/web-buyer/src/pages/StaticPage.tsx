@@ -59,13 +59,32 @@ const FALLBACK_TITLES: Record<string, string> = {
 // `emphasis` (orange), so this ordering correctly produces an orange
 // "Harley-Davidson®" followed by a white "Cookie Notice" on the page.
 const HERO_COPY: Record<string, { title: string; emphasis: string; image: string }> = {
-  about: { title: 'Life. Liberty.', emphasis: 'Certified', image: HERO.streetGlide },
+  // QA latest (About): brand-supplied About.svg outdoor scenic
+  // adventure-route asset (twin touring motorcycles by water) — was
+  // the indoor streetGlide placeholder. Title row reads "Life.
+  // Liberty." in white + "Certified" in orange per the existing
+  // Figma frame.
+  about: { title: 'Life. Liberty.', emphasis: 'Certified', image: HERO.about },
   faq: { title: 'Frequently', emphasis: 'Asked', image: HERO.sportster },
   privacy: { title: 'Privacy', emphasis: 'Policy', image: HERO.iron883 },
   cookies: { title: 'Cookie Notice', emphasis: 'Harley-Davidson®', image: HERO.iron883 },
   terms: { title: 'Terms &', emphasis: 'Conditions', image: HERO.iron883 },
   contact: { title: 'Contact', emphasis: 'Us', image: HERO.roadKing },
 };
+
+// QA latest (About): bundled intro paragraphs so the About page
+// never falls through to the "not published yet" placeholder when
+// the admin hasn't seeded the API. Mirrors the existing FAQ /
+// Contact sections rendered below so the page reads as a single
+// continuous narrative. Admin-published bodyHtml takes precedence
+// (same pattern as the cookies fallback).
+const ABOUT_FALLBACK_HTML = `
+<p>The Harley-Davidson&reg; Certified Pre-Owned Marketplace is a dedicated platform for H-D
+riders to buy and sell pre-owned motorcycles &mdash; all backed by the trusted dealer network.</p>
+
+<p>Every Certified motorcycle passes a detailed 110-Point Inspection. Every enquiry is verified.
+Every transaction is handled through an authorised Harley-Davidson&reg; dealer.</p>
+`;
 
 // QA latest (Cookie Notice): full HTML fallback body so the page
 // never renders the "not published yet" placeholder. The 6 mandated
@@ -154,10 +173,12 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
   };
   const isMissing = isError && error instanceof ApiError && error.status === 404;
   const isCookies = contentKey === 'cookies';
+  const isAbout = contentKey === 'about';
 
-  // Cookies page falls back to the bundled HTML if the API hasn't
-  // been seeded (or returns 404) so the page never shows the
-  // "not published yet" placeholder per QA.
+  // Cookies + About pages fall back to bundled HTML if the API
+  // hasn't been seeded (or returns 404) so they never show the
+  // "not published yet" placeholder per QA. Admin-published
+  // bodyHtml always takes precedence.
   const effectiveHtml =
     data?.bodyHtml
       ? DOMPurify.sanitize(data.bodyHtml, {
@@ -165,6 +186,10 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         })
       : isCookies && isMissing
       ? DOMPurify.sanitize(COOKIE_NOTICE_FALLBACK_HTML, {
+          ADD_ATTR: ['target', 'rel'],
+        })
+      : isAbout && isMissing
+      ? DOMPurify.sanitize(ABOUT_FALLBACK_HTML, {
           ADD_ATTR: ['target', 'rel'],
         })
       : '';
@@ -184,16 +209,20 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         // "Cookie Notice as of October 2020" subtitle under the
         // main heading.
         solidBlack={isCookies}
+        // QA latest: HOME / COOKIE on cookies page, HOME / ABOUT US
+        // on the About page — current page in orange per Figma.
         breadcrumbs={
           isCookies
             ? [{ label: 'Home', to: '/' }, { label: 'Cookie' }]
+            : isAbout
+            ? [{ label: 'Home', to: '/' }, { label: 'About Us' }]
             : undefined
         }
         subtitle={isCookies ? 'Cookie Notice as of October 2020' : undefined}
       />
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
         {isLoading && <div className="text-gray-600">Loading…</div>}
-        {isMissing && !isCookies && (
+        {isMissing && !isCookies && !isAbout && (
           <p className="text-gray-600">
             This content has not been published yet. Check back shortly.
           </p>
@@ -314,10 +343,19 @@ function FaqItem({
 }) {
   const [open, setOpen] = useState(Boolean(defaultOpen));
   return (
+    // QA latest: active accordion frame = 1.5px solid #FF5500 with
+    // absolute sharp corners (was 1px border-hd-orange). The closed
+    // state keeps a thin grey separator. Inline style for the
+    // expanded border because Tailwind doesn't ship a 1.5px utility
+    // out-of-the-box for arbitrary colours; we need pixel-perfect
+    // parity with the Figma spec on both colour and stroke width.
     <div
-      className={`border transition ${
-        open ? 'border-hd-orange bg-hd-orange/5' : 'border-gray-200'
-      }`}
+      className="transition rounded-none"
+      style={
+        open
+          ? { border: '1.5px solid #FF5500', backgroundColor: 'rgba(255, 85, 0, 0.05)' }
+          : { border: '1px solid #E5E7EB' }
+      }
     >
       <button
         type="button"
@@ -325,7 +363,9 @@ function FaqItem({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
       >
-        <span className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
+        {/* QA latest: question header pinned to 16px (was text-sm /
+            14px) per Figma. Still 1903 Sans wide bold uppercase. */}
+        <span className="font-subhead font-bold uppercase tracking-subhead text-[16px] text-text-on-light">
           {item.q}
         </span>
         <span
@@ -338,7 +378,8 @@ function FaqItem({
         </span>
       </button>
       {open && (
-        <p className="px-5 pb-5 text-sm text-gray-700 leading-relaxed">{item.a}</p>
+        // QA latest: body answer pinned to 14px per Figma.
+        <p className="px-5 pb-5 text-[14px] text-gray-700 leading-relaxed">{item.a}</p>
       )}
     </div>
   );

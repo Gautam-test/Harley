@@ -31,42 +31,42 @@ const FEATURES: FeatureRow[] = [
     title: '110 Point Pre-Delivery Check',
     iconSrc: '/brand/benefits/1.svg',
     body:
-      "Inspection of the technical condition of the motorcycle is the same for all authorised dealers. A know-how is a part of 110 points covering the whole operation of the motorcycle. A detailed record signed by the performing technician is available to the customer from each inspection. Only ones that have been done over a roadtest are then right to be classed as H-D Certified™ and qualify for the other benefits associated with these certified used motorcycles.",
+      'Inspection of the technical condition of the motorcycle is the same for all authorised dealers. It amounts to a check of 110 points covering the whole operation of the machine. A detailed record signed by the performing technician is available to the customer from each inspection. Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
     image: '/brand/benefits/feature-images/1.svg',
   },
   {
     title: 'History Check / HPI Check / Insurance Database',
     iconSrc: '/brand/benefits/2.svg',
     body:
-      "In the H-D Certified™ motorcycles are offered at a fixed and transparent price. Cross-checked against the national HPI / insurance database — no outstanding finance, theft markers or hidden write-offs. Every certified motorcycle comes with the verification report shared in writing.",
+      'In the H-D Certified™, motorcycles are offered only with XXXX specification, as sold by Harley-Davidson® India Pvt Ltd (the importer of record).',
     image: '/brand/benefits/feature-images/2.svg',
   },
   {
     title: 'Kilometer Verification Check',
     iconSrc: '/brand/benefits/3.svg',
     body:
-      'An online check is performed to verify the records that the KM declared on the motorcycle is correct and confirmed in writing. Every odometer reading is independently corroborated against the motorcycle\'s service history.',
+      'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
     image: '/brand/benefits/feature-images/3.svg',
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
     iconSrc: '/brand/benefits/4.svg',
     body:
-      'Once the motorcycle has been H-D Certified™ we back this with a minimum 12-month guarantee. It can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
+      'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee, this can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     image: '/brand/benefits/feature-images/4.svg',
   },
   {
     title: '12 Month Roadside Assistance',
     iconSrc: '/brand/benefits/5.svg',
     body:
-      'In addition to the 12 month guarantee we provide Roadside Assistance (the Roadside assistance package provider is an Authorised Vehicle Assist). Recovery and Onward Travel if required 24/7, should you accidentally pundoction from the Roadside package is also extended.',
+      'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7, should you extend your Guarantee then the Assistance package is also extended.',
     image: '/brand/benefits/feature-images/5.svg',
   },
   {
     title: '12 Month HOG Membership',
     iconSrc: '/brand/benefits/6.svg',
     body:
-      'As an H-D Certified™ owner you will receive the first 12 months\' membership of the Harley Owners Group. From here you will have the choice of renewing your membership.',
+      'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group. Each year you will have the choice of renewing your membership.',
     image: '/brand/benefits/feature-images/6.svg',
     cta: { label: 'HOG Benefits Click Here', href: HOG_BENEFITS_URL },
   },
@@ -104,9 +104,14 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         //     into a narrow central column on desktop.
         //   • Still center-aligned per BUG_UI_032 + bg-surface-light
         //     soft off-white canvas.
-        <section className="bg-surface-light py-14 md:py-16 lg:py-20">
-          <div className="max-w-5xl mx-auto px-6 md:px-10 text-center">
-            <h2 className="font-subhead font-bold tracking-subhead uppercase text-[28px] text-text-on-light leading-tight">
+        // QA latest: Overview canvas bg = #EEECEB (warm light grey,
+        // not the cooler bg-surface-light), and the inner content
+        // gets explicit side-padding gutters (px-8 md:px-12 lg:px-16)
+        // so the body copy can't bleed edge-to-edge on ultra-wide
+        // screens. Heading size dropped to 26px per Figma spec.
+        <section className="py-14 md:py-16 lg:py-20" style={{ backgroundColor: '#EEECEB' }}>
+          <div className="max-w-5xl mx-auto px-8 md:px-12 lg:px-16 text-center">
+            <h2 className="font-subhead font-bold tracking-subhead uppercase text-[26px] text-text-on-light leading-tight">
               What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
             <p className="mt-5 text-[14px] text-gray-700 leading-relaxed">
@@ -123,8 +128,10 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto px-6 md:px-10 mt-12 md:mt-16 text-center">
-            <h3 className="font-subhead font-bold tracking-subhead uppercase text-[28px] text-text-on-light leading-tight">
+          <div className="max-w-5xl mx-auto px-8 md:px-12 lg:px-16 mt-12 md:mt-16 text-center">
+            {/* QA latest: Overview sub-heading also locked to 26px
+                per Figma — matches the section's main heading rhythm. */}
+            <h3 className="font-subhead font-bold tracking-subhead uppercase text-[26px] text-text-on-light leading-tight">
               Overview Of H-D Certified&trade; - Ride With Confidence
             </h3>
             <p className="mt-5 text-[14px] text-gray-700 leading-relaxed">
@@ -149,8 +156,13 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         </section>
       )}
 
-      {/* 6 alternating image/text feature rows. */}
-      <div className={compact ? 'bg-hd-white' : 'bg-surface-light'}>
+      {/* 6 alternating image/text feature rows. QA latest: row 1 must
+          render WHITE (#FFFFFF), row 2 soft-grey (#F5F5F5), and so on
+          — odd indices (1, 3, 5 = rows 2, 4, 6) get the grey fill.
+          The wrapper colour matches row 1 so the page reads as a
+          continuous white-to-grey alternation right from the section
+          edge. */}
+      <div className="bg-hd-white">
         {FEATURES.map((f, i) => (
           <FeatureSection key={f.title} feature={f} reverse={i % 2 === 1} index={i} />
         ))}
@@ -183,7 +195,13 @@ function FeatureSection({
   //     than font-headline (1903 Sans Condensed); the condensed cut was
   //     too vertically compressed for these card titles.
   return (
-    <section className={`py-10 md:py-14 ${index % 2 === 1 ? 'bg-hd-white' : 'bg-surface-light'}`}>
+    // QA latest: row 1 (index 0) = white, row 2 (index 1) = soft
+    // #F5F5F5, alternating. Even indices get white, odd indices grey
+    // — flipped from the previous pattern that started grey-first.
+    <section
+      className="py-10 md:py-14"
+      style={{ backgroundColor: index % 2 === 1 ? '#F5F5F5' : '#FFFFFF' }}
+    >
       <div
         className={`max-w-container mx-auto px-6 grid lg:grid-cols-2 gap-0 items-center ${
           reverse ? 'lg:[&>*:first-child]:order-2' : ''

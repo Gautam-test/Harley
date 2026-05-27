@@ -65,7 +65,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
       {...linkProps}
       data-testid="listing-card"
       data-listing-status={listing.status}
-      className={`group block text-left w-full bg-hd-white border border-gray-200 overflow-hidden transition ${
+      className={`group block text-left w-full bg-hd-white border border-gray-200 overflow-hidden transition h-full flex flex-col ${
         isSold ? 'opacity-90 cursor-pointer' : 'hover:border-hd-orange'
       }`}
     >
@@ -144,26 +144,41 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
               the condensed headline cut that was distorting it)
             • Title-case "View Details >" with plain > chevron
           More generous vertical padding (p-5) so the card breathes. */}
-      <div className="p-5">
+      {/* QA latest: card body is now a flex column with the price
+          row pinned to the bottom via mt-auto, so a one-line title
+          ("STREET GLIDE SPECIAL") and a two-line title ("PAN AMERICA
+          1250 SPECIAL") land their price + View Details on identical
+          baselines across the grid. h-full on the wrapper above
+          handles the outer height equalisation; the flex-1 spacer
+          here absorbs any extra slack inside. */}
+      <div className="p-5 flex flex-col flex-1">
         <h3 className="font-subhead font-bold uppercase tracking-subhead text-base text-text-on-light leading-tight">
           {listing.modelName}
         </h3>
 
-        {/* QA latest: pin marker = solid circular orange disc with a
-            thin white inner dot (replaces the teardrop pin). Renders
-            as a small bullet badge to the left of the dealer name. */}
+        {/* QA latest: pin glyph swapped to the brand-supplied
+            map-pin.svg (outline teardrop with center dot, both
+            strokes in #FF6600). Was a solid orange disc. */}
         <p className="flex items-center gap-1.5 text-[12px] text-gray-600 mt-2">
-          <span
+          <img
+            src="/brand/map-pin.svg"
+            alt=""
             aria-hidden
-            className="inline-flex items-center justify-center w-3 h-3 rounded-full bg-hd-orange shrink-0"
-          >
-            <span className="w-[4px] h-[4px] rounded-full bg-hd-white" />
-          </span>
+            className="w-4 h-4 shrink-0"
+            width={16}
+            height={16}
+            decoding="async"
+          />
           <span className="truncate">{listing.dealerName}</span>
         </p>
 
-        {/* Metadata: Stock ID · Year · KM · Color */}
-        <p className="text-[11px] text-gray-600 mt-2 leading-relaxed">
+        {/* QA latest: metadata row breathes — wider gap between
+            tokens (gap-x-2 inline-flex) so "C2UUC · 2023 · 8,240 KM ·
+            METALLIC BLUE" doesn't compress into a single dense
+            run-on line at narrow card widths. Wrap behaviour
+            preserved so long colour names still drop to a second
+            row instead of overflowing. */}
+        <p className="text-[11px] text-gray-600 mt-2 leading-relaxed inline-flex flex-wrap gap-x-2 gap-y-0.5">
           {[
             stockCode || null,
             listing.year,
@@ -171,11 +186,18 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             listing.colour ? listing.colour.toUpperCase() : null,
           ]
             .filter(Boolean)
-            .join(' · ')}
+            .map((token, i, arr) => (
+              <span key={`${token}-${i}`} className="inline-flex items-center gap-x-2">
+                <span>{token}</span>
+                {i < arr.length - 1 && <span aria-hidden>·</span>}
+              </span>
+            ))}
         </p>
 
-        {/* Horizontal separator + price row */}
-        <div className="mt-4 pt-4 border-t border-gray-200 flex items-baseline justify-between gap-2">
+        {/* Horizontal separator + price row. mt-auto pushes this
+            block to the bottom of the flex column so cards align
+            their price baselines regardless of title-wrap height. */}
+        <div className="mt-auto pt-4 border-t border-gray-200 flex items-baseline justify-between gap-2">
           <span className="font-subhead font-bold text-xl text-text-on-light tracking-subhead">
             ₹ {listing.price.toLocaleString('en-IN')}
           </span>
