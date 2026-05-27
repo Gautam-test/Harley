@@ -17,6 +17,7 @@ export function ImageGallery({
   images,
   alt,
   sold = false,
+  certificationStatus,
 }: {
   images: string[];
   alt: string;
@@ -24,6 +25,10 @@ export function ImageGallery({
    *  desaturate it slightly. Used during the 1-hour visibility window
    *  after a dealer marks the bike sold. */
   sold?: boolean;
+  /** When 'CPO' / 'AS_IS', overlay the matching certification badge
+   *  at the top-left of the active image (QA spec — VDP Detail.png).
+   *  White background per Figma so it pops against the bike photo. */
+  certificationStatus?: 'CPO' | 'AS_IS' | null;
 }) {
   const [active, setActive] = useState(0);
   const safe = images.length > 0 ? images : [FALLBACK];
@@ -39,6 +44,28 @@ export function ImageGallery({
           fetchPriority="high"
           onError={onImgError}
         />
+        {/* QA latest (VDP Detail.png re-apply, surgical scope): white
+            brand stamp overlaid on the top-left of the active image.
+            CPO renders the full "H-D CERTIFIED" wordmark; AS_IS
+            renders the "AS · IS" plate. Both use the same dash
+            separator structure as the search-card brand stamp. Other
+            layout changes from the prior commit (equal-height grid,
+            title-row chip removal, sidebar mt-auto) are NOT
+            re-applied here. */}
+        {certificationStatus === 'CPO' && (
+          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-hd-white text-hd-black font-subhead font-bold uppercase tracking-subhead text-[11px] px-3 py-1.5 shadow-sm">
+            <span>H-D</span>
+            <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
+            <span>CERTIFIED</span>
+          </span>
+        )}
+        {certificationStatus === 'AS_IS' && (
+          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-hd-white text-hd-black font-subhead font-bold uppercase tracking-subhead text-[11px] px-3 py-1.5 shadow-sm">
+            <span>AS</span>
+            <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
+            <span>IS</span>
+          </span>
+        )}
         {sold && (
           <div
             aria-hidden

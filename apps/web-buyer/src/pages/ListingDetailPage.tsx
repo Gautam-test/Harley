@@ -124,6 +124,7 @@ export function ListingDetailPage() {
                 images={data.images}
                 alt={heading}
                 sold={data.status === 'SOLD'}
+                certificationStatus={data.certificationStatus}
               />
             </div>
 
