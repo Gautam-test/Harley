@@ -94,13 +94,7 @@ export function ListingSidebarCard({
 
   return (
     <>
-      {/* QA latest (VDP Detail.png): h-full flex-col so the card
-          stretches to match the gallery height on lg+, with the
-          action buttons block (Enquire / View Dealer Details) pinned
-          to the bottom via mt-auto on its wrapper. On mobile the
-          card flows naturally (no items-stretch in the parent grid
-          below lg). */}
-      <div className="bg-hd-white border border-gray-200 overflow-hidden h-full flex flex-col">
+      <div className="bg-hd-white border border-gray-200 overflow-hidden">
         {/* Price + EMI from */}
         <div className="p-5">
           {/* Price wordmark in font-subhead (1903 Sans) per the Figma
@@ -144,12 +138,8 @@ export function ListingSidebarCard({
           </div>
         </div>
 
-        {/* CTAs. QA latest: mt-auto pushes this action block to the
-            bottom of the flex column so the "VIEW DEALER DETAILS"
-            button's bottom edge aligns with the gallery thumbnail
-            row on the left when the card stretches to match the
-            gallery height (Detail.png parity). */}
-        <div className="mt-auto px-5 pb-5 pt-1 space-y-2">
+        {/* CTAs */}
+        <div className="px-5 pb-5 pt-1 space-y-2">
           {!submitted ? (
             <>
               {/* Primary CTA — label per Figma /Dealer-updated/zoom-listing-top.png

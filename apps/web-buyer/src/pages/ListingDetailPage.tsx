@@ -117,25 +117,17 @@ export function ListingDetailPage() {
             <span className="text-hd-orange">Search Stock</span>
           </nav>
 
-          {/* Top section — gallery left, price/dealer card right.
-              QA latest (Detail.png): items-stretch so the right
-              sidebar matches the gallery's full height. The sidebar
-              card itself is now h-full flex-col so its "VIEW DEALER
-              DETAILS" CTA bottom-edge aligns with the thumbnail row
-              bottom on the left, killing the previous height
-              asymmetry where the sidebar collapsed short and the
-              gallery extended below it. */}
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-stretch">
+          {/* Top section — gallery left, price/dealer card right */}
+          <div className="grid lg:grid-cols-[1fr_360px] gap-8">
             <div>
               <ImageGallery
                 images={data.images}
                 alt={heading}
                 sold={data.status === 'SOLD'}
-                certificationStatus={data.certificationStatus}
               />
             </div>
 
-            <aside className="h-full">
+            <aside>
               <ListingSidebarCard
                 slug={data.slug}
                 modelInterest={`${data.year} ${data.modelName}`}
@@ -148,13 +140,24 @@ export function ListingDetailPage() {
             </aside>
           </div>
 
-          {/* Title row. QA latest: the certification chip was removed
-              from this row — the white-bg version now lives as a
-              brand stamp overlay on the top-left of the gallery's
-              active image (see ImageGallery). Duplicating it here
-              cluttered the title block. */}
+          {/* Title row */}
           <div className="mt-10">
-            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light leading-tight">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* CPO + As-Is badges aligned with the listing-card rebuild:
+                  both render as sharp black rectangles with white text so
+                  the buyer sees the same chrome on the grid AND the detail
+                  page. */}
+              {data.certificationStatus === 'CPO' ? (
+                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+                  H-D Certified
+                </span>
+              ) : (
+                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+                  As-Is
+                </span>
+              )}
+            </div>
+            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-3 leading-tight">
               {heading}
             </h1>
             <p className="font-subhead uppercase tracking-subhead text-xs text-gray-600 mt-2">
