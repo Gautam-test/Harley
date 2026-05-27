@@ -113,21 +113,25 @@ export function HeroSearch() {
   return (
     <>
       <section
-        className="relative bg-hd-black overflow-hidden"
-        style={{ height: '480px' }}
+        className="relative bg-hd-black"
+        style={{ height: '460px' }}
       >
         {/* QA latest: brand accent flag — provided Flag.svg vector
             (asymmetric vertical flag with H-D corporate emblem inset
-            into the top white panel). Native aspect 85×627 ≈ 0.135 :1
-            so the flag drops vertically from the top of the hero on
-            its own. Height fills the 650px hero on desktop; scales
-            down on smaller breakpoints. Hidden on the smallest
-            phones (<sm) to keep the headline + search legible. */}
-        <div className="absolute top-0 left-0 z-10 hidden sm:block pointer-events-none">
+            into the top white panel). Per QA spec the flag dynamically
+            hangs LOWER than the rest of the hero, extending past the
+            hero's bottom edge into the search band area to create the
+            asymmetric design accent ("a dedicated section on the left
+            side of the filter widget must float or hang lower beneath
+            the 'Search by cash Price' container"). Achieved via a
+            larger fixed flag height than the hero canvas (560px flag
+            vs 460px hero on lg). The parent <section> intentionally
+            DROPS overflow-hidden so the flag tail can spill out. */}
+        <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
           <img
             src="/brand/hd-flag.svg"
             alt="H-D Bar & Shield flag"
-            className="h-[360px] sm:h-[400px] md:h-[440px] lg:h-[480px] w-auto"
+            className="h-[360px] sm:h-[420px] md:h-[480px] lg:h-[560px] w-auto"
             width={85}
             height={627}
             decoding="async"
@@ -187,16 +191,17 @@ export function HeroSearch() {
         </div>
       </section>
 
-      {/* Search band — sits below the hero photo. Figma /Customer/Home.png
-          uses a charcoal grey (not pure black) so the white input fields
-          contrast clearly against the band without the inputs disappearing. */}
-      {/* QA latest: search band sub-container — premium glassmorphism
-          treatment per Figma. Translucent dark fill (rgba(0,0,0,0.6))
-          + heavy backdrop blur so the photo bleeds through subtly.
-          Falls back to plain dark fill in browsers without
-          backdrop-filter support. */}
+      {/* QA latest: search band — pulled UP via negative margin so it
+          overlaps the bottom of the hero photo. The previous build
+          had the band as a separate sibling section AFTER the hero,
+          which left backdrop-filter with nothing to blur (no content
+          behind it) and made the panel render as a flat opaque grey.
+          With the overlap, the hero's lifestyle photo bleeds through
+          the 0.6-opacity dark fill + 40px blur and the glassmorphism
+          effect actually paints. relative + z-10 keep the band above
+          the hero's gradient overlays. */}
       <section
-        className="hero-search-band border-y border-surface-1"
+        className="hero-search-band relative z-10 -mt-12 border-y border-surface-1"
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(40px)',
