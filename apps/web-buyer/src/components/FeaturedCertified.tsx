@@ -54,14 +54,15 @@ export function FeaturedCertified() {
           Each one inspected, verified, and ready to ride.
         </p>
 
-        {/* QA RE-OPEN: grid forces 4 columns on lg+ with equal-height
-            cells via items-stretch, so each card matches its neighbour
-            regardless of title length. First card receives a default
-            highlighted state — orange box-shadow glow + orange border
-            via [&>*:first-child]:ring-2 [&>*:first-child]:ring-hd-orange
-            descendant selectors so we don't have to refactor
-            ListingCardItem's props. */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch [&>a:first-child]:ring-2 [&>a:first-child]:ring-hd-orange [&>a:first-child]:shadow-[0_0_24px_rgba(255,102,0,0.35)] [&>button:first-child]:ring-2 [&>button:first-child]:ring-hd-orange [&>button:first-child]:shadow-[0_0_24px_rgba(255,102,0,0.35)]">
+        {/* QA latest (BUG_UI_Featured): drop the first-card highlight.
+            Earlier QA round added an orange ring + ambient orange glow
+            on the first card so it read as the "active" tile; the
+            current QA spec calls that out as an unauthorised treatment
+            and wants every card to render flat + uniform. The
+            descendant-selector ring/shadow has been removed; the only
+            accent now is the regular hover orange-border state from
+            ListingCardItem itself. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {isLoading &&
             Array.from({ length: 4 }).map((_, i) => <ListingCardSkeleton key={i} />)}
           {!isLoading &&
