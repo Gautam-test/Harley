@@ -1074,17 +1074,6 @@ export function InfoGateModal({
 
         {step === 'verify' && !sendBlocked && (
           <div className="mt-6 space-y-3">
-            {/* QA latest: when no digits have been typed yet the
-                `tracking-[0.5em]` stretched the placeholder string
-                ("6 - d i g i t   c o d e") into ugly spaced
-                characters. We now only apply the wide tracking AND
-                the centred big-digit treatment when there IS a
-                value; placeholder state uses normal tracking + a
-                smaller, brand-tone placeholder rendered via the
-                ::placeholder CSS hook (in packages/ui/styles.css
-                we set placeholder color to #6B6B6B with normal
-                tracking — that rule already exists for the hero
-                search band and any other field). */}
             <Input
               placeholder="6-digit code"
               inputMode="numeric"
@@ -1092,8 +1081,11 @@ export function InfoGateModal({
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              style={code ? { letterSpacing: '0.5em' } : undefined}
-              className="text-center text-xl font-body font-bold placeholder:tracking-normal placeholder:text-base placeholder:font-normal"
+              // QA latest: brand-font 1903 Sans on the OTP input
+              // (was font-mono). Wide tracking preserves the
+              // distinct-digit look without resorting to a generic
+              // monospace stack.
+              className="text-center text-2xl tracking-[0.5em] font-body font-bold"
             />
             {/* QA RE-OPEN bug #2: polished, persistent notice — stays
                 visible from the moment the OTP send fires (busy) all

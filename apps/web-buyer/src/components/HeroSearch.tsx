@@ -127,12 +127,7 @@ export function HeroSearch() {
             larger fixed flag height than the hero canvas (560px flag
             vs 460px hero on lg). The parent <section> intentionally
             DROPS overflow-hidden so the flag tail can spill out. */}
-        {/* QA latest: flag z-index dropped from z-20 → z-0 so the
-            flag's tail sits BEHIND the search container row when
-            they overlap (search band has z-10). The flag still
-            paints above the hero's gradient overlays because they
-            have no positive z-index of their own. */}
-        <div className="absolute top-0 left-0 z-0 hidden sm:block pointer-events-none">
+        <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
           <img
             src="/brand/hd-flag.svg"
             alt="H-D Bar & Shield flag"
@@ -208,11 +203,7 @@ export function HeroSearch() {
       <section
         className="hero-search-band relative z-10 -mt-12 border-y border-surface-1"
         style={{
-          // QA latest: lighter translucent blend — alpha dropped
-          // from 0.6 → 0.35 so the landscape photo behind the
-          // search band peeks through more visibly (per Figma the
-          // panel is meant to feel softly frosted, not matte-dark).
-          backgroundColor: 'rgba(0, 0, 0, 0.35)',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(40px)',
           WebkitBackdropFilter: 'blur(40px)',
         }}
