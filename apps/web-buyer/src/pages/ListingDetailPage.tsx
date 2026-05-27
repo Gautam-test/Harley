@@ -117,8 +117,16 @@ export function ListingDetailPage() {
             <span className="text-hd-orange">Search Stock</span>
           </nav>
 
-          {/* Top section — gallery left, price/dealer card right */}
-          <div className="grid lg:grid-cols-[1fr_360px] gap-8">
+          {/* QA latest: merged into a SINGLE grid so the right-column
+              sidebar can stick (lg:sticky lg:top-20 self-start) across
+              the whole left-column scroll — gallery → title → specs →
+              tabs → EMI calculator. Previously the gallery + sidebar
+              lived in their own grid whose track was only ~600px tall,
+              so the sticky aside disengaged the moment the user
+              scrolled into the specs section. Now the sidebar follows
+              the buyer through the entire product detail block,
+              matching standard e-commerce PDP behaviour per QA. */}
+          <div className="grid lg:grid-cols-[1fr_360px] gap-8 items-start">
             <div>
               <ImageGallery
                 images={data.images}
@@ -126,83 +134,67 @@ export function ListingDetailPage() {
                 sold={data.status === 'SOLD'}
                 certificationStatus={data.certificationStatus}
               />
-            </div>
 
-            <aside>
-              <ListingSidebarCard
-                slug={data.slug}
-                modelInterest={`${data.year} ${data.modelName}`}
-                price={data.price}
-                emiFrom={emiFrom}
-                dealerId={data.dealerId}
-                dealerName={data.dealerName}
-                dealerCity={data.city}
-              />
-            </aside>
-          </div>
+              {/* Title row */}
+              <div className="mt-10">
+                <div className="flex flex-wrap items-center gap-3">
+                  {/* CPO + As-Is badges aligned with the listing-card rebuild:
+                      both render as sharp black rectangles with white text so
+                      the buyer sees the same chrome on the grid AND the detail
+                      page. */}
+                  {data.certificationStatus === 'CPO' ? (
+                    <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+                      H-D Certified
+                    </span>
+                  ) : (
+                    <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+                      As-Is
+                    </span>
+                  )}
+                </div>
+                <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-3 leading-tight">
+                  {heading}
+                </h1>
+                <p className="font-subhead uppercase tracking-subhead text-xs text-gray-600 mt-2">
+                  {metaLine}
+                </p>
+              </div>
 
-          {/* Title row */}
-          <div className="mt-10">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* CPO + As-Is badges aligned with the listing-card rebuild:
-                  both render as sharp black rectangles with white text so
-                  the buyer sees the same chrome on the grid AND the detail
-                  page. */}
-              {data.certificationStatus === 'CPO' ? (
-                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-                  H-D Certified
-                </span>
-              ) : (
-                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-                  As-Is
-                </span>
-              )}
-            </div>
-            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-3 leading-tight">
-              {heading}
-            </h1>
-            <p className="font-subhead uppercase tracking-subhead text-xs text-gray-600 mt-2">
-              {metaLine}
-            </p>
-          </div>
-
-          {/* Spec rows + EMI calculator */}
-          <div className="mt-8 grid lg:grid-cols-[1fr_360px] gap-8 items-start">
-            <div>
+              {/* Spec rows */}
               {/* QA NEW: single comprehensive spec highlights grid per
                   Figma — YEAR, MODEL, CATEGORY, KMS, OWNERS, INSPECTION,
                   MILEAGE, COLOUR, LOCATION, VEHICLE REGISTRATION. Five
-                  columns on lg+, two on mobile. The earlier 3-row stack
-                  was missing Model / Category / Mileage / Colour /
-                  Vehicle Registration. */}
-              <SpecRow
-                items={[
-                  { label: 'Year', value: String(data.year) },
-                  { label: 'Model', value: data.modelName },
-                  { label: 'Category', value: data.modelFamily },
-                  { label: 'KMs', value: `${data.kmsDriven.toLocaleString('en-IN')} KM` },
-                  {
-                    label: 'Owners',
-                    value: data.owners
-                      ? data.owners === 1
-                        ? '1 (Single)'
-                        : `${data.owners}`
-                      : '—',
-                  },
-                  {
-                    label: 'Inspection',
-                    value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'As-Is',
-                  },
-                  { label: 'Mileage', value: '—' },
-                  { label: 'Colour', value: data.colour },
-                  {
-                    label: 'Location',
-                    value: [data.city, data.pincode].filter(Boolean).join(' · '),
-                  },
-                  { label: 'Vehicle Registration', value: stockCode || '—' },
-                ]}
-                full
-              />
+                  columns on lg+, two on mobile. */}
+              <div className="mt-8">
+                <SpecRow
+                  items={[
+                    { label: 'Year', value: String(data.year) },
+                    { label: 'Model', value: data.modelName },
+                    { label: 'Category', value: data.modelFamily },
+                    { label: 'KMs', value: `${data.kmsDriven.toLocaleString('en-IN')} KM` },
+                    {
+                      label: 'Owners',
+                      value: data.owners
+                        ? data.owners === 1
+                          ? '1 (Single)'
+                          : `${data.owners}`
+                        : '—',
+                    },
+                    {
+                      label: 'Inspection',
+                      value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'As-Is',
+                    },
+                    { label: 'Mileage', value: '—' },
+                    { label: 'Colour', value: data.colour },
+                    {
+                      label: 'Location',
+                      value: [data.city, data.pincode].filter(Boolean).join(' · '),
+                    },
+                    { label: 'Vehicle Registration', value: stockCode || '—' },
+                  ]}
+                  full
+                />
+              </div>
 
               {/* QA latest: tabs + content rendered as ELEVATED white
                   card layered on the soft #F4F4F4 page canvas. Tab
@@ -236,12 +228,34 @@ export function ListingDetailPage() {
                   )}
                 </div>
               </div>
+
+              {/* EMI Calculator — moved from the prior right-rail
+                  position into the left column under the tabs so the
+                  RIGHT rail can carry the (now-sticky) price/dealer
+                  card on its own. */}
+              <div className="mt-10">
+                <EmiCalculator
+                  price={data.price}
+                  bikeLabel={`${data.year} ${data.modelName}`}
+                />
+              </div>
             </div>
 
-            <aside className="lg:sticky lg:top-20">
-              <EmiCalculator
+            {/* QA latest (Critical): price/dealer card is now sticky on
+                lg+ — lg:sticky lg:top-20 self-start keeps it anchored
+                next to the gallery + spec scroll. top-20 (80px) clears
+                the 56px sticky header with breathing room. self-start
+                stops the aside from auto-stretching to grid row
+                height, which would otherwise break sticky behaviour. */}
+            <aside className="lg:sticky lg:top-20 self-start">
+              <ListingSidebarCard
+                slug={data.slug}
+                modelInterest={`${data.year} ${data.modelName}`}
                 price={data.price}
-                bikeLabel={`${data.year} ${data.modelName}`}
+                emiFrom={emiFrom}
+                dealerId={data.dealerId}
+                dealerName={data.dealerName}
+                dealerCity={data.city}
               />
             </aside>
           </div>

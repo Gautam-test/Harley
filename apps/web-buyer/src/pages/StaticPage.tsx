@@ -192,120 +192,336 @@ cookies and how they use them.</p>
 //     https://www.harley-davidson.com/in/en/footer/utility/
 //     cookie-policy.html
 const PRIVACY_FALLBACK_HTML = `
+<p>Welcome to Harley-Davidson&reg;. Our primary goal in collecting your personal information
+is to enable us to provide our products and services to you and help personalize your
+interactions and experiences with us. This notice explains what personal information we may
+collect from you, when we may collect it, how we may use and disclose it, and your rights
+regarding our use of it. Before using our websites, our mobile app and any products or
+services purchased or subscribed to via our websites and mobile app and by
+submitting/providing your personal information, please make sure to read this Privacy Notice
+carefully.</p>
+
+<p><strong>Please note:</strong> in the event of any discrepancy or inconsistency between
+this Privacy Notice and any applicable laws (including but not limited to the Digital
+Personal Data Protection Law (&ldquo;DPDP&rdquo;)), such applicable laws shall prevail and
+this Privacy Notice shall be deemed to be automatically amended to be consistent with the
+applicable laws.</p>
+
 <h2>Harley-Davidson&reg; Commitment To Your Privacy</h2>
-<p>Harley-Davidson&reg; is committed to protecting the privacy of every visitor to our
-websites and every customer in our dealer network. This notice sets out how we collect, use,
-share, and safeguard your personal information when you interact with the H-D Certified&trade;
-pre-owned marketplace and related Harley-Davidson&reg; digital services in India.</p>
+<ul>
+  <li><a href="${HD_PRIVACY}#who" target="_blank" rel="noopener noreferrer">Who is Harley-Davidson&reg;?</a></li>
+  <li><a href="${HD_PRIVACY}#what" target="_blank" rel="noopener noreferrer">What kind of information does Harley-Davidson&reg; collect and when?</a></li>
+  <li><a href="${HD_PRIVACY}#how" target="_blank" rel="noopener noreferrer">How does Harley-Davidson&reg; use my information?</a></li>
+  <li><a href="${HD_PRIVACY}#cookies" target="_blank" rel="noopener noreferrer">How does Harley-Davidson&reg; use Cookies or tracking?</a></li>
+  <li><a href="${HD_PRIVACY}#share" target="_blank" rel="noopener noreferrer">Does Harley-Davidson&reg; share my information?</a></li>
+  <li><a href="${HD_PRIVACY}#change" target="_blank" rel="noopener noreferrer">How do I access or change my information?</a></li>
+  <li><a href="${HD_PRIVACY}#choices" target="_blank" rel="noopener noreferrer">How do I make choices about receiving promotional communication?</a></li>
+  <li><a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How do I Opt-In or Opt-Out of Promotional Communications?</a></li>
+  <li><a href="${HD_PRIVACY}#dealers" target="_blank" rel="noopener noreferrer">Does this govern my communications with Harley-Davidson&reg; Dealers?</a></li>
+  <li><a href="${HD_PRIVACY}#personal" target="_blank" rel="noopener noreferrer">How does Harley-Davidson&reg; protect my personal information?</a></li>
+  <li><a href="${HD_PRIVACY}#children" target="_blank" rel="noopener noreferrer">How does Harley-Davidson&reg; protect Children&rsquo;s privacy?</a></li>
+  <li><a href="${HD_PRIVACY}#secure" target="_blank" rel="noopener noreferrer">How do I know my personal information is secure?</a></li>
+  <li><a href="${HD_PRIVACY}#websites" target="_blank" rel="noopener noreferrer">What about links to other websites?</a></li>
+  <li><a href="${HD_PRIVACY}#updates" target="_blank" rel="noopener noreferrer">How am I updated about changes to the Harley-Davidson&reg; Privacy Notice?</a></li>
+  <li><a href="${HD_PRIVACY}#questions" target="_blank" rel="noopener noreferrer">Who do I contact with questions on the Privacy Notice?</a></li>
+  <li><a href="${HD_PRIVACY}#privacy" target="_blank" rel="noopener noreferrer">Your Privacy Rights under the DPDP</a></li>
+  <li><a href="${HD_PRIVACY}#rights" target="_blank" rel="noopener noreferrer">Exercising Your Rights</a></li>
+  <li><a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a></li>
+</ul>
 
-<h3><a href="${HD_PRIVACY}#who" target="_blank" rel="noopener noreferrer">Who Is Harley-Davidson&reg;?</a></h3>
-<p>Harley-Davidson&reg; refers to Harley-Davidson&reg; India Pvt Ltd and its affiliates
-operating the H-D Certified&trade; marketplace. We are the controller responsible for the
-personal information collected through this site.</p>
+<h2>Who Is Harley-Davidson&reg;?</h2>
+<p>For the purposes of this Notice, Harley-Davidson&reg; is Harley-Davidson&reg;, Inc. and
+its subsidiary and affiliate entities around the world, including the local
+Harley-Davidson&reg; company in your country (excluding Harley-Davidson&reg; Financial
+Services, Inc. and its subsidiary entities). Harley-Davidson&reg; includes
+Harley-Davidson&reg; Motor Company and Harley-Davidson&reg; Dealer Systems.</p>
+<p>Harley-Davidson&reg; HOG Chapters have their own privacy practices and privacy notices,
+including their own opt-in and opt-out processes. Except to the extent specified in this
+Privacy Notice, this Privacy Notice does not apply to them.</p>
+<p>Harley-Davidson&reg; dealers operate independently from Harley-Davidson&reg;. This Privacy
+Notice also does not apply to them. Please contact the dealer or visit the dealer website to
+learn more about its privacy practices.</p>
 
-<h3><a href="${HD_PRIVACY}#what" target="_blank" rel="noopener noreferrer">What Kind Of Information Does Harley-Davidson&reg; Collect And When?</a></h3>
-<p>We collect information that you provide directly (name, phone, email, pincode, vehicle
-details) when you submit a buyer enquiry, request a trade-in valuation, or track an order. We
-also collect technical and usage information automatically (device, browser, IP address, pages
-visited, referring URL) when you browse our site.</p>
+<h2>What Kind Of Personal Information Does Harley-Davidson&reg; Collect And When?</h2>
+<p>We may collect personal information from you when you visit one of our websites or
+stores, use our mobile app, place an order with us online or by phone, make an in-store
+purchase, save your information with us online, contact us with a question or concern, or
+participate in a contest, promotion, survey, or marketing campaign either online or physical
+event.</p>
+<p>If we do not collect this personal information, we may not be able to provide you with
+the products and services you have requested. For the purposes of this Privacy Notice,
+personal information may include, but is not limited to, your name, email address, postal
+address, phone number, mobile phone ID, location data, gender, birthday, personal interests,
+and other information related to an identified or identifiable natural person, but does not
+include anonymized information.</p>
+<p>We maintain a record of your product and service interests and the purchases you make and
+services you subscribe to online, by phone, or in our stores. Information collected may be
+combined with information we acquire from our joint marketing partners or other unrelated
+third parties as permitted by applicable law.</p>
 
-<h3><a href="${HD_PRIVACY}#how" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Use My Information?</a></h3>
-<p>We use your information to respond to enquiries, route leads to the correct authorised
-dealer, verify your identity by OTP, deliver finance and roadside assistance services where
-requested, send service updates, and improve the site experience. We process information only
-for the purposes described here or notified to you at collection.</p>
+<h3>Consent</h3>
+<p>Privacy legislation requires Harley-Davidson&reg; to obtain the consent of an individual
+to the collection, use or disclosure of personal information in many circumstances, unless
+other legal bases are available under applicable law.</p>
+<p>By providing your personal information to Harley-Davidson&reg; and giving consent where
+we require you to do so, you agree that Harley-Davidson&reg; may process (including collect,
+use, disclose, etc.) your personal information in accordance with this Privacy Notice and as
+otherwise permitted or required by law. Where a separate consent is required by applicable
+law, we will seek your separate consent accordingly.</p>
+<p>If you need to provide Harley-Davidson&reg; with personal information about other
+individuals or if you allow other individuals to use your vehicle, prior to your disclosure
+to Harley-Davidson&reg; or the use of your vehicle by other individuals, you should give a
+copy of or a link to this notice to each individual to whom that information relates and
+obtain the consent of such individual(s) for the collection, use and disclosure by
+Harley-Davidson&reg; for the specific purpose(s) that the disclosure is made by you, unless
+other legal bases are available under applicable law.</p>
+<p>Providing Harley-Davidson&reg; with your personal information is always your choice. You
+may withdraw your consent at any time; such withdrawal shall not affect the lawfulness of the
+processing based on consent before its withdrawal. When you request products and/or services
+from Harley-Davidson&reg;, utilize Harley-Davidson&reg;&rsquo;s services, or register with
+any of Harley-Davidson&reg;&rsquo;s websites, Harley-Davidson&reg; asks that you provide
+information that enables Harley-Davidson&reg; to respond to your request and/or provide you
+with Harley-Davidson&reg;&rsquo;s products or services. In doing so, you understand that
+Harley-Davidson&reg; may process your personal information as detailed in this Privacy
+Notice.</p>
+<p>Please note that, some processing of your personal information is necessary for the
+functions of Harley-Davidson&reg;&rsquo;s websites, mobile app, or any products or services
+purchased or subscribed to via our website or mobile app. If you decline to give us your
+consent to such processing, we are not able to serve you with the corresponding functions.
+Please contact Harley-Davidson&reg; using the contact information listed in the
+&ldquo;<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>&rdquo;
+section below if you wish to withdraw your consent to Harley-Davidson&reg;&rsquo;s
+collection, use, or disclosure of your personal information as described in this Privacy
+Notice. After withdrawing your consent, you will not be permitted to access or activate any
+products / services purchased or subscribed to via our websites or mobile app that require
+your consent in order for Harley-Davidson&reg; to provide the relevant product /
+service.</p>
 
-<h3><a href="${HD_PRIVACY}#cookies" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Use Cookies Or Tracking?</a></h3>
-<p>We use cookies and similar tracking technologies to keep the site functional, remember
-your preferences, measure traffic, and personalise content. For more information on our use
-of cookies, click <a href="https://www.harley-davidson.com/in/en/footer/utility/cookie-policy.html" target="_blank" rel="noopener noreferrer">here</a>.</p>
+<h3>Electronic Communications</h3>
+<p>Where applicable, we will seek your express consent to contact you, including by way of
+commercial electronic messages. You can unsubscribe at any time from receiving commercial
+electronic messages by following the instructions in such messages. Even if you have opted
+out of receiving promotional communications from us, please be aware that we may still
+contact you for other purposes. For example, we may contact you to provide communications you
+have consented to receive, regarding the products or services we provide to you, or if you
+contact us with an inquiry.</p>
 
-<h3><a href="${HD_PRIVACY}#share" target="_blank" rel="noopener noreferrer">Does Harley-Davidson&reg; Share My Information?</a></h3>
-<p>We share your information with the authorised Harley-Davidson&reg; dealer routed to your
-enquiry, with our finance and insurance partners where you request a quote, with service
-providers acting on our behalf (SMS, email, hosting, analytics), and with regulatory
-authorities where required by law. We do not sell your personal information.</p>
+<h2>How Does Harley-Davidson&reg; Use My Information?</h2>
+<p>We will collect, use, disclose, and process personal information only where we have legal
+basis to do so under the DPDP and other applicable legislations. Legal basis includes consent
+(where you have given consent), contract (where processing is necessary for the performance
+of a contract with you (e.g., to deliver the product or service you have requested)), legal
+obligation and other legal bases allowed by applicable laws.</p>
+<p>We may use your personal information in the following ways:</p>
+<ul>
+  <li>To personalize and enhance your experiences when you interact with Harley-Davidson&reg;</li>
+  <li>To enable Harley-Davidson&reg; to provide you with the highest quality experiences, products, services and motorcycles</li>
+  <li>To process and fulfill your orders and provide you with our services which includes sending you emails to confirm your order status and shipment</li>
+  <li>To maintain transaction and other business records for legal, regulatory, and tax requirements</li>
+  <li>To communicate with you and send you information by email, postal mail, telephone (including autodialed or pre-recorded call), text message, or other means about our products, services, contests, and promotions, unless you have directed us not to contact you with promotional communications</li>
+  <li>To administer contests and promotions, and to respond to your requests and questions, and manage your complaints</li>
+  <li>To help us learn more about your motorcycle and retail preferences</li>
+  <li>To improve our understanding of your interests and concerns</li>
+  <li>To help us manage and improve our websites, events, experiences, products and services</li>
+  <li>To update you on membership programs, benefits and services, and to enhance your membership experience</li>
+  <li>To authenticate you</li>
+  <li>To perform market and demographic research</li>
+  <li>To manage the possible adverse effect caused by our products or services in accordance with our legal obligations as a manufacturer</li>
+  <li>To establish or exercise our legal rights or defend against any legal claims, or when necessary, to investigate, prevent, or respond to suspected illegal activities or fraud, or to protect the safety, rights, or property of you, us, or a third party</li>
+  <li>To enhance your ownership experience and use of product or service</li>
+  <li>To contact you if necessary, including by autodialed or pre-recorded call</li>
+</ul>
 
-<h3><a href="${HD_PRIVACY}#change" target="_blank" rel="noopener noreferrer">How Do I Access Or Change My Information?</a></h3>
-<p>You may request access, correction, or deletion of your personal information at any time.
-To make a request, contact us through the channels listed below or visit
-<a href="https://www.harley-davidson.com/in/en/index.html" target="_blank" rel="noopener noreferrer">harley-davidson.com</a>.</p>
-
-<h3><a href="${HD_PRIVACY}#choices" target="_blank" rel="noopener noreferrer">How Do I Make Choices About Receiving Promotional Communication?</a></h3>
-<p>You can opt in or out of marketing emails, SMS, and push notifications at any time using
-the unsubscribe link in each message or by updating your preferences via the channels in the
-section below.</p>
-
-<h3><a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How Do I Opt-In Or Opt-Out Of Promotional Communications?</a></h3>
-<p>Use the <a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">Opt-In / Opt-Out preferences</a>
-form on the Harley-Davidson&reg; corporate privacy page to manage your marketing-communication
-choices for email, SMS, and direct mail channels.</p>
-
-<h3><a href="${HD_PRIVACY}#dealers" target="_blank" rel="noopener noreferrer">Does This Govern My Communications With Harley-Davidson&reg; Dealers?</a></h3>
-<p>Authorised Harley-Davidson&reg; dealers in India are independent businesses with their own
-privacy notices. This notice governs information held by Harley-Davidson&reg; India Pvt Ltd —
-once your enquiry is shared with a dealer, the dealer's own privacy practice applies in
-parallel. Contact the dealer directly for their notice.</p>
-
-<h3><a href="${HD_PRIVACY}#personal" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Protect My Personal Information?</a></h3>
-<p>We apply industry-standard technical and organisational safeguards including encryption in
-transit (TLS) and at rest (AES-256), access controls, rate-limiting on identity flows, and
-periodic third-party security review. Personal identifiers stored at rest are encrypted at
-column level.</p>
+<h3>Keeping Information Accurate / Access And Correction</h3>
+<p>Having accurate information about you enables Harley-Davidson&reg; to give you better
+service. You can help Harley-Davidson&reg; keep personal information up to date by keeping
+Harley-Davidson&reg; informed of any changes, such as a change of address, telephone number
+or any other circumstances.</p>
+<p>Where required by law, you may have the right to access, verify and amend the information
+Harley-Davidson&reg; has about you after Harley-Davidson&reg; has received your written
+request and authenticated your identity.</p>
+<p>In some situations, Harley-Davidson&reg; may not be able to provide access to certain
+personal information as the right to access personal information is not absolute. If
+Harley-Davidson&reg; does not provide you with the requested information, Harley-Davidson&reg;
+will notify you in writing and explain Harley-Davidson&reg;&rsquo;s reason(s) for not
+fulfilling your request.</p>
+<p>Despite Harley-Davidson&reg;&rsquo;s efforts, errors sometimes do occur. If you identify
+any personal information that is out-of-date, incorrect or incomplete, let Harley-Davidson&reg;
+know and Harley-Davidson&reg; will make the corrections promptly and use every reasonable
+effort to communicate these changes to other parties who may have inadvertently received
+incorrect or out-of-date personal information from Harley-Davidson&reg;.</p>
 
 <h3>Retention And Destruction Of Personal Information</h3>
-<p>We retain personal information only as long as needed for the purpose collected and for
-any legal, accounting, or reporting obligations. Lead records are retained for the duration
-of the dealer engagement and a follow-up window; verified-buyer profiles are retained while
-the account is active. See
-<a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How do I Opt-In or Opt-Out of Promotional Communications?</a>
-for the marketing preferences that govern retention windows for marketing-purpose data.</p>
+<p>The amount of time Harley-Davidson&reg; will retain personal information varies, depending
+on the services Harley-Davidson&reg; has provided, the nature of the personal information
+that Harley-Davidson&reg; holds, as well as the basis and purposes for which it was collected
+or processed. Harley-Davidson&reg; retains personal information for such period which will be
+the minimum period necessary for Harley-Davidson&reg; to maintain sufficient information, so
+that Harley-Davidson&reg; may respond to any issues that arise later or as is required by
+law.</p>
+<p>Legal requirements, however, may require us to retain some or all the personal information
+we hold for a period that is longer than that for which we might otherwise hold.</p>
+<p>When personal information is no longer required by Harley-Davidson&reg; or by law,
+Harley-Davidson&reg; will either convert it into an aggregated non-identifying form or
+Harley-Davidson&reg; will appropriately destroy or erase the personal information in a manner
+that is in accordance with Harley-Davidson&reg;&rsquo;s current policies and procedures.</p>
+<p>You control the choice of receiving marketing information or marketing calls. For
+instructions on opting out, please see the section entitled, &ldquo;<a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How do I Opt-In or Opt-Out of Promotional Communications?</a>&rdquo;</p>
 
-<h3><a href="${HD_PRIVACY}#children" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Protect Children's Privacy?</a></h3>
-<p>Our services are not directed at children under 18 and we do not knowingly collect
-personal information from minors. If we learn that we have collected information from a
-minor, we will delete it promptly.</p>
+<h2>How Does Harley-Davidson&reg; Use Cookies Or Tracking?</h2>
+<p>Harley-Davidson&reg; and third-party companies we work with use tracking technologies
+(including cookies and pixel tags) on our websites in order to provide tailored advertisements
+on your behalf and on behalf of other advertisers across the Internet. Harley-Davidson&reg;
+and these companies may collect information about your activity on our sites and other sites,
+as well as your interaction with our advertising and other communications, and use this
+information to determine which ads you see on websites and applications.</p>
+<p>For more information on our use of cookies, click
+<a href="https://www.harley-davidson.com/in/en/footer/utility/cookie-policy.html" target="_blank" rel="noopener noreferrer">[here]</a>.</p>
 
-<h3><a href="${HD_PRIVACY}#secure" target="_blank" rel="noopener noreferrer">How Do I Know My Personal Information Is Secure?</a></h3>
-<p>While no transmission over the internet can be guaranteed 100% secure, we apply layered
-controls (encryption, access management, audit logging, monitoring) consistent with current
-best practice. Suspected incidents trigger a defined response protocol with notification
-where required.</p>
+<h2>How Do I Access Or Change My Information?</h2>
+<p>You can review, change, and make up-to-date certain personal information using one of our
+online sites (such as on
+<a href="https://www.harley-davidson.com/in/en/index.html" target="_blank" rel="noopener noreferrer">harley-davidson.com</a>).
+To access your information at a Harley-Davidson&reg; website, simply sign into your account
+using your email address and password, and you will be able to edit certain personal
+information in your account profile.</p>
+<p>You can also ask us for access to your personal information, to have it corrected or
+updated or, to the extent allowed by applicable law, oppose our use of your personal
+information by contacting us as described in the section entitled &ldquo;<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>&rdquo;.</p>
 
-<h3><a href="${HD_PRIVACY}#websites" target="_blank" rel="noopener noreferrer">What About Links To Other Websites?</a></h3>
-<p>This site may link to third-party websites (browser cookie guides, partner finance
-providers, dealer maps). Once you leave our site the linked operator's own privacy practice
-applies; this notice does not extend to those external destinations.</p>
+<h2>How Do I Make Choices About Receiving Promotional Communications?</h2>
+<p>Harley-Davidson&reg; wants to communicate with you only if you want to hear from us. At
+the time when we collect your personal information you will generally be offered a choice, in
+compliance with applicable law, of whether you wish to receive promotional communications or
+other electronic communications. If you elect not to receive such communications, we will not
+process your data for marketing purposes. If at any point in the future you decide you prefer
+not to receive promotional information such as information about special offers and marketing
+events or other electronic communications, you can follow the process below.</p>
 
-<h3><a href="${HD_PRIVACY}#updates" target="_blank" rel="noopener noreferrer">How Am I Updated About Changes To The Harley-Davidson&reg; Privacy Notice?</a></h3>
-<p>Material changes to this notice are announced via a site banner and the "as of" date at
-the top of the corporate privacy page. We encourage you to review the notice periodically.</p>
+<h2>How Do I Opt-In Or Opt-Out Of Promotional Communications?</h2>
+<p>If you change your mind about your current communication preferences with
+Harley-Davidson&reg;, you can use the unsubscribe feature in a marketing email or log into
+your online profile account via our website or mobile app to change your preferences and
+consents. You can also contact our customer service team via phone or mail as described in
+the section entitled &ldquo;<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>&rdquo;.</p>
+<p>We are required by law to provide motorcycle owners with warranty and recall information.
+Please note that when you make a business transaction with us (for example, renew HOG or
+Museum membership or purchase a product or subscribe to a service online) we will confirm
+your order or subscription status (and any related shipment) by email. We may also need to
+contact you via telephone, email (in accordance with applicable laws) or postal mail or
+notification via the mobile app with questions or information regarding your order or
+subscription. Opt outs are entity specific. Opting out with respect to one entity is not
+automatically effective with respect to the others. For example, opting out for
+Harley-Davidson&reg; Motor Company does not opt you out for Harley-Davidson&reg; Financial
+Services.</p>
+<p>If you ask to no longer receive promotional communications or other electronic
+communications from us, we will mark your information as &ldquo;do not market&rdquo; and take
+steps to honor your request in accordance with applicable laws.</p>
 
-<h3><a href="${HD_PRIVACY}#questions" target="_blank" rel="noopener noreferrer">Who Do I Contact With Questions On The Privacy Notice?</a></h3>
-<p>For questions about this notice, see the contact channels in the
-<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>
-section below.</p>
+<h2>Does This Govern My Communications With Harley-Davidson&reg; Dealers?</h2>
+<p>Harley-Davidson&reg; dealers are independent entities. Dealers may share certain
+information with us in connection with your purchase of a Harley-Davidson&reg; vehicle.
+However, this notice does not apply to them or your communications with them. To change your
+privacy preferences with a Harley-Davidson&reg; dealer, please contact the dealer
+directly.</p>
 
-<h3><a href="${HD_PRIVACY}#privacy" target="_blank" rel="noopener noreferrer">Your Privacy Rights Under The DPDP</a></h3>
-<p>Under India's Digital Personal Data Protection (DPDP) Act, you have the right to access,
-correction, completion, updating, and erasure of your personal information, the right to
-nominate a person to exercise rights on your behalf, and the right to grievance redressal.
-See the next section for how to exercise these rights.</p>
+<h2>How Does Harley-Davidson&reg; Protect My Personal Information?</h2>
+<p>Harley-Davidson&reg; will provide an adequate level of protection for the personal
+information and make sure that appropriate technical and organizational security measures are
+in place to protect the personal information against accidental or unlawful destruction,
+accidental loss or alteration, unauthorized disclosure or access, and against all other
+unlawful forms of processing. In the event of a personal information breach, we will comply
+with applicable measures as required under applicable law.</p>
+<p>Our website may include links to other websites whose content is not under our control,
+therefore we do not assume or accept any responsibility for the content of these websites,
+nor are responsible for the information protection strategies of other web pages or their
+content.</p>
 
-<h3><a href="${HD_PRIVACY}#rights" target="_blank" rel="noopener noreferrer">Exercising Your Rights</a></h3>
-<p>You can exercise your privacy rights through any of the channels below:</p>
+<h2>How Does Harley-Davidson&reg; Protect Children&rsquo;s Privacy?</h2>
+<p>Our websites and mobile app are not directed to children. We do not knowingly collect
+personally identifiable information from children without permission from a parent or legal
+representative, unless permitted by applicable law.</p>
+<p>You must be at least 18 years old to provide us with your personal information, to engage
+in transactions on our store or websites, or mobile app. By engaging in transactions with us,
+you affirm that you are at least 18 years old and are fully able to enter into and be legally
+bound by such transactions.</p>
+<p>If we are notified or learn that a minor below 18 years old has submitted personal data
+to us through our media or otherwise, we will delete such personal information.</p>
+
+<h2>How Do I Know My Personal Information Is Secure?</h2>
+<p>Harley-Davidson&reg; may hold your personal information in paper and/or electronic form.
+Harley-Davidson&reg; maintains physical, electronic, contractual, procedural and managerial
+safeguards to protect the confidentiality, integrity, security, and privacy of your personal
+information. We use Secure Sockets Layer (SSL) technology to protect your information as it
+is transmitted to us. We also employ user authentication procedures and other preventative
+technologies designed to keep your data secure and protected. Access to personal information
+stored by Harley-Davidson&reg; is limited to authorized Harley-Davidson&reg; personnel who
+require access to perform their job functions, and to authorized third parties that are
+contractually required to keep your information confidential and secure. Please note,
+however, that no data transmission or storage can be guaranteed to be 100% secure. As a
+result, while we strive to protect the information we maintain, we cannot ensure or warrant
+the security of any information that you transmit to us.</p>
+<p>You are responsible for taking all reasonable steps to protect your Customer Account ID
+and password. Please store these in a safe location and do not share them with any third
+party.</p>
+
+<h2>What About Links To Other Websites?</h2>
+<p>For your convenience, our websites and mobile app may contain links to other companies&rsquo;
+sites such as authorized Harley-Davidson&reg; dealers, which may have privacy notices that
+differ from our own. We do not endorse and are not responsible for the content or practices
+of any linked sites. We recommend that you review the privacy notice of any site that you
+access through a link from our websites or our mobile app.</p>
+
+<h2>How Am I Updated About Changes To The Harley-Davidson&reg; Privacy Notice?</h2>
+<p>As Harley-Davidson&reg; business or outside business conditions change, we may update our
+Privacy Notice to reflect changes in our practices. We will post a revised Privacy Notice on
+our website as needed due to changes in our practices or as otherwise legally required.</p>
+
+<h2>Who Do I Contact With Questions On The Privacy Notice?</h2>
+<p>For questions or concerns specific to our Privacy Notice and its application or complaints
+about our handling of your information, send your question, concern or complaint using the
+contact information listed in the &ldquo;<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>&rdquo;
+section below. If you are not satisfied with our response, you always have rights to lodge a
+complaint with relevant competent authorities.</p>
+
+<h2>Your Privacy Rights Under The India DPDP</h2>
+<p>Pursuant to applicable data protection laws you have certain rights with respect to the
+personal information that we process about you.</p>
+<ul>
+  <li><strong>Right to withdraw consent:</strong> If you have consented to a personal information processing activity, you can withdraw this consent at any time for future processing. Such withdrawal will not affect the lawfulness of the processing prior to consent being withdrawn. If you have provided your consent to receiving direct marketing from us or any third parties and would like to withdraw such consent, please consult the following section for detailed information on how to do so.</li>
+  <li><strong>Right of access and copy:</strong> You may have the right to obtain from us confirmation as to whether or not personal information concerning you is processed, and, where that is the case, to request access to, and copy of, the personal information.</li>
+  <li><strong>Right to rectification:</strong> You may have the right to obtain from us the rectification of inaccurate personal information about you. Depending on the purposes of the processing, you may have the right to have incomplete personal information completed, including by means of providing a supplementary statement.</li>
+  <li><strong>Right to erasure:</strong> Under certain circumstances, you may have the right to obtain from us the erasure of personal information about you and we may be obliged to erase such personal information.</li>
+  <li><strong>Right to restriction of processing:</strong> Under certain circumstances, you may have the right to obtain from us restriction of processing your personal information. In this case, the respective information will be marked and may only be processed by us for certain purposes.</li>
+</ul>
+
+<h2>Exercising Your Rights</h2>
+<p>To exercise the right to Consumer Rights under the India DPDP, you may submit a request
+by:</p>
 <ul>
   <li><strong>Online at:</strong> <a href="https://submit-irm.trustarc.com/services/validation/7065b8e2-638c-44e3-9be8-1f9a741ddb44" target="_blank" rel="noopener noreferrer">Data Privacy Request Form</a></li>
   <li><strong>By email:</strong> <a href="mailto:DataPrivacy@Harley-Davidson.com">DataPrivacy@Harley-Davidson&reg;.com</a></li>
   <li><strong>By Phone:</strong> <a href="tel:1-800-258-2464">1-800-258-2464</a></li>
 </ul>
+<p>Please include your name, address, email address, and phone number in your request. In
+order to complete your request, you will be required to respond to any follow-up inquires we
+may make, and we may deny your request if you do not do so. We will not discriminate against
+any consumer for exercising these rights, as described further below.</p>
 
-<h3><a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How Do I Contact Harley-Davidson&reg;?</a></h3>
-<p>For any other questions or requests, please reach the Data Privacy team:</p>
+<h2>How Do I Contact Harley-Davidson&reg;?</h2>
+<p>To change selections about receiving promotional communications, to update your personal
+information, to ask questions about this Privacy Notice and our handling of your personal
+information, or to exercise your privacy rights, you can contact Harley-Davidson&reg; by
+email, telephone, or postal mail. We will review and respond within 15 working days after
+verifying your identity, during which period you may continue to receive communications from
+Harley-Davidson&reg;. We will explain to you within 15 working days if there is any
+complicated situation that requires extension.</p>
+<p>If contacting us by postal mail, please include your name and the email address or street
+address you used when you provided your information to Harley-Davidson&reg;.</p>
 <ul>
-  <li><strong>By email:</strong> <a href="mailto:DataPrivacy@Harley-Davidson.com">DataPrivacy@Harley-Davidson&reg;.com</a></li>
-  <li><strong>By Phone:</strong> <a href="tel:1-800-258-2464">1-800-258-2464</a></li>
-  <li><strong>Online:</strong> <a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">Corporate privacy contact page</a></li>
+  <li><strong>Email:</strong> <a href="mailto:DataPrivacy@Harley-Davidson.com">DataPrivacy@Harley-Davidson&reg;.com</a></li>
+  <li><strong>Customer Care via phone:</strong> <a href="tel:1-800-258-2464">1-800-258-2464</a></li>
+  <li><strong>Regular Mail:</strong> Attn: Chief Privacy Officer, 3700 W. Juneau Avenue, Milwaukee, WI 53208</li>
 </ul>
 `;
 
