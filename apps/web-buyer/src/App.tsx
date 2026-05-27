@@ -44,9 +44,18 @@ export function App() {
   return (
     <div className="min-h-screen flex flex-col bg-hd-white text-text-on-light">
       <ScrollManager />
+      {/* QA latest (Accessibility): swap focus: → focus-visible: so the
+          skip link ONLY surfaces during keyboard tab navigation. The
+          previous `focus:` variant also fired on mouse clicks and on
+          DevTools-induced focus shifts, leaving the orange CTA pinned
+          over the header logo whenever the viewport reflowed (QA
+          flagged it as a "permanent visibility" regression that
+          covered the wordmark). focus-visible follows the WCAG
+          recommended pattern — invisible to pointer users, instantly
+          available to keyboard users. */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-hd-orange focus:text-hd-black focus:px-3 focus:py-2 focus:font-subhead focus:uppercase focus:tracking-subhead"
+        className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-50 focus-visible:bg-hd-orange focus-visible:text-hd-black focus-visible:px-3 focus-visible:py-2 focus-visible:font-subhead focus-visible:uppercase focus-visible:tracking-subhead"
       >
         Skip to content
       </a>

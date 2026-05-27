@@ -51,6 +51,13 @@ const FALLBACK_TITLES: Record<string, string> = {
   contact: 'Contact Us',
 };
 
+// QA latest: shorthand for the canonical Harley-Davidson India privacy
+// page — every "How do I contact" / "Opt-Out" / TOC anchor on the
+// Privacy fallback page below routes here.
+const HD_PRIVACY = 'https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html';
+const HD_PRIVACY_CONTACT = `${HD_PRIVACY}#contacthd`;
+const HD_PRIVACY_OPT = `${HD_PRIVACY}#opt`;
+
 // Per-page hero copy + image. Two-word "title / emphasis" pattern matches the
 // brand "LIFE. LIBERTY. CERTIFIED." treatment from the freeze designs.
 // QA latest (Cookie Notice): cookies hero uses an inverted scheme —
@@ -66,6 +73,8 @@ const HERO_COPY: Record<string, { title: string; emphasis: string; image: string
   // Figma frame.
   about: { title: 'Life. Liberty.', emphasis: 'Certified', image: HERO.about },
   faq: { title: 'Frequently', emphasis: 'Asked', image: HERO.sportster },
+  // QA latest (Privacy): hero is solid black, no scenic photo. Title
+  // row reads "Privacy" white + "Policy" orange per Figma.
   privacy: { title: 'Privacy', emphasis: 'Policy', image: HERO.iron883 },
   cookies: { title: 'Cookie Notice', emphasis: 'Harley-Davidson®', image: HERO.iron883 },
   terms: { title: 'Terms &', emphasis: 'Conditions', image: HERO.iron883 },
@@ -161,6 +170,145 @@ cookies and how they use them.</p>
 <a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
 `;
 
+// QA latest (Privacy Policy): bundled fallback so the Privacy page
+// never falls through to the "not published yet" placeholder. Same
+// pattern as cookies + about: admin-published bodyHtml takes
+// precedence when present. Every section heading + sub-section link
+// here is wired to its canonical anchor on the Harley-Davidson India
+// corporate privacy page (https://www.harley-davidson.com/in/en/
+// footer/utility/privacy-policy.html#<anchor>) so a reader who needs
+// the full legal text can deep-link straight there.
+//
+// Special links per QA spec:
+//   • "harley-davidson.com" in "How do I access or change…" →
+//     https://www.harley-davidson.com/in/en/index.html
+//   • "Data Privacy Request Form" in "Exercising Your Rights" →
+//     https://submit-irm.trustarc.com/services/validation/
+//     7065b8e2-638c-44e3-9be8-1f9a741ddb44
+//   • "DataPrivacy@Harley-Davidson.com" → mailto: (opens default
+//     mail client)
+//   • "1-800-258-2464" → tel: (mobile picker)
+//   • "click [here]" in cookies/tracking section →
+//     https://www.harley-davidson.com/in/en/footer/utility/
+//     cookie-policy.html
+const PRIVACY_FALLBACK_HTML = `
+<h2>Harley-Davidson&reg; Commitment To Your Privacy</h2>
+<p>Harley-Davidson&reg; is committed to protecting the privacy of every visitor to our
+websites and every customer in our dealer network. This notice sets out how we collect, use,
+share, and safeguard your personal information when you interact with the H-D Certified&trade;
+pre-owned marketplace and related Harley-Davidson&reg; digital services in India.</p>
+
+<h3><a href="${HD_PRIVACY}#who" target="_blank" rel="noopener noreferrer">Who Is Harley-Davidson&reg;?</a></h3>
+<p>Harley-Davidson&reg; refers to Harley-Davidson&reg; India Pvt Ltd and its affiliates
+operating the H-D Certified&trade; marketplace. We are the controller responsible for the
+personal information collected through this site.</p>
+
+<h3><a href="${HD_PRIVACY}#what" target="_blank" rel="noopener noreferrer">What Kind Of Information Does Harley-Davidson&reg; Collect And When?</a></h3>
+<p>We collect information that you provide directly (name, phone, email, pincode, vehicle
+details) when you submit a buyer enquiry, request a trade-in valuation, or track an order. We
+also collect technical and usage information automatically (device, browser, IP address, pages
+visited, referring URL) when you browse our site.</p>
+
+<h3><a href="${HD_PRIVACY}#how" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Use My Information?</a></h3>
+<p>We use your information to respond to enquiries, route leads to the correct authorised
+dealer, verify your identity by OTP, deliver finance and roadside assistance services where
+requested, send service updates, and improve the site experience. We process information only
+for the purposes described here or notified to you at collection.</p>
+
+<h3><a href="${HD_PRIVACY}#cookies" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Use Cookies Or Tracking?</a></h3>
+<p>We use cookies and similar tracking technologies to keep the site functional, remember
+your preferences, measure traffic, and personalise content. For more information on our use
+of cookies, click <a href="https://www.harley-davidson.com/in/en/footer/utility/cookie-policy.html" target="_blank" rel="noopener noreferrer">here</a>.</p>
+
+<h3><a href="${HD_PRIVACY}#share" target="_blank" rel="noopener noreferrer">Does Harley-Davidson&reg; Share My Information?</a></h3>
+<p>We share your information with the authorised Harley-Davidson&reg; dealer routed to your
+enquiry, with our finance and insurance partners where you request a quote, with service
+providers acting on our behalf (SMS, email, hosting, analytics), and with regulatory
+authorities where required by law. We do not sell your personal information.</p>
+
+<h3><a href="${HD_PRIVACY}#change" target="_blank" rel="noopener noreferrer">How Do I Access Or Change My Information?</a></h3>
+<p>You may request access, correction, or deletion of your personal information at any time.
+To make a request, contact us through the channels listed below or visit
+<a href="https://www.harley-davidson.com/in/en/index.html" target="_blank" rel="noopener noreferrer">harley-davidson.com</a>.</p>
+
+<h3><a href="${HD_PRIVACY}#choices" target="_blank" rel="noopener noreferrer">How Do I Make Choices About Receiving Promotional Communication?</a></h3>
+<p>You can opt in or out of marketing emails, SMS, and push notifications at any time using
+the unsubscribe link in each message or by updating your preferences via the channels in the
+section below.</p>
+
+<h3><a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How Do I Opt-In Or Opt-Out Of Promotional Communications?</a></h3>
+<p>Use the <a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">Opt-In / Opt-Out preferences</a>
+form on the Harley-Davidson&reg; corporate privacy page to manage your marketing-communication
+choices for email, SMS, and direct mail channels.</p>
+
+<h3><a href="${HD_PRIVACY}#dealers" target="_blank" rel="noopener noreferrer">Does This Govern My Communications With Harley-Davidson&reg; Dealers?</a></h3>
+<p>Authorised Harley-Davidson&reg; dealers in India are independent businesses with their own
+privacy notices. This notice governs information held by Harley-Davidson&reg; India Pvt Ltd —
+once your enquiry is shared with a dealer, the dealer's own privacy practice applies in
+parallel. Contact the dealer directly for their notice.</p>
+
+<h3><a href="${HD_PRIVACY}#personal" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Protect My Personal Information?</a></h3>
+<p>We apply industry-standard technical and organisational safeguards including encryption in
+transit (TLS) and at rest (AES-256), access controls, rate-limiting on identity flows, and
+periodic third-party security review. Personal identifiers stored at rest are encrypted at
+column level.</p>
+
+<h3>Retention And Destruction Of Personal Information</h3>
+<p>We retain personal information only as long as needed for the purpose collected and for
+any legal, accounting, or reporting obligations. Lead records are retained for the duration
+of the dealer engagement and a follow-up window; verified-buyer profiles are retained while
+the account is active. See
+<a href="${HD_PRIVACY_OPT}" target="_blank" rel="noopener noreferrer">How do I Opt-In or Opt-Out of Promotional Communications?</a>
+for the marketing preferences that govern retention windows for marketing-purpose data.</p>
+
+<h3><a href="${HD_PRIVACY}#children" target="_blank" rel="noopener noreferrer">How Does Harley-Davidson&reg; Protect Children's Privacy?</a></h3>
+<p>Our services are not directed at children under 18 and we do not knowingly collect
+personal information from minors. If we learn that we have collected information from a
+minor, we will delete it promptly.</p>
+
+<h3><a href="${HD_PRIVACY}#secure" target="_blank" rel="noopener noreferrer">How Do I Know My Personal Information Is Secure?</a></h3>
+<p>While no transmission over the internet can be guaranteed 100% secure, we apply layered
+controls (encryption, access management, audit logging, monitoring) consistent with current
+best practice. Suspected incidents trigger a defined response protocol with notification
+where required.</p>
+
+<h3><a href="${HD_PRIVACY}#websites" target="_blank" rel="noopener noreferrer">What About Links To Other Websites?</a></h3>
+<p>This site may link to third-party websites (browser cookie guides, partner finance
+providers, dealer maps). Once you leave our site the linked operator's own privacy practice
+applies; this notice does not extend to those external destinations.</p>
+
+<h3><a href="${HD_PRIVACY}#updates" target="_blank" rel="noopener noreferrer">How Am I Updated About Changes To The Harley-Davidson&reg; Privacy Notice?</a></h3>
+<p>Material changes to this notice are announced via a site banner and the "as of" date at
+the top of the corporate privacy page. We encourage you to review the notice periodically.</p>
+
+<h3><a href="${HD_PRIVACY}#questions" target="_blank" rel="noopener noreferrer">Who Do I Contact With Questions On The Privacy Notice?</a></h3>
+<p>For questions about this notice, see the contact channels in the
+<a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How do I contact Harley-Davidson&reg;?</a>
+section below.</p>
+
+<h3><a href="${HD_PRIVACY}#privacy" target="_blank" rel="noopener noreferrer">Your Privacy Rights Under The DPDP</a></h3>
+<p>Under India's Digital Personal Data Protection (DPDP) Act, you have the right to access,
+correction, completion, updating, and erasure of your personal information, the right to
+nominate a person to exercise rights on your behalf, and the right to grievance redressal.
+See the next section for how to exercise these rights.</p>
+
+<h3><a href="${HD_PRIVACY}#rights" target="_blank" rel="noopener noreferrer">Exercising Your Rights</a></h3>
+<p>You can exercise your privacy rights through any of the channels below:</p>
+<ul>
+  <li><strong>Online at:</strong> <a href="https://submit-irm.trustarc.com/services/validation/7065b8e2-638c-44e3-9be8-1f9a741ddb44" target="_blank" rel="noopener noreferrer">Data Privacy Request Form</a></li>
+  <li><strong>By email:</strong> <a href="mailto:DataPrivacy@Harley-Davidson.com">DataPrivacy@Harley-Davidson&reg;.com</a></li>
+  <li><strong>By Phone:</strong> <a href="tel:1-800-258-2464">1-800-258-2464</a></li>
+</ul>
+
+<h3><a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">How Do I Contact Harley-Davidson&reg;?</a></h3>
+<p>For any other questions or requests, please reach the Data Privacy team:</p>
+<ul>
+  <li><strong>By email:</strong> <a href="mailto:DataPrivacy@Harley-Davidson.com">DataPrivacy@Harley-Davidson&reg;.com</a></li>
+  <li><strong>By Phone:</strong> <a href="tel:1-800-258-2464">1-800-258-2464</a></li>
+  <li><strong>Online:</strong> <a href="${HD_PRIVACY_CONTACT}" target="_blank" rel="noopener noreferrer">Corporate privacy contact page</a></li>
+</ul>
+`;
+
 // PRD §6.1.7 — content pulled from StaticContent table; admin-editable.
 // PRD §9.3 — sanitise HTML on render with DOMPurify before injecting.
 export function StaticPage({ contentKey }: { contentKey: string }) {
@@ -179,6 +327,11 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
   const isMissing = isError && error instanceof ApiError && error.status === 404;
   const isCookies = contentKey === 'cookies';
   const isAbout = contentKey === 'about';
+  const isPrivacy = contentKey === 'privacy';
+  // QA latest: legal-page hero pattern — solid black banner, no
+  // scenic photo, breadcrumb above headline. Applies to cookies +
+  // privacy (terms will land here too when its copy is published).
+  const isLegal = isCookies || isPrivacy;
 
   // Cookies + About pages fall back to bundled HTML if the API
   // hasn't been seeded (or returns 404) so they never show the
@@ -197,6 +350,10 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
       ? DOMPurify.sanitize(ABOUT_FALLBACK_HTML, {
           ADD_ATTR: ['target', 'rel'],
         })
+      : isPrivacy && isMissing
+      ? DOMPurify.sanitize(PRIVACY_FALLBACK_HTML, {
+          ADD_ATTR: ['target', 'rel'],
+        })
       : '';
 
   return (
@@ -213,21 +370,30 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         // carries a HOME / COOKIE breadcrumb, and shows a small
         // "Cookie Notice as of October 2020" subtitle under the
         // main heading.
-        solidBlack={isCookies}
-        // QA latest: HOME / COOKIE on cookies page, HOME / ABOUT US
-        // on the About page — current page in orange per Figma.
+        solidBlack={isLegal}
+        // QA latest: HOME / COOKIE on cookies page, HOME / PRIVACY &
+        // POLICY on the Privacy page, HOME / ABOUT US on the About
+        // page — current segment in orange per Figma.
         breadcrumbs={
           isCookies
             ? [{ label: 'Home', to: '/' }, { label: 'Cookie' }]
+            : isPrivacy
+            ? [{ label: 'Home', to: '/' }, { label: 'Privacy & Policy' }]
             : isAbout
             ? [{ label: 'Home', to: '/' }, { label: 'About Us' }]
             : undefined
         }
-        subtitle={isCookies ? 'Cookie Notice as of October 2020' : undefined}
+        subtitle={
+          isCookies
+            ? 'Cookie Notice as of October 2020'
+            : isPrivacy
+            ? 'Privacy Notice as of October 2020'
+            : undefined
+        }
       />
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
         {isLoading && <div className="text-gray-600">Loading…</div>}
-        {isMissing && !isCookies && !isAbout && (
+        {isMissing && !isCookies && !isAbout && !isPrivacy && (
           <p className="text-gray-600">
             This content has not been published yet. Check back shortly.
           </p>
@@ -285,8 +451,8 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
               [&_strong]:text-text-on-light
               [&_strong]:font-subhead
               ${
-                isCookies
-                  ? '[&_h2]:text-[24px] [&_h2]:!text-[#1A1A1A] [&_h3]:text-[18px]'
+                isLegal
+                  ? '[&_h2]:text-[24px] [&_h2]:!text-[#1A1A1A] [&_h3]:text-[18px] [&_h3_a]:!text-[#1A1A1A] [&_h3_a]:hover:!text-hd-orange [&_h3_a]:!no-underline'
                   : '[&_h2]:text-[22px] [&_h2]:text-hd-orange [&_h3]:text-base'
               }
             `}
