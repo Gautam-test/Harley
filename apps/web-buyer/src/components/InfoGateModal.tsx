@@ -1074,6 +1074,21 @@ export function InfoGateModal({
 
         {step === 'verify' && !sendBlocked && (
           <div className="mt-6 space-y-3">
+            {/* QA latest (Medium — re-apply, surgical scope): the
+                tracking-[0.5em] utility was being applied to BOTH
+                typed digits AND the empty-state placeholder, stretching
+                "6-digit code" into "6 - d i g i t   c o d e" by
+                inserting visual gaps between every glyph. Fix:
+                  • Wide tracking applied ONLY when code has a value
+                    (inline style; CSS placeholder pseudo-element
+                    inherits from input but can be overridden).
+                  • placeholder:tracking-normal explicitly resets the
+                    placeholder back to default tracking even when
+                    the typed-state tracking is in effect.
+                  • Placeholder font drops to text-base + font-normal
+                    so it reads as a clean caption instead of an
+                    oversized stretched block.
+                  • font-body keeps 1903 Sans on both states. */}
             <Input
               placeholder="6-digit code"
               inputMode="numeric"
@@ -1081,11 +1096,8 @@ export function InfoGateModal({
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              // QA latest: brand-font 1903 Sans on the OTP input
-              // (was font-mono). Wide tracking preserves the
-              // distinct-digit look without resorting to a generic
-              // monospace stack.
-              className="text-center text-2xl tracking-[0.5em] font-body font-bold"
+              style={code ? { letterSpacing: '0.5em' } : undefined}
+              className="text-center text-xl font-body font-bold placeholder:tracking-normal placeholder:text-base placeholder:font-normal"
             />
             {/* QA RE-OPEN bug #2: polished, persistent notice — stays
                 visible from the moment the OTP send fires (busy) all
