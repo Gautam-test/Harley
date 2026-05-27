@@ -219,6 +219,20 @@ export function InfoGateModal({
     null,
   );
 
+  // QA latest (Critical): "Resend code" was occasionally a no-op when
+  // the initial send had failed silently — both otpId and lastSentAt
+  // could be null, the resend handler skipped the network call, the
+  // send-effect did not re-fire (no state dep changed), and the
+  // button effectively did nothing. Track a brief "Code sent" badge
+  // so the user always sees confirmation that a resend actually
+  // fired (independent of whether the SMS itself arrives).
+  const [justSent, setJustSent] = useState(false);
+  useEffect(() => {
+    if (!justSent) return;
+    const t = window.setTimeout(() => setJustSent(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [justSent]);
+
   // Friendly copy for each server-side OTP rate-limit code. Anything we
   // don't recognise falls through to the raw server message.
   function blockingMessage(code: string, raw: string):
@@ -324,6 +338,7 @@ export function InfoGateModal({
         setOtpId(res.otpId);
         setLastSentAt(sentAt);
         setError(null);
+        setJustSent(true);
         // QA bug #2: hand the session back to the parent so a later
         // Edit→Resubmit can re-mount this modal with the same otpId
         // (avoids the new-mount → /otp/send → OTP_RESEND_TOO_SOON loop).
@@ -450,7 +465,7 @@ export function InfoGateModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const resendOtp = () => {
+  const resendOtp = async () => {
     // Diagnostic trace — same rationale as submitVerify above (QA #4).
     // eslint-disable-next-line no-console
     console.log('[OTP] Resend clicked', {
@@ -460,25 +475,65 @@ export function InfoGateModal({
       hasOtpId: !!otpId,
     });
     if (busy || resendCooldown > 0) return;
-    // If the previous send was within the server's 30s window, surface
-    // a visible countdown and skip the network call entirely — the user
-    // already has the OTP from the first send. They can still enter it
-    // and verify; this just blocks a duplicate /otp/send that would
-    // 429 with "Wait 30s before resending" and clutter the UI with an
-    // error message.
-    if (lastSentAt) {
-      const elapsedSec = (Date.now() - lastSentAt) / 1000;
-      if (elapsedSec < 30) {
-        setResendCooldown(Math.max(1, Math.ceil(30 - elapsedSec)));
-        return;
-      }
+
+    const phone = prefilled?.phone ?? profile?.phone;
+    if (!phone) {
+      setError('Phone number missing — close this dialog and try again.');
+      return;
     }
-    // Cooldown elapsed (or no prior send recorded — e.g. remount).
-    // Clearing otpId + error makes the send-effect above re-fire with
-    // the same prefilled phone (or whichever phone the buyer entered
-    // in step 1).
-    setOtpId(null);
+
+    // QA latest (Critical): ALWAYS fire a fresh /otp/send when the
+    // user clicks Resend. Previously when (a) otpId+lastSentAt were
+    // both null after a silent first-send failure or (b) the parent
+    // had remounted us with a null session, setOtpId(null) was a
+    // no-op state write and the auto-send effect never re-ran — the
+    // button looked dead. Direct API call here removes that
+    // dependency on effect-re-fire and always gives the user a
+    // confirmation (the new "Code sent" badge fires either way).
+    //
+    // Server-side reverse-index: if we're inside the 30s window the
+    // server returns the EXISTING otpId, not OTP_RESEND_TOO_SOON,
+    // so this never spams a new SMS even on rapid clicks. The
+    // cooldown UI still kicks in below to gate further clicks.
+    setBusy(true);
     setError(null);
+    try {
+      const res = await api<{ otpId: string }>('/otp/send', {
+        method: 'POST',
+        body: JSON.stringify({ phone, purpose }),
+      });
+      const sentAt = Date.now();
+      setOtpId(res.otpId);
+      setLastSentAt(sentAt);
+      setJustSent(true);
+      // Arm the 30s cooldown so a tap-happy buyer can't fire 10
+      // sends per minute against the server's rate-limit.
+      setResendCooldown(30);
+      onSent?.({ otpId: res.otpId, sentAt });
+    } catch (e) {
+      // OTP_RESEND_TOO_SOON — the prior send is still active.
+      // Surface the cooldown UI instead of an error banner.
+      if (e instanceof ApiError && e.code === 'OTP_RESEND_TOO_SOON') {
+        const elapsedSec = lastSentAt ? (Date.now() - lastSentAt) / 1000 : 0;
+        setResendCooldown(Math.max(1, Math.ceil(30 - elapsedSec)));
+        // Treat as a quiet success — the existing OTP is still valid.
+        setJustSent(true);
+        setError(null);
+      } else if (
+        e instanceof ApiError &&
+        (e.code === 'OTP_RESEND_LIMIT' ||
+          e.code === 'OTP_DAILY_LIMIT' ||
+          e.code === 'OTP_LOCKED' ||
+          e.code === 'RATE_LIMITED')
+      ) {
+        const msg = blockingMessage(e.code, e.message);
+        if (msg) setSendBlocked(msg);
+      } else {
+        setError(e instanceof ApiError ? e.message : 'Could not resend OTP');
+      }
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Dealers list for the "Choose Dealer" select. Loaded only when the modal
@@ -1026,17 +1081,37 @@ export function InfoGateModal({
               autoFocus
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="text-center text-2xl tracking-[0.5em] font-mono"
+              // QA latest: brand-font 1903 Sans on the OTP input
+              // (was font-mono). Wide tracking preserves the
+              // distinct-digit look without resorting to a generic
+              // monospace stack.
+              className="text-center text-2xl tracking-[0.5em] font-body font-bold"
             />
             {/* QA RE-OPEN bug #2: polished, persistent notice — stays
                 visible from the moment the OTP send fires (busy) all
                 the way through the verify step. Only hidden when an
                 error has surfaced (error path takes precedence). Copy
                 exactly matches the QA spec text. */}
-            {!error && (
+            {!error && !justSent && (
               <div className="text-amber-900 text-[13px] bg-amber-50 border border-amber-200 px-3 py-2.5 leading-relaxed">
                 OTP has been sent to your mobile number. If you don&rsquo;t receive it
                 shortly, tap <strong>Resend code</strong> below.
+              </div>
+            )}
+            {/* QA latest (Critical): when the user taps Resend, show
+                a clear "Code sent" success badge for 4 seconds so the
+                action is visibly acknowledged (previously the click
+                could appear to do nothing in environments using the
+                mock SMS provider where no real SMS arrives). */}
+            {!error && justSent && (
+              <div className="text-emerald-900 text-[13px] bg-emerald-50 border border-emerald-200 px-3 py-2.5 leading-relaxed flex items-center gap-2">
+                <span aria-hidden className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-[11px] font-bold">
+                  &#10003;
+                </span>
+                <span>
+                  <strong>Code sent</strong> to your mobile number. Check your SMS
+                  and enter the 6-digit code above.
+                </span>
               </div>
             )}
             {error && (

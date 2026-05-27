@@ -95,65 +95,70 @@ Every transaction is handled through an authorised Harley-Davidson&reg; dealer.<
 // Admin-published bodyHtml takes precedence — when the API returns
 // content for `cookies`, this fallback is hidden.
 const COOKIE_NOTICE_FALLBACK_HTML = `
-<p>This Cookie Notice explains how Harley-Davidson&reg; uses cookies and similar tracking
-technologies on the H-D Certified&trade; pre-owned marketplace. By continuing to use this
-website you consent to the placement of cookies on your device as described below.</p>
+<h2>Use Of Cookies By Harley-Davidson&reg;</h2>
+<p>Harley-Davidson&reg; websites make use of cookies and web beacons (hereafter referred to as
+&ldquo;cookies&rdquo;). These tools consist of small text or pixel files that are stored on
+your computer.</p>
 
-<h2>What Are Cookies?</h2>
-<p>Cookies are small text files that a website places on your computer, tablet, or phone when
-you visit. They let the site recognise your device on subsequent visits, remember preferences
-such as your language or pincode, and help us understand how the site is used so we can
-improve it. For a plain-English primer on cookies in general, see
-<a href="https://allaboutcookies.org/" target="_blank" rel="noopener noreferrer">allaboutcookies.org</a>.</p>
+<p>Because we value your privacy and want to be transparent in how we collect information
+about you, this notice provides details on the cookies we use, how you can oppose their use
+and how this will impact your browsing experience.</p>
 
-<h2>How We Use Cookies</h2>
-<p>Harley-Davidson&reg; uses cookies for four purposes:</p>
+<h3>What Cookies Do We Use?</h3>
+<p>Below we have detailed the categories of cookies set by our websites and their purpose. In
+some cases we use third party cookies, in which case the source is also indicated.</p>
+
+<p><strong>Strictly necessary cookies</strong> &mdash; These cookies are essential for you to
+browse the website and use its features. Without these cookies we cannot hold items in your
+shopping cart while shopping on the site or use certain features to access secure areas of
+the site.</p>
+
+<p><strong>Preferences cookies</strong> &mdash; Also known as &ldquo;functionality
+cookies,&rdquo; these cookies allow our website to remember choices you have made in the past,
+like what language you prefer, what region site you would like to see when you return, or what
+your user name and password are so you can automatically log in.</p>
+
+<p><strong>Statistics cookies</strong> &mdash; Also known as &ldquo;performance cookies,&rdquo;
+these cookies collect information about how you use a website, like which pages you visited
+and which links you clicked on. None of this information can be used to identify you. It is
+all aggregated and, therefore, anonymized. Their sole purpose is to improve website functions.
+This includes cookies from third-party analytics services as long as the cookies are for the
+exclusive use of the owner of the website visited.</p>
+
+<p><strong>Marketing cookies</strong> &mdash; These cookies track your online activity to help
+tailor more relevant advertising or to limit how many times you see an ad. This information
+may be used by Harley-Davidson&reg; and others to, among other things, analyze and track data,
+determine the popularity of certain content, deliver advertising and content targeted to your
+interest on our Services and other websites, and better understand your online activity.</p>
+
+<h3>How To Disable Or Enable Cookies?</h3>
+<p>You can accept or decline cookies by modifying the settings in your browser. However, if
+you disable cookies, you will not be able to use all of the interactive features of the site.
+Most web browsers allow you to control the cookies saved on your computer. You can find out
+more about cookies, including how to see what cookies have been set and how to manage and
+delete them on
+<a href="https://allaboutcookies.org/" target="_blank" rel="noopener noreferrer">www.allaboutcookies.org</a>.</p>
+
+<p>To delete, change or manage your cookie settings, select from some of the most popular
+browser below to learn more:</p>
 <ul>
-  <li><strong>Strictly necessary cookies</strong> &mdash; required for core site functions such as
-  signing into your account, submitting a buyer enquiry, or completing OTP verification on a
-  trade-in lead. The site cannot function correctly without these.</li>
-  <li><strong>Preference cookies</strong> &mdash; remember choices you make (pincode, distance
-  radius, search filters) so you don&rsquo;t have to re-enter them on each visit.</li>
-  <li><strong>Analytics cookies</strong> &mdash; aggregated, anonymised data about which pages
-  buyers visit, which listings convert, and how long sessions last. Used to improve the
-  catalogue and the discovery experience.</li>
-  <li><strong>Marketing cookies</strong> &mdash; set only after explicit opt-in. Used to show
-  relevant H-D advertising on third-party sites and to measure campaign effectiveness.</li>
+  <li><a href="https://support.google.com/chrome/answer/95647?hl=en-GB" target="_blank" rel="noopener noreferrer">Chrome</a></li>
+  <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer">Firefox</a></li>
+  <li><a href="https://support.apple.com/en-in/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer">Safari</a></li>
+  <li><a href="https://support.microsoft.com/en-US/edge/manage-cookies-in-microsoft-edge-view-allow-block-delete-and-use" target="_blank" rel="noopener noreferrer">Microsoft Edge</a></li>
+  <li><a href="https://support.microsoft.com/en-us/topic/delete-and-manage-cookies-168dab11-0753-043d-7c16-ede5947fc64d" target="_blank" rel="noopener noreferrer">Internet Explorer</a></li>
 </ul>
 
-<h2>Managing Cookies in Your Browser</h2>
-<p>You can disable, delete, or block cookies at any time through your browser settings. Note
-that blocking strictly-necessary cookies will prevent you from signing in or submitting an
-enquiry. The major browsers all expose cookie controls under Privacy or Settings:</p>
-<ul>
-  <li><a href="https://support.google.com/chrome/answer/95647?hl=en-GB" target="_blank" rel="noopener noreferrer">Google Chrome &mdash; Manage cookies</a></li>
-  <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer">Mozilla Firefox &mdash; Manage cookies</a></li>
-  <li><a href="https://support.apple.com/en-in/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer">Apple Safari &mdash; Manage cookies</a></li>
-  <li><a href="https://support.microsoft.com/en-US/edge/manage-cookies-in-microsoft-edge-view-allow-block-delete-and-use" target="_blank" rel="noopener noreferrer">Microsoft Edge &mdash; Manage cookies</a></li>
-</ul>
+<h3>Third-Party Cookies</h3>
+<p>In addition, our websites may allow you to &ldquo;share&rdquo; content with friends through
+social networks. These social networks may set a cookie when you are logged in to their
+service and use the share functionality on our websites. Harley-Davidson&reg; does not control
+these cookies. Please check the social networks websites for more information about their
+cookies and how they use them.</p>
 
-<h2>Third-Party Cookies</h2>
-<p>Some cookies on this site are set by third parties we work with for analytics, embedded
-maps (dealer locator), and finance partner integrations. These third parties may use the
-cookies they set to track your activity across other websites. We do not control these
-cookies; please refer to the third party&rsquo;s own privacy policy for details.</p>
-
-<h2>How We Protect Your Data</h2>
-<p>Personally identifiable information collected through cookies is handled in line with our
-corporate privacy policy. For full details, including your rights of access, correction and
-erasure, see the Harley-Davidson&reg;
-<a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">corporate privacy policy</a>.</p>
-
-<h2>Changes To This Notice</h2>
-<p>We may update this Cookie Notice from time to time to reflect changes in technology,
-regulation, or our business practice. When we do, the &ldquo;as of&rdquo; date at the top of
-the page will be updated. Material changes will be announced via the site banner before they
-take effect.</p>
-
-<h2>Contact</h2>
-<p>If you have questions about how Harley-Davidson&reg; uses cookies, or about this notice in
-particular, please reach out through the
-<a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">corporate privacy contact channel</a>.</p>
+<h3>How Do I Contact Harley-Davidson&reg;?</h3>
+<p>Please see our
+<a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
 `;
 
 // PRD §6.1.7 — content pulled from StaticContent table; admin-editable.
@@ -229,36 +234,39 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         )}
         {(data || effectiveHtml) && (
           <article
-            // QA bug 3: typography drifted across legal / info pages — different
-            // sizes for the same heading level, inconsistent paragraph spacing,
-            // varying link colors. The class chain below pins ALL headings,
-            // paragraphs, lists, and links to a single rule set so privacy /
-            // terms / about / faq / contact share identical rhythm.
+            // QA bug 3: typography drifted across legal / info pages —
+            // unified rule set for privacy / terms / about / faq /
+            // contact. QA latest (Cookie Notice): cookies-specific
+            // overrides bump the h2 main heading to 24px (#1A1A1A,
+            // bold 1903 Sans wide) and the h3 sub-headings to 18px.
+            // The orange `text-hd-orange` colour on h2 is conditionally
+            // suppressed for cookies so the spec colour #1A1A1A
+            // dominates.
             //
             //   p / li     → 15px regular, leading 1.7, gray-700, mt-4
-            //   h2         → 22px font-subhead uppercase, hd-orange, mt-10
-            //   h3         → 16px font-subhead uppercase, mt-6
+            //   h2 (def)   → 22px font-subhead uppercase, hd-orange
+            //   h2 (cook)  → 24px font-subhead uppercase, #1A1A1A
+            //   h3 (def)   → 16px font-subhead uppercase, text-on-light
+            //   h3 (cook)  → 18px font-subhead uppercase, text-on-light
             //   a          → hd-orange, underlined on hover
-            //   ul         → disc bullets, indent
-            className="
+            className={`
               text-[15px] text-gray-700
               [&>*]:max-w-none
               [&_p]:leading-[1.7]
               [&_p]:mt-4
               [&_p:first-child]:mt-0
               [&_h2]:font-subhead
+              [&_h2]:font-bold
               [&_h2]:uppercase
               [&_h2]:tracking-subhead
-              [&_h2]:text-hd-orange
-              [&_h2]:text-[22px]
               [&_h2]:mt-10
               [&_h2]:mb-3
               [&_h2:first-child]:mt-0
               [&_h3]:font-subhead
+              [&_h3]:font-bold
               [&_h3]:uppercase
               [&_h3]:tracking-subhead
               [&_h3]:text-text-on-light
-              [&_h3]:text-base
               [&_h3]:mt-6
               [&_h3]:mb-2
               [&_a]:text-hd-orange
@@ -276,7 +284,12 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
               [&_li]:leading-[1.7]
               [&_strong]:text-text-on-light
               [&_strong]:font-subhead
-            "
+              ${
+                isCookies
+                  ? '[&_h2]:text-[24px] [&_h2]:!text-[#1A1A1A] [&_h3]:text-[18px]'
+                  : '[&_h2]:text-[22px] [&_h2]:text-hd-orange [&_h3]:text-base'
+              }
+            `}
             dangerouslySetInnerHTML={{ __html: effectiveHtml }}
           />
         )}
