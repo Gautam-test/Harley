@@ -79,6 +79,10 @@ interface PageHeroProps {
   /** Optional desktop headline size override (e.g. Track Enquiry
    *  needs 56px per BUG_UI_043; the 'sm' default jumps to 60px). */
   titlePx?: number;
+  /** Skip the background photo entirely and render a flat solid
+   *  black banner (Cookie Notice / future legal pages — QA spec
+   *  flagged the scenic image as off-brand for legal headers). */
+  solidBlack?: boolean;
 }
 
 export function PageHero({
@@ -91,6 +95,7 @@ export function PageHero({
   children,
   heightPx,
   titlePx,
+  solidBlack,
 }: PageHeroProps) {
   const padY =
     size === 'lg' ? 'py-24 md:py-28' : size === 'sm' ? 'py-14 md:py-16' : 'py-20 md:py-24';
@@ -125,20 +130,27 @@ export function PageHero({
       {/* QA BUG_UI_027: the brand-supplied search-stock-bg.svg has its
           own dark gradient baked in (90% opacity), so we removed the
           previous `opacity-50` photo dimming + softened the overlay so
-          the bikes + containers are visible behind the headline. */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url("${image}")` }}
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.55) 100%)',
-        }}
-        aria-hidden
-      />
+          the bikes + containers are visible behind the headline.
+          When `solidBlack` is set the photo + overlay layers are
+          skipped entirely — the bg-hd-black section fill is the only
+          paint (Cookie Notice / legal-pages spec). */}
+      {!solidBlack && (
+        <>
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url("${image}")` }}
+            aria-hidden
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.05) 45%, rgba(0,0,0,0.55) 100%)',
+            }}
+            aria-hidden
+          />
+        </>
+      )}
       <div
         className={`relative max-w-container mx-auto px-6 text-center ${
           heightPx ? 'h-full flex flex-col items-center justify-center py-8' : padY

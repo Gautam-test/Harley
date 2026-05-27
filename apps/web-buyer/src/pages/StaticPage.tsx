@@ -45,7 +45,7 @@ const ABOUT_CONTACT = {
 const FALLBACK_TITLES: Record<string, string> = {
   about: 'About H-D Certified',
   privacy: 'Privacy Policy',
-  cookies: 'Cookie Policy',
+  cookies: 'Cookie Notice',
   terms: 'Terms & Conditions',
   faq: 'Frequently Asked Questions',
   contact: 'Contact Us',
@@ -53,14 +53,89 @@ const FALLBACK_TITLES: Record<string, string> = {
 
 // Per-page hero copy + image. Two-word "title / emphasis" pattern matches the
 // brand "LIFE. LIBERTY. CERTIFIED." treatment from the freeze designs.
+// QA latest (Cookie Notice): cookies hero uses an inverted scheme —
+// "Harley-Davidson®" in orange (the EMPHASIS slot) + "Cookie Notice"
+// in white (the TITLE slot). PageHero renders `title` (white) then
+// `emphasis` (orange), so this ordering correctly produces an orange
+// "Harley-Davidson®" followed by a white "Cookie Notice" on the page.
 const HERO_COPY: Record<string, { title: string; emphasis: string; image: string }> = {
   about: { title: 'Life. Liberty.', emphasis: 'Certified', image: HERO.streetGlide },
   faq: { title: 'Frequently', emphasis: 'Asked', image: HERO.sportster },
   privacy: { title: 'Privacy', emphasis: 'Policy', image: HERO.iron883 },
-  cookies: { title: 'Cookie', emphasis: 'Policy', image: HERO.iron883 },
+  cookies: { title: 'Cookie Notice', emphasis: 'Harley-Davidson®', image: HERO.iron883 },
   terms: { title: 'Terms &', emphasis: 'Conditions', image: HERO.iron883 },
   contact: { title: 'Contact', emphasis: 'Us', image: HERO.roadKing },
 };
+
+// QA latest (Cookie Notice): full HTML fallback body so the page
+// never renders the "not published yet" placeholder. The 6 mandated
+// outbound links (allaboutcookies.org + 4 browser guides + the
+// corporate privacy policy) are wired as real <a target="_blank"
+// rel="noopener noreferrer"> anchors so they're actually clickable
+// (raster Content.svg from Figma can't carry working hyperlinks).
+// Admin-published bodyHtml takes precedence — when the API returns
+// content for `cookies`, this fallback is hidden.
+const COOKIE_NOTICE_FALLBACK_HTML = `
+<p>This Cookie Notice explains how Harley-Davidson&reg; uses cookies and similar tracking
+technologies on the H-D Certified&trade; pre-owned marketplace. By continuing to use this
+website you consent to the placement of cookies on your device as described below.</p>
+
+<h2>What Are Cookies?</h2>
+<p>Cookies are small text files that a website places on your computer, tablet, or phone when
+you visit. They let the site recognise your device on subsequent visits, remember preferences
+such as your language or pincode, and help us understand how the site is used so we can
+improve it. For a plain-English primer on cookies in general, see
+<a href="https://allaboutcookies.org/" target="_blank" rel="noopener noreferrer">allaboutcookies.org</a>.</p>
+
+<h2>How We Use Cookies</h2>
+<p>Harley-Davidson&reg; uses cookies for four purposes:</p>
+<ul>
+  <li><strong>Strictly necessary cookies</strong> &mdash; required for core site functions such as
+  signing into your account, submitting a buyer enquiry, or completing OTP verification on a
+  trade-in lead. The site cannot function correctly without these.</li>
+  <li><strong>Preference cookies</strong> &mdash; remember choices you make (pincode, distance
+  radius, search filters) so you don&rsquo;t have to re-enter them on each visit.</li>
+  <li><strong>Analytics cookies</strong> &mdash; aggregated, anonymised data about which pages
+  buyers visit, which listings convert, and how long sessions last. Used to improve the
+  catalogue and the discovery experience.</li>
+  <li><strong>Marketing cookies</strong> &mdash; set only after explicit opt-in. Used to show
+  relevant H-D advertising on third-party sites and to measure campaign effectiveness.</li>
+</ul>
+
+<h2>Managing Cookies in Your Browser</h2>
+<p>You can disable, delete, or block cookies at any time through your browser settings. Note
+that blocking strictly-necessary cookies will prevent you from signing in or submitting an
+enquiry. The major browsers all expose cookie controls under Privacy or Settings:</p>
+<ul>
+  <li><a href="https://support.google.com/chrome/answer/95647?hl=en-GB" target="_blank" rel="noopener noreferrer">Google Chrome &mdash; Manage cookies</a></li>
+  <li><a href="https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener noreferrer">Mozilla Firefox &mdash; Manage cookies</a></li>
+  <li><a href="https://support.apple.com/en-in/guide/safari/sfri11471/mac" target="_blank" rel="noopener noreferrer">Apple Safari &mdash; Manage cookies</a></li>
+  <li><a href="https://support.microsoft.com/en-US/edge/manage-cookies-in-microsoft-edge-view-allow-block-delete-and-use" target="_blank" rel="noopener noreferrer">Microsoft Edge &mdash; Manage cookies</a></li>
+</ul>
+
+<h2>Third-Party Cookies</h2>
+<p>Some cookies on this site are set by third parties we work with for analytics, embedded
+maps (dealer locator), and finance partner integrations. These third parties may use the
+cookies they set to track your activity across other websites. We do not control these
+cookies; please refer to the third party&rsquo;s own privacy policy for details.</p>
+
+<h2>How We Protect Your Data</h2>
+<p>Personally identifiable information collected through cookies is handled in line with our
+corporate privacy policy. For full details, including your rights of access, correction and
+erasure, see the Harley-Davidson&reg;
+<a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">corporate privacy policy</a>.</p>
+
+<h2>Changes To This Notice</h2>
+<p>We may update this Cookie Notice from time to time to reflect changes in technology,
+regulation, or our business practice. When we do, the &ldquo;as of&rdquo; date at the top of
+the page will be updated. Material changes will be announced via the site banner before they
+take effect.</p>
+
+<h2>Contact</h2>
+<p>If you have questions about how Harley-Davidson&reg; uses cookies, or about this notice in
+particular, please reach out through the
+<a href="https://www.harley-davidson.com/in/en/footer/utility/privacy-policy.html" target="_blank" rel="noopener noreferrer">corporate privacy contact channel</a>.</p>
+`;
 
 // PRD §6.1.7 — content pulled from StaticContent table; admin-editable.
 // PRD §9.3 — sanitise HTML on render with DOMPurify before injecting.
@@ -78,8 +153,21 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
     image: HERO.streetGlide,
   };
   const isMissing = isError && error instanceof ApiError && error.status === 404;
+  const isCookies = contentKey === 'cookies';
 
-  const cleanHtml = data?.bodyHtml ? DOMPurify.sanitize(data.bodyHtml) : '';
+  // Cookies page falls back to the bundled HTML if the API hasn't
+  // been seeded (or returns 404) so the page never shows the
+  // "not published yet" placeholder per QA.
+  const effectiveHtml =
+    data?.bodyHtml
+      ? DOMPurify.sanitize(data.bodyHtml, {
+          ADD_ATTR: ['target', 'rel'],
+        })
+      : isCookies && isMissing
+      ? DOMPurify.sanitize(COOKIE_NOTICE_FALLBACK_HTML, {
+          ADD_ATTR: ['target', 'rel'],
+        })
+      : '';
 
   return (
     <>
@@ -91,15 +179,26 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         emphasis={hero.emphasis}
         image={hero.image}
         size="md"
+        // QA latest: cookies hero is solid black (no scenic photo),
+        // carries a HOME / COOKIE breadcrumb, and shows a small
+        // "Cookie Notice as of October 2020" subtitle under the
+        // main heading.
+        solidBlack={isCookies}
+        breadcrumbs={
+          isCookies
+            ? [{ label: 'Home', to: '/' }, { label: 'Cookie' }]
+            : undefined
+        }
+        subtitle={isCookies ? 'Cookie Notice as of October 2020' : undefined}
       />
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
         {isLoading && <div className="text-gray-600">Loading…</div>}
-        {isMissing && (
+        {isMissing && !isCookies && (
           <p className="text-gray-600">
             This content has not been published yet. Check back shortly.
           </p>
         )}
-        {data && (
+        {(data || effectiveHtml) && (
           <article
             // QA bug 3: typography drifted across legal / info pages — different
             // sizes for the same heading level, inconsistent paragraph spacing,
@@ -149,7 +248,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
               [&_strong]:text-text-on-light
               [&_strong]:font-subhead
             "
-            dangerouslySetInnerHTML={{ __html: cleanHtml }}
+            dangerouslySetInnerHTML={{ __html: effectiveHtml }}
           />
         )}
 
