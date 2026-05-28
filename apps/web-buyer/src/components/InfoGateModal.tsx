@@ -149,6 +149,11 @@ export function InfoGateModal({
   // OTP_RESEND_TOO_SOON.
   const [otpId, setOtpId] = useState<string | null>(existingOtp?.otpId ?? null);
   const [code, setCode] = useState('');
+  // QA latest (Compliance): the buyer-enquiry terms checkbox must load
+  // UNCHECKED and require a deliberate click before the form can be
+  // submitted. Controlled state (default false) replaces the previous
+  // uncontrolled `defaultChecked` input that loaded pre-ticked.
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -459,6 +464,8 @@ export function InfoGateModal({
       setSendBlocked(null);
       setBusy(false);
       setResendCooldown(0);
+      // QA: terms checkbox always re-loads unchecked on a fresh open.
+      setTermsAccepted(false);
     } else if (!open && wasOpen.current) {
       wasOpen.current = false;
     }
@@ -592,6 +599,12 @@ export function InfoGateModal({
       setProfile({ ...values, phone: cleanPhone });
       setOtpId(res.otpId);
       setLastSentAt(Date.now());
+      // QA latest: fire the green "Code sent" badge on the buyer
+      // (collect → verify) flow too, so it matches the seller
+      // (prefilled) flow which sets justSent in its auto-send effect.
+      // Without this the buyer modal only ever showed the persistent
+      // yellow banner.
+      setJustSent(true);
       setStep('verify');
     } catch (e) {
       if (
@@ -992,15 +1005,17 @@ export function InfoGateModal({
                 {error}
               </div>
             )}
-            {/* QA latest: terms checkbox renders as a CLEAN UNBORDERED
-                open square per Figma — drop the accent-hd-orange fill.
-                Native appearance-none + 1.5px border keeps it visible
-                without the colour-fill feel. */}
+            {/* QA latest (Compliance): controlled checkbox — loads
+                UNCHECKED, requires a deliberate click. Checked state
+                fills brand orange #ff5500 with a white tick (was a
+                white fill with black tick), matching the seller
+                enquiry form's accent token. */}
             <p className="text-xs text-gray-500">
               <input
                 type="checkbox"
-                defaultChecked
-                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-hd-white checked:after:content-['✓'] checked:after:text-hd-black checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-[#ff5500] checked:border-[#ff5500] checked:after:content-['✓'] checked:after:text-white checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
                 aria-label="I have read and understood the Terms and Conditions and Privacy Policy"
               />
               I have read &amp; understood the{' '}
@@ -1031,7 +1046,13 @@ export function InfoGateModal({
               )}
               <button
                 type="submit"
-                disabled={busy}
+                // QA: SEND ENQUIRY is gated on the (now-unchecked-by-
+                // default) terms checkbox for the buyer-enquiry flow,
+                // so the user must give explicit consent before the
+                // OTP send fires. The non-buyer (general/trade-in)
+                // collect path keeps its own consent handling and
+                // isn't gated here.
+                disabled={busy || (isBuyerEnquiry && !termsAccepted)}
                 className={`bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-8 py-2.5 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed ${isBuyerEnquiry ? '' : 'w-full'}`}
               >
                 {busy ? 'SENDING OTP…' : isBuyerEnquiry ? 'SEND ENQUIRY' : 'CONTINUE'}
@@ -1099,24 +1120,17 @@ export function InfoGateModal({
               style={code ? { letterSpacing: '0.5em' } : undefined}
               className="text-center text-xl font-body font-bold placeholder:tracking-normal placeholder:text-base placeholder:font-normal"
             />
-            {/* QA RE-OPEN bug #2: polished, persistent notice — stays
-                visible from the moment the OTP send fires (busy) all
-                the way through the verify step. Only hidden when an
-                error has surfaced (error path takes precedence). Copy
-                exactly matches the QA spec text. */}
-            {!error && !justSent && (
-              <div className="text-amber-900 text-[13px] bg-amber-50 border border-amber-200 px-3 py-2.5 leading-relaxed">
-                OTP has been sent to your mobile number. If you don&rsquo;t receive it
-                shortly, tap <strong>Resend code</strong> below.
-              </div>
-            )}
-            {/* QA latest (Critical): when the user taps Resend, show
-                a clear "Code sent" success badge for 4 seconds so the
-                action is visibly acknowledged (previously the click
-                could appear to do nothing in environments using the
-                mock SMS provider where no real SMS arrives). */}
+            {/* QA latest: single light-green "Code sent" confirmation
+                box — identical copy + treatment across BOTH the buyer
+                (collect → verify) and seller (prefilled) flows. Renders
+                on verify-step entry and on every Resend, then auto-fades
+                after 4s (justSent timer) so it doesn't permanently
+                occupy modal space. The previous persistent yellow
+                "OTP has been sent…" banner is dropped per QA — the
+                green box + the Resend button below carry the full
+                guidance. */}
             {!error && justSent && (
-              <div className="text-emerald-900 text-[13px] bg-emerald-50 border border-emerald-200 px-3 py-2.5 leading-relaxed flex items-center gap-2">
+              <div className="text-emerald-900 text-[13px] bg-emerald-50 border border-emerald-200 px-3 py-2.5 leading-relaxed flex items-center gap-2 transition-opacity">
                 <span aria-hidden className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-[11px] font-bold">
                   &#10003;
                 </span>

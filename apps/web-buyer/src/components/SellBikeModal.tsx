@@ -228,12 +228,16 @@ export function SellBikeModal() {
 
   return (
     <>
-      {/* QA RE-OPEN responsive: pb-12 sm:pb-8 ensures the Send Enquiry
-          CTA never clips under the mobile browser chrome / safe area.
-          The overflow-y-auto + my-auto pattern centres content but the
-          extra bottom pad gives wiggle room above the address bar. */}
-      <div className="fixed inset-0 z-50 bg-black/80 flex items-start justify-center px-3 sm:px-4 pt-6 pb-12 sm:py-8 overflow-y-auto">
-        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-xl my-auto">
+      {/* QA latest (High — overflow): the overlay centres the card and
+          the CARD itself caps at 90vh + scrolls internally, so the
+          CANCEL / SEND ENQUIRY footer CTAs never get pushed below the
+          viewport fold on a standard desktop. Previously the whole
+          overlay scrolled (overflow-y-auto on the backdrop) which left
+          the long form spilling past the bottom edge with the action
+          buttons out of view. items-center vertically centres the
+          capped card; the inner overflow-y-auto handles long content. */}
+      <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-3 sm:px-4 py-6">
+        <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-baseline justify-between">
             <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
               Tell Us About Your Motorcycle
@@ -597,15 +601,15 @@ export function SellBikeModal() {
   );
 }
 
-// QA NEW (Sell Bike Figma): labels are text-only — no red asterisk
-// suffix per Figma. `required` is still accepted for backward-compat
-// but no longer visually decorates the label. The hint slot is also
-// dropped from the visible UI (Figma shows clean single-line
-// placeholders); we keep the prop in the signature so the VIN field's
-// hint can still be passed without breaking callers.
+// QA latest (Medium): required fields now show a red asterisk (*)
+// after the label so the mandatory inputs are visually flagged up
+// front. Only the optional Pin Code field passes required={false}
+// (the sole field the QA carved out). The hint slot stays dropped
+// from the visible UI per the earlier Figma pass.
 function Labelled({
   label,
   error,
+  required,
   children,
 }: {
   label: string;
@@ -618,6 +622,7 @@ function Labelled({
     <div>
       <label className="block font-subhead font-bold tracking-subhead uppercase text-[11px] text-text-on-light mb-1.5">
         {label}
+        {required && <span className="text-danger ml-0.5" aria-hidden>*</span>}
       </label>
       {children}
       {error && (
