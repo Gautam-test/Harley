@@ -558,7 +558,7 @@ export function InfoGateModal({
     handleSubmit,
     control,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<Step1Values>({
     mode: 'onChange',
     defaultValues: {
@@ -938,8 +938,16 @@ export function InfoGateModal({
 
             {isBuyerEnquiry && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Looking For" show>
-                  <Select {...register('lookingFor')} defaultValue="">
+                {/* QA latest: "Looking For" is mandatory to generate
+                    an enquiry ticket — gets the red asterisk + a
+                    required validator so it counts toward isValid and
+                    blocks SEND ENQUIRY until a model is picked. */}
+                <Labelled label="Looking For" required error={errors.lookingFor?.message} show>
+                  <Select
+                    aria-invalid={Boolean(errors.lookingFor)}
+                    {...register('lookingFor', requiredSelect('a model'))}
+                    defaultValue=""
+                  >
                     <option value="">Select a model</option>
                     {HD_MODEL_CATALOG.map((g) => (
                       <optgroup key={g.family} label={g.family}>
@@ -1046,13 +1054,16 @@ export function InfoGateModal({
               )}
               <button
                 type="submit"
-                // QA: SEND ENQUIRY is gated on the (now-unchecked-by-
-                // default) terms checkbox for the buyer-enquiry flow,
-                // so the user must give explicit consent before the
-                // OTP send fires. The non-buyer (general/trade-in)
-                // collect path keeps its own consent handling and
-                // isn't gated here.
-                disabled={busy || (isBuyerEnquiry && !termsAccepted)}
+                // QA latest: SEND ENQUIRY stays disabled until BOTH
+                // (a) every required field validates (RHF isValid,
+                // mode:onChange) AND (b) the legal terms checkbox is
+                // ticked — mirroring the seller enquiry form's strict
+                // validation flow. Previously ticking the checkbox
+                // alone enabled the button even while Full Name /
+                // Phone / Email / State / City were empty with active
+                // red errors. The non-buyer (general/trade-in) collect
+                // path keeps its own handling and isn't gated here.
+                disabled={busy || (isBuyerEnquiry && (!isValid || !termsAccepted))}
                 className={`bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-8 py-2.5 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed ${isBuyerEnquiry ? '' : 'w-full'}`}
               >
                 {busy ? 'SENDING OTP…' : isBuyerEnquiry ? 'SEND ENQUIRY' : 'CONTINUE'}

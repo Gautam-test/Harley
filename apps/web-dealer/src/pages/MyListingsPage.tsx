@@ -331,7 +331,7 @@ export function MyListingsPage() {
                       {l.status === 'REMOVED' && l.adminFeedback && (
                         <div className="mt-1.5 text-[10px] text-warning leading-tight max-w-[260px]">
                           <span className="font-subhead uppercase tracking-subhead">
-                            Reason:
+                            REMOVAL REASON:
                           </span>{' '}
                           {l.adminFeedback}
                         </div>
@@ -697,8 +697,11 @@ function RemovedNotificationsCarousel({ rows }: { rows: DealerListingRow[] }) {
   const prev = () => setIdx((i) => (i - 1 + total) % total);
   const next = () => setIdx((i) => (i + 1) % total);
 
+  // QA latest: soft warning-yellow canvas #fffde6 per spec (was
+  // bg-warning/10). adminFeedback is the verbatim string the admin typed
+  // e.g. "REMOVAL REASON: Removed by admin" — dynamic, not hardcoded.
   return (
-    <div className="mb-6 bg-warning/10 border border-warning/40 p-4">
+    <div className="mb-6 border border-warning/40 p-4" style={{ backgroundColor: '#fffde6' }}>
       <div className="flex items-center justify-between gap-3">
         <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
           {total} listing{total === 1 ? '' : 's'} removed by admin
@@ -741,7 +744,7 @@ function RemovedNotificationsCarousel({ rows }: { rows: DealerListingRow[] }) {
         </p>
         <p className="text-gray-700 mt-1">
           <span className="font-subhead uppercase tracking-subhead text-[11px] text-warning">
-            Removal reason:
+            REMOVAL REASON:
           </span>{' '}
           {current.adminFeedback}
         </p>

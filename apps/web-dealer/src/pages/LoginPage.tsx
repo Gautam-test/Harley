@@ -14,6 +14,11 @@ export function LoginPage() {
   const navigate = useNavigate();
   const setSession = useAuthStore((s) => s.setSession);
   const [error, setError] = useState<string | null>(null);
+  // QA latest: inline per-field validation strings shown before API call.
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
+  // QA latest: password masking toggle state.
+  const [showPassword, setShowPassword] = useState(false);
+
   // Session-expiry banner — set by api.ts when a 401-after-refresh-fail
   // boots the user back to /login. Cleared on the next successful login
   // OR when the dealer dismisses it. Read once on mount so navigating
@@ -46,12 +51,24 @@ export function LoginPage() {
       body.style.overflow = prevBody;
     };
   }, []);
+
+  // QA latest: "Remember me" must load UNCHECKED (was `remember: true`).
   const { register, handleSubmit, formState } = useForm<FormValues>({
-    defaultValues: { remember: true },
+    defaultValues: { remember: false },
   });
 
   const onSubmit = async (values: FormValues) => {
     setError(null);
+    // QA latest: client-side required validation with dedicated per-field
+    // messages BEFORE hitting the API.
+    //   • empty email/username → "Please enter your email"
+    //   • email present but no password → "Please enter your password"
+    const nextErrors: { username?: string; password?: string } = {};
+    if (!values.username.trim()) nextErrors.username = 'Please enter your email';
+    if (!values.password) nextErrors.password = 'Please enter your password';
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     const apiBase = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1';
     const res = await fetch(`${apiBase}/auth/dealer/login`, {
       method: 'POST',
@@ -117,7 +134,7 @@ export function LoginPage() {
             Authorized dealer access only. Contact H-D Admin if your credentials are not active.
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
             <div>
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
                 Registered Email
@@ -125,22 +142,65 @@ export function LoginPage() {
               <Input
                 autoComplete="username"
                 placeholder="vikram@capital-hd.in"
-                {...register('username', { required: true, minLength: 3 })}
+                aria-invalid={Boolean(fieldErrors.username)}
+                {...register('username', {
+                  onChange: () => setFieldErrors((p) => ({ ...p, username: undefined })),
+                })}
               />
+              {fieldErrors.username && (
+                <p className="mt-1 text-xs text-danger" role="alert">
+                  {fieldErrors.username}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
                 Password
               </label>
-              <Input
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••"
-                {...register('password', { required: true, minLength: 8 })}
-              />
+              {/* QA latest: relative wrapper so the eye toggle sits inside
+                  the input on the right edge. */}
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  className="pr-10"
+                  {...register('password', {
+                    onChange: () => setFieldErrors((p) => ({ ...p, password: undefined })),
+                  })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-text-on-light p-1"
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                      <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                      <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                      <line x1="2" y1="2" x2="22" y2="22" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-xs text-danger" role="alert">
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between text-sm">
+              {/* QA latest: loads UNCHECKED (defaultValues.remember = false). */}
               <label className="inline-flex items-center gap-2 text-gray-700">
                 <input
                   type="checkbox"
@@ -149,11 +209,6 @@ export function LoginPage() {
                 />
                 <span>Remember me</span>
               </label>
-              {/* Self-serve password reset isn't built yet — point the
-                  link at a tel: URL + mailto chain via a small popup so a
-                  stranded rep has a real recovery path (QA: link must be
-                  clickable). Mobile clicks dial directly; desktop offers
-                  to open the system phone / mail handler. */}
               <button
                 type="button"
                 onClick={() => {
@@ -188,12 +243,10 @@ export function LoginPage() {
             Need Help? · +91 98188 00000
           </p>
 
-          {/* Demo creds are baked in for local / staging walk-throughs but
-              must NOT ship in the production HTML — that's a free credential
-              for anyone hitting the page. import.meta.env.DEV is true in
-              `pnpm dev` and false in `pnpm build`, so the line drops out
-              of the production bundle entirely (tree-shaken, not just
-              hidden). */}
+          {/* QA latest: demo credentials completely removed from production
+              HTML. The DEV-only guard keeps them available during local
+              dev (`pnpm dev`) but they are tree-shaken out of `pnpm build`
+              so they never appear on staging or production. */}
           {import.meta.env.DEV && (
             <p className="text-xs text-gray-500 mt-6 text-center">
               Demo: <code className="text-hd-orange">gurgaon-hd</code> / <code className="text-hd-orange">Dealer@123!</code>
