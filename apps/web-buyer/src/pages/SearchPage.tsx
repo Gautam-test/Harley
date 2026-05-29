@@ -156,7 +156,9 @@ export function SearchPage() {
                 cut) at a bumped size. font-headline (Condensed) was
                 visually compressing the row. */}
             <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
-              <h2 className="font-subhead font-bold tracking-subhead uppercase text-xl md:text-2xl lg:text-[28px] text-text-on-light leading-tight">
+              {/* QA latest: heading locked to exactly 24px per spec
+                  (was scaling up to 28px on lg). */}
+              <h2 className="font-subhead font-bold tracking-subhead uppercase text-[24px] text-text-on-light leading-tight">
                 H-D Certified&trade; Used Motorcycle Stocklist
               </h2>
               <div className="flex items-center gap-3">
