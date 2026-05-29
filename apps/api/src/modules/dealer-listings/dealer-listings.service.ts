@@ -8,6 +8,7 @@ import { HttpError } from '../../middleware/error-handler.js';
 import { torque } from '../torque/torque.module.js';
 import { buildListingSlug } from '../../utils/slug.js';
 import { decodeVinYear } from '../../utils/vinYear.js';
+import { emailProvider, adminListingQueuedEmail } from '../email/email.module.js';
 
 // Short random discriminator used to disambiguate slugs when two listings
 // share year + model + last-6-of-VIN. 4 hex chars = 65k possibilities,
@@ -165,6 +166,26 @@ export async function createListing(dealerId: string, input: CreateListingInput)
       logger.warn({ err: e, vin: input.vin }, 'Torque inspection-report push failed; will retry');
     }
   }
+
+  // Trigger #6: admin new-listing approval-queue alert. A fresh
+  // dealer-created listing lands in DRAFT (unless LISTINGS_AUTO_PUBLISH
+  // flips it straight to ACTIVE for demos) and needs admin review.
+  // Notify the admin inbox. Fire-and-forget — a mail failure must not
+  // fail the listing create. Skipped when no EMAIL_ADMIN is configured.
+  void (async () => {
+    const adminTo = getEnv().EMAIL_ADMIN;
+    if (!adminTo) return;
+    try {
+      const msg = adminListingQueuedEmail({
+        dealerName: dealer.name,
+        bikeLabel: `${listing.year} ${vehicle.modelName}`,
+        action: 'created',
+      });
+      await emailProvider().send({ ...msg, to: adminTo });
+    } catch (e) {
+      logger.warn({ err: e, listingId: listing.id }, 'Admin listing-queued email failed');
+    }
+  })();
 
   return listing;
 }
