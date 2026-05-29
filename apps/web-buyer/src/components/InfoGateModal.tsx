@@ -700,13 +700,14 @@ export function InfoGateModal({
     // modal — Verify and Resend look unresponsive on mobile. Bumping to
     // z-60 puts OTP unambiguously on top for both paint AND hit-testing.
     // QA: "Verify+Resend not working on Sell Your Motorcycle (works on Buy)".
-    {/* QA latest (overflow): match the seller modal's containment —
-        the overlay centres the card and the CARD itself caps at 90vh +
-        scrolls internally, so the long Buyer Enquiry form (description
-        textarea, consent checkbox, CANCEL / SEND ENQUIRY footer) never
-        spills past the viewport fold on a standard desktop. Previously
-        the whole backdrop scrolled (overflow-y-auto + my-auto) which
-        pushed the footer CTAs out of view. */}
+    //
+    // QA latest (overflow): match the seller modal's containment — the
+    // overlay centres the card and the CARD itself caps at 90vh + scrolls
+    // internally, so the long Buyer Enquiry form (description textarea,
+    // consent checkbox, CANCEL / SEND ENQUIRY footer) never spills past
+    // the viewport fold on a standard desktop. Previously the whole
+    // backdrop scrolled (overflow-y-auto + my-auto) which pushed the
+    // footer CTAs out of view.
     <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center px-3 sm:px-4 py-6">
       <div
         className={`bg-hd-white border-t-4 border-hd-orange ${
