@@ -156,7 +156,9 @@ export function MyListingsPage() {
     (l) => l.adminFeedback && (l.status === 'DRAFT' || l.status === 'REMOVED'),
   );
   const returnedDrafts = flaggedListings.filter((l) => l.status === 'DRAFT');
-  const removedWithReason = flaggedListings.filter((l) => l.status === 'REMOVED');
+  // QA latest: the removed-by-admin carousel banner was dropped, so we
+  // no longer derive a removedWithReason list here. The per-row REMOVAL
+  // REASON copy in the table reads l.adminFeedback directly.
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -207,16 +209,12 @@ export function MyListingsPage() {
         </div>
       )}
 
-      {/* Admin-removed banner — when the admin removes a listing the
-          adminFeedback column carries the removal reason. Surface those
-          rows in their own banner so the dealer learns why the bike was
-          taken down (was previously hidden — QA Bug 16).
-          QA #9: when there are multiple removed listings, switch from a
-          stacked list to a one-at-a-time carousel with prev/next so the
-          dealer doesn't have to scroll past a wall of warnings. */}
-      {removedWithReason.length > 0 && (
-        <RemovedNotificationsCarousel rows={removedWithReason} />
-      )}
+      {/* QA latest: the top "N LISTINGS REMOVED BY ADMIN" carousel
+          banner is removed per request. The per-row REMOVAL REASON
+          copy still renders inline in the Inactive/Removed table rows
+          (see the l.status === 'REMOVED' block below), so the dealer
+          can still see why each bike was taken down — just without the
+          large stacked banner at the top of the page. */}
 
       {/* Tab bar — Figma terminology with badge counts. scrollbar-hide
           suppresses the always-visible horizontal track that QA flagged
@@ -677,94 +675,6 @@ function TrashIcon() {
       <line x1="10" y1="11" x2="10" y2="17" />
       <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
-  );
-}
-
-// Carousel for admin-removed listing notifications. Renders one card at a
-// time with prev/next chevrons + a dot indicator. With a single removed
-// listing the navigation hides — this stays a plain banner until there are
-// 2+ to page through (QA #9).
-function RemovedNotificationsCarousel({ rows }: { rows: DealerListingRow[] }) {
-  const [idx, setIdx] = useState(0);
-  const total = rows.length;
-  // Defensive: parent gates render on rows.length > 0, but TypeScript can't
-  // narrow that across the function boundary, so explicit early-return.
-  if (total === 0) return null;
-  // Clamp index when the underlying list shrinks (e.g. a row gets restored).
-  const safeIdx = Math.min(idx, total - 1);
-  const current = rows[safeIdx]!;
-  const showNav = total > 1;
-  const prev = () => setIdx((i) => (i - 1 + total) % total);
-  const next = () => setIdx((i) => (i + 1) % total);
-
-  // QA latest: soft warning-yellow canvas #fffde6 per spec (was
-  // bg-warning/10). adminFeedback is the verbatim string the admin typed
-  // e.g. "REMOVAL REASON: Removed by admin" — dynamic, not hardcoded.
-  return (
-    <div className="mb-6 border border-warning/40 p-4" style={{ backgroundColor: '#fffde6' }}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-subhead uppercase tracking-subhead text-sm text-warning">
-          {total} listing{total === 1 ? '' : 's'} removed by admin
-          {showNav && (
-            <span className="ml-2 text-gray-600">
-              ({safeIdx + 1} of {total})
-            </span>
-          )}
-        </p>
-        {showNav && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={prev}
-              aria-label="Previous notification"
-              className="inline-flex items-center justify-center w-8 h-8 border border-warning/40 rounded text-warning hover:bg-warning/20 transition"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              aria-label="Next notification"
-              className="inline-flex items-center justify-center w-8 h-8 border border-warning/40 rounded text-warning hover:bg-warning/20 transition"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3 text-sm bg-hd-white border border-warning/30 rounded p-3" key={current.id}>
-        <p className="font-subhead text-text-on-light">
-          {current.year} {current.modelName} ·{' '}
-          <span className="font-mono text-xs text-gray-600">{current.vin}</span>
-        </p>
-        <p className="text-gray-700 mt-1">
-          <span className="font-subhead uppercase tracking-subhead text-[11px] text-warning">
-            REMOVAL REASON:
-          </span>{' '}
-          {current.adminFeedback}
-        </p>
-      </div>
-
-      {showNav && (
-        <div className="flex items-center justify-center gap-1.5 mt-3">
-          {rows.map((r, i) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => setIdx(i)}
-              aria-label={`Notification ${i + 1}`}
-              aria-current={i === safeIdx}
-              className={`h-1.5 rounded-full transition-all ${i === safeIdx ? 'w-6 bg-warning' : 'w-1.5 bg-warning/40 hover:bg-warning/60'}`}
-            />
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
