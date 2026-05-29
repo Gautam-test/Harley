@@ -27,15 +27,29 @@ export async function createListing(dealerId: string, input: CreateListingInput)
     throw new HttpError(403, 'VIN_NOT_ASSIGNED', 'VIN is not assigned to this dealer in Torque');
   }
 
-  // PRD §6.2.3 AC2 — duplicate VIN check, exclude REMOVED and SOLD.
+  // PRD §6.2.3 AC2 — duplicate VIN check.
   //
-  // The DB-level `vin` unique constraint covers all rows, so a dealer who
-  // tries to re-list a previously-removed or sold bike would hit a 500
-  // (P2002 on `vin`). We free up the constraint by retiring the old row's
-  // vin + slug to a sentinel value before the create — the history row
-  // stays for audit, but its identifying keys are released.
+  // A VIN is only "already registered" when a listing is genuinely
+  // holding it in a live or pending-review state — i.e. ACTIVE
+  // (buyer-visible) or DRAFT (sitting in the owning dealer's
+  // submit-for-approval queue). Every other state means the bike is
+  // NOT listed anywhere a buyer (or another dealer) would see it:
+  //   - DEACTIVATED → the dealer turned the listing OFF
+  //   - SOLD        → the sale is done
+  //   - REMOVED     → admin / dealer took it down
+  // The QA report was specifically about this: a VIN whose only record
+  // was a DEACTIVATED (turned-off) listing — often on a *different*
+  // dealer's portal — still threw "already registered" even though it
+  // wasn't listed anywhere visible. Those non-live states now fall
+  // through to the retire-and-reuse path below.
+  //
+  // The DB-level `vin` unique constraint covers ALL rows, so before the
+  // create we retire the old non-live row's vin + slug to a sentinel
+  // value — the history row stays for audit, but its identifying keys
+  // are released so the new listing can take the clean VIN.
+  const BLOCKING_STATUSES = ['ACTIVE', 'DRAFT'];
   const existing = await prisma.listing.findUnique({ where: { vin: input.vin } });
-  if (existing && existing.status !== 'REMOVED' && existing.status !== 'SOLD') {
+  if (existing && BLOCKING_STATUSES.includes(existing.status)) {
     throw new HttpError(
       409,
       'VIN_DUPLICATE',
