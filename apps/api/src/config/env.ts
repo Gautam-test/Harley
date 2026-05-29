@@ -46,7 +46,21 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('hd-cpo-assets'),
 
   SMS_PROVIDER: z.enum(['mock', 'msg91', 'twilio']).default('mock'),
-  EMAIL_PROVIDER: z.enum(['mock', 'sendgrid', 'ses']).default('mock'),
+  EMAIL_PROVIDER: z.enum(['mock', 'sendgrid', 'ses', 'smtp']).default('mock'),
+  // SMTP transport — used only when EMAIL_PROVIDER=smtp. Live credentials
+  // live ONLY in the gitignored apps/api/.env; .env.example carries
+  // placeholders. For Gmail use an App Password (not the account
+  // password) in SMTP_PASS, host smtp.gmail.com, port 587 (STARTTLS,
+  // SMTP_SECURE=false) or 465 (SSL, SMTP_SECURE=true).
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_USER: optionalString,
+  SMTP_PASS: optionalString,
+  // From-address (display name + address) on outbound mail, and the admin
+  // inbox that receives new-dealer-request + new-listing-queue alerts.
+  EMAIL_FROM: z.string().default('H-D Certified <no-reply@hd-certified.in>'),
+  EMAIL_ADMIN: optionalString,
   TORQUE_MODE: z.enum(['mock', 'live']).default('mock'),
   TORQUE_BASE_URL: optionalUrl,
   TORQUE_API_KEY: optionalString,

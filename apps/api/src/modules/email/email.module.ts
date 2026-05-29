@@ -1,8 +1,11 @@
+import nodemailer, { type Transporter } from 'nodemailer';
 import { getEnv } from '../../config/env.js';
 import { logger } from '../../config/logger.js';
 
 // Provider-agnostic email interface (PRD §4.1, Open Question 11).
-// Mock prints to logs in dev; SendGrid / SES implementations slot in here.
+// Mock prints to logs in dev; the SMTP adapter sends real mail via
+// nodemailer (Gmail / any SMTP server). SendGrid / SES could slot in
+// here too but aren't wired yet.
 
 export interface EmailMessage {
   to: string;
@@ -21,11 +24,49 @@ class MockEmailProvider implements EmailProvider {
   }
 }
 
+// Real SMTP transport. Credentials come from env (SMTP_USER / SMTP_PASS)
+// which are loaded only from the gitignored .env — never committed. The
+// transporter is created once and reused. The `from` address falls back
+// to the authenticated user when EMAIL_FROM isn't a verified sender
+// (Gmail rewrites From to the auth user anyway).
+class SmtpEmailProvider implements EmailProvider {
+  private transporter: Transporter;
+  private from: string;
+
+  constructor() {
+    const env = getEnv();
+    this.from = env.EMAIL_FROM;
+    this.transporter = nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE, // true → 465 (SSL); false → 587 (STARTTLS)
+      auth:
+        env.SMTP_USER && env.SMTP_PASS
+          ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+          : undefined,
+    });
+  }
+
+  async send(msg: EmailMessage): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.from,
+      to: msg.to,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+    });
+    logger.info({ to: msg.to, subject: msg.subject }, '✉️ [SMTP] sent');
+  }
+}
+
 let cached: EmailProvider | null = null;
 export function emailProvider(): EmailProvider {
   if (cached) return cached;
   const env = getEnv();
   switch (env.EMAIL_PROVIDER) {
+    case 'smtp':
+      cached = new SmtpEmailProvider();
+      break;
     case 'mock':
     default:
       cached = new MockEmailProvider();
