@@ -73,6 +73,10 @@ export function HeroSearch() {
   });
   const maxPrice = watch('maxPrice');
   const maxMonthly = watch('maxMonthly');
+  // QA latest: watch the pincode so the Distance dropdown can enable
+  // only once a valid 6-digit pincode is present (distance is only
+  // meaningful relative to a pincode).
+  const pinCode = watch('pinCode');
 
   const onSubmit = (v: FormValues) => {
     const params = new URLSearchParams();
@@ -261,11 +265,20 @@ export function HeroSearch() {
                 filter sitting between Pin Code and Family. bg-gray-300
                 matches the Figma swatch closely. */}
             <FieldLabel label="Distance">
-              {/* QA latest: Distance dropdown background = exact
-                  Figma swatch #C0C0C0 (silver-grey). */}
+              {/* QA latest: Distance is DISABLED by default and stays
+                  the silver-grey #C0C0C0 swatch until the buyer types a
+                  valid 6-digit pincode — distance only makes sense
+                  relative to a pincode. Once a 6-digit pincode is
+                  entered the dropdown enables and its background turns
+                  #FFFFFF. */}
               <Select
-                style={{ backgroundColor: '#C0C0C0', borderColor: '#C0C0C0' }}
-                className="text-gray-700"
+                disabled={!/^\d{6}$/.test(pinCode ?? '')}
+                style={
+                  /^\d{6}$/.test(pinCode ?? '')
+                    ? { backgroundColor: '#FFFFFF', borderColor: '#C0C0C0' }
+                    : { backgroundColor: '#C0C0C0', borderColor: '#C0C0C0' }
+                }
+                className="text-gray-700 disabled:cursor-not-allowed"
                 {...register('distance')}
               >
                 <option value="">Any distance</option>

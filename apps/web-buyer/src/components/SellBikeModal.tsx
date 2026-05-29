@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Select } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
@@ -59,6 +59,7 @@ function normalisePhone(raw: string): string {
 
 export function SellBikeModal() {
   const { open, closeSellBike } = useSellBikeStore();
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,

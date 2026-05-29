@@ -91,6 +91,9 @@ export function SearchFilters() {
   });
 
   const watchedModel = useWatch({ control, name: 'model' });
+  // QA latest: watch the pincode so the Distance dropdown enables only
+  // once a valid 6-digit pincode is present (mirrors the hero banner).
+  const watchedPincode = useWatch({ control, name: 'pincode' });
   const validModels = HD_FAMILIES.flatMap((f) => modelsForFamily(f));
   useEffect(() => {
     if (watchedModel && !validModels.includes(watchedModel)) {
@@ -297,8 +300,22 @@ export function SearchFilters() {
           <Input placeholder="Enter your pincode" inputMode="numeric" maxLength={6} {...register('pincode')} />
         </Field>
 
+        {/* QA latest: Distance is disabled by default and stays grey
+            until a valid 6-digit pincode is entered, then it enables
+            with a #FFFFFF background — mirroring the hero banner
+            behaviour (distance is only meaningful relative to a
+            pincode). */}
         <Field label="Distance">
-          <Select {...register('distance')}>
+          <Select
+            disabled={!/^\d{6}$/.test(watchedPincode ?? '')}
+            style={
+              /^\d{6}$/.test(watchedPincode ?? '')
+                ? { backgroundColor: '#FFFFFF' }
+                : { backgroundColor: '#C0C0C0', borderColor: '#C0C0C0' }
+            }
+            className="disabled:cursor-not-allowed"
+            {...register('distance')}
+          >
             {DISTANCE_OPTIONS.map((d) => (
               <option key={d.value || 'any'} value={d.value}>
                 {d.label}
