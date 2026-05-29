@@ -88,9 +88,8 @@ export function LoginPage() {
             {formState.isSubmitting ? 'Signing in…' : 'Sign In'}
           </Button>
         </form>
-        <p className="text-xs text-gray-500 mt-6">
-          Demo: <code className="text-hd-orange">admin@hd-cpo.local</code> / <code className="text-hd-orange">Admin@123!</code>
-        </p>
+        {/* QA latest: plaintext demo credentials removed from the admin
+            sign-in page entirely — an unauthorised credential leak. */}
       </div>
     </div>
   );
