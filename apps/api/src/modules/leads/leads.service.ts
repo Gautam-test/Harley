@@ -14,6 +14,7 @@ import {
   dealerLeadEmail,
   emailProvider,
   buyerEnquiryConfirmationEmail,
+  buyerDealerUpdateEmail,
 } from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
 
@@ -378,6 +379,55 @@ export async function updateLeadStatus(
   } else {
     await prisma.tradeInLead.update({ where, data: { status } });
   }
+
+  // Buyer dealer-response notification (trigger: dealer updates the lead
+  // status). Email the customer that their enquiry moved forward. Fire-
+  // and-forget — a mail failure never fails the status update. Recipient
+  // email + bike label are fetched fresh; emailEnc is decrypted here.
+  void (async () => {
+    try {
+      if (kind === 'buyer') {
+        const row = await prisma.enquiry.findFirst({
+          where,
+          select: {
+            name: true,
+            emailEnc: true,
+            listing: { select: { year: true, modelName: true } },
+          },
+        });
+        if (row) {
+          await sendBuyerEmail(
+            decryptPii(row.emailEnc),
+            buyerDealerUpdateEmail({
+              buyerName: row.name ?? 'there',
+              bikeLabel: row.listing
+                ? `${row.listing.year} ${row.listing.modelName}`
+                : 'your enquiry',
+              updateText: `Status updated to "${status}".`,
+            }),
+          );
+        }
+      } else {
+        const row = await prisma.tradeInLead.findFirst({
+          where,
+          select: { username: true, emailEnc: true, bikeModel: true },
+        });
+        if (row) {
+          await sendBuyerEmail(
+            decryptPii(row.emailEnc),
+            buyerDealerUpdateEmail({
+              buyerName: row.username ?? 'there',
+              bikeLabel: row.bikeModel ?? 'your trade-in',
+              updateText: `Status updated to "${status}".`,
+            }),
+          );
+        }
+      }
+    } catch (e) {
+      logger.error({ err: e, id, kind }, 'Buyer status-update email failed');
+    }
+  })();
+
   return { fromStatus: existing.status as LeadStatus, toStatus: status, changed: true };
 }
 
