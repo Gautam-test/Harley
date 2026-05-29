@@ -73,6 +73,11 @@ vi.mock('../email/email.module.js', () => ({
   // object — a bare vi.fn() would resolve undefined and crash the .to
   // assignment downstream.
   dealerLeadEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
+  // Email triggers #1 + #2: the leads service now also imports these
+  // buyer-facing templates, so the mock must expose them or vitest's
+  // import resolution throws 'No export defined on the mock'.
+  buyerEnquiryConfirmationEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
+  buyerDealerUpdateEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
   emailProvider: () => ({ send: vi.fn().mockResolvedValue(undefined) }),
 }));
 
