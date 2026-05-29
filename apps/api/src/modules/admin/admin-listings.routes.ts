@@ -10,7 +10,11 @@ import { validate } from '../../middleware/validate.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { audit } from '../audit/audit.service.js';
 import { torque } from '../torque/torque.module.js';
-import { emailProvider } from '../email/email.module.js';
+import {
+  emailProvider,
+  dealerListingApprovedEmail,
+  dealerListingRemovedEmail,
+} from '../email/email.module.js';
 import { normalizeCpoDocs, normalizeInspectionUrl } from '../../utils/docUrl.js';
 import { rootVin } from '../../utils/vin.js';
 
@@ -214,7 +218,7 @@ adminListingsRouter.post(
       const { id } = req.params as { id: string };
       const { reason } = req.body as { reason: string };
 
-      const before = (await prisma.listing.findUnique({
+      const beforeRaw = (await prisma.listing.findUnique({
         where: { id },
         select: {
           id: true,
@@ -222,6 +226,8 @@ adminListingsRouter.post(
           status: true,
           images: true,
           inspectionReportUrl: true,
+          year: true,
+          modelName: true,
         },
       })) as
         | {
@@ -230,9 +236,13 @@ adminListingsRouter.post(
             status: ListingStatus;
             images: string[];
             inspectionReportUrl: string | null;
+            year: number;
+            modelName: string;
           }
         | null;
-      if (!before) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+      if (!beforeRaw) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+      // Derive the human bike label once for the removal email below.
+      const before = { ...beforeRaw, bikeLabel: `${beforeRaw.year} ${beforeRaw.modelName}` };
 
       const listing = await prisma.listing.update({
         where: { id },
@@ -251,12 +261,15 @@ adminListingsRouter.post(
             select: { email: true, name: true },
           })) as { email: string; name: string } | null;
           if (!dealer) return;
-          await emailProvider().send({
-            to: dealer.email,
-            subject: 'A listing has been removed by H-D Certified',
-            html: `<p>Hi ${dealer.name},</p><p>One of your listings was removed by an H-D Certified admin with the following reason:</p><blockquote>${reason}</blockquote><p>Sign in to your dealer portal for details.</p>`,
-            text: `Listing removed by admin. Reason: ${reason}. Sign in for details.`,
+          // Trigger #5: listing rejected / removed by admin, with reason.
+          // Uses the shared branded template; the reason text comes from
+          // the admin's modal (defaults to "Removed by admin").
+          const msg = dealerListingRemovedEmail({
+            dealerName: dealer.name,
+            bikeLabel: before.bikeLabel,
+            reason: reason || 'Removed by admin',
           });
+          await emailProvider().send({ ...msg, to: dealer.email });
         } catch (e) {
           logger.warn({ err: e, dealerId: before.dealerId }, 'Listing-removed email failed');
         }
@@ -345,8 +358,8 @@ adminListingsRouter.post(
       const { id } = req.params as { id: string };
       const existing = (await prisma.listing.findUnique({
         where: { id },
-        select: { id: true, status: true, vin: true, dealerId: true },
-      })) as { id: string; status: ListingStatus; vin: string; dealerId: string } | null;
+        select: { id: true, status: true, vin: true, dealerId: true, year: true, modelName: true },
+      })) as { id: string; status: ListingStatus; vin: string; dealerId: string; year: number; modelName: string } | null;
       if (!existing) throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
       if (existing.status !== 'DRAFT') {
         throw new HttpError(409, 'INVALID_STATE', `Only DRAFT listings can be published (current: ${existing.status})`);
@@ -414,6 +427,25 @@ adminListingsRouter.post(
         ipAddress: req.ip,
         userAgent: req.get('user-agent') ?? undefined,
       });
+      // Trigger #4: listing approved → notify the dealer it's now LIVE.
+      // Fire-and-forget — a mail failure must not fail the publish.
+      void (async () => {
+        try {
+          const dealer = (await prisma.dealer.findUnique({
+            where: { id: existing.dealerId },
+            select: { email: true, name: true },
+          })) as { email: string; name: string } | null;
+          if (dealer?.email) {
+            const msg = dealerListingApprovedEmail({
+              dealerName: dealer.name,
+              bikeLabel: `${existing.year} ${existing.modelName}`,
+            });
+            await emailProvider().send({ ...msg, to: dealer.email });
+          }
+        } catch (e) {
+          logger.warn({ err: e, dealerId: existing.dealerId }, 'Listing-approved email failed');
+        }
+      })();
       res.json({ id: listing.id, status: listing.status, publishedAt: listing.publishedAt });
     } catch (e) {
       next(e);
