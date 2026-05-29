@@ -243,15 +243,10 @@ export function LoginPage() {
             Need Help? · +91 98188 00000
           </p>
 
-          {/* QA latest: demo credentials completely removed from production
-              HTML. The DEV-only guard keeps them available during local
-              dev (`pnpm dev`) but they are tree-shaken out of `pnpm build`
-              so they never appear on staging or production. */}
-          {import.meta.env.DEV && (
-            <p className="text-xs text-gray-500 mt-6 text-center">
-              Demo: <code className="text-hd-orange">gurgaon-hd</code> / <code className="text-hd-orange">Dealer@123!</code>
-            </p>
-          )}
+          {/* QA latest: demo credentials removed from the dealer sign-in
+              page entirely (was previously DEV-guarded but still present
+              in source). No plaintext credential block ships in any
+              environment now — matches the admin sign-in treatment. */}
         </div>
       </section>
     </div>
