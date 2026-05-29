@@ -21,16 +21,52 @@ interface NavItem {
   to: string;
   label: string;
   end?: boolean;
+  icon: React.ReactNode;
 }
 
+// QA latest: inline stroke icons to the left of each sidebar label.
+// Kept inline (no icon-lib dependency) — heroicons-flavoured, 18×18,
+// inherit currentColor so they pick up the active/inactive text colour.
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  className: 'w-[18px] h-[18px] shrink-0',
+  'aria-hidden': true,
+};
+const DashboardIcon = () => (
+  <svg {...iconProps}><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
+);
+const DealersIcon = () => (
+  <svg {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+);
+const ListingsIcon = () => (
+  <svg {...iconProps}><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+);
+const EnquiriesIcon = () => (
+  <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+);
+const ContentIcon = () => (
+  <svg {...iconProps}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="16" y2="17" /></svg>
+);
+const AuditIcon = () => (
+  <svg {...iconProps}><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+);
+const ProfileIcon = () => (
+  <svg {...iconProps}><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></svg>
+);
+
 const NAV: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', end: true },
-  { to: '/dealers', label: 'Dealers' },
-  { to: '/listings', label: 'Listings' },
-  { to: '/enquiries', label: 'Enquiries' },
-  { to: '/content', label: 'Content' },
-  { to: '/audit', label: 'Audit' },
-  { to: '/profile', label: 'Profile' },
+  { to: '/dashboard', label: 'Dashboard', end: true, icon: <DashboardIcon /> },
+  { to: '/dealers', label: 'Dealers', icon: <DealersIcon /> },
+  { to: '/listings', label: 'Listings', icon: <ListingsIcon /> },
+  { to: '/enquiries', label: 'Enquiries', icon: <EnquiriesIcon /> },
+  { to: '/content', label: 'Content', icon: <ContentIcon /> },
+  { to: '/audit', label: 'Audit', icon: <AuditIcon /> },
+  { to: '/profile', label: 'Profile', icon: <ProfileIcon /> },
 ];
 
 function initials(name?: string | null) {
@@ -67,7 +103,11 @@ export function AdminShell() {
   const renderNavLinks = () =>
     NAV.map((n) => (
       <NavLink key={n.to} to={n.to} end={n.end} className={navClass}>
-        <span>{n.label}</span>
+        {/* QA latest: icon to the LEFT of the label. */}
+        <span className="inline-flex items-center gap-3 min-w-0">
+          {n.icon}
+          <span className="truncate">{n.label}</span>
+        </span>
       </NavLink>
     ));
 

@@ -17,7 +17,37 @@ interface NavItem {
   label: string;
   end?: boolean;
   badgeKey?: 'pendingListings' | 'newLeads';
+  icon: React.ReactNode;
 }
+
+// QA latest: inline stroke icons to the left of each sidebar label.
+// Kept inline (no icon-lib dependency) — heroicons-flavoured, 18×18,
+// inherit currentColor so they pick up the active/inactive text colour.
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  className: 'w-[18px] h-[18px] shrink-0',
+  'aria-hidden': true,
+};
+const DashboardIcon = () => (
+  <svg {...iconProps}><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
+);
+const AddListingIcon = () => (
+  <svg {...iconProps}><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
+);
+const ListingsIcon = () => (
+  <svg {...iconProps}><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+);
+const EnquiriesIcon = () => (
+  <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+);
+const ProfileIcon = () => (
+  <svg {...iconProps}><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></svg>
+);
 
 // Sidebar order matches Figma /Dealer/Halrey dealer_page-0007.jpg, minus the
 // General Leads tab which was retired May 2026 (info-gate flow removed).
@@ -26,11 +56,11 @@ interface NavItem {
 // inside. The sidebar badge totals both kinds so the dealer still sees
 // "5 new enquiries" at a glance without opening the page.
 const NAV: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', end: true },
-  { to: '/listings/new', label: 'Add Listing' },
-  { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings' },
-  { to: '/enquiries', label: 'Enquiries', badgeKey: 'newLeads' },
-  { to: '/profile', label: 'Profile' },
+  { to: '/dashboard', label: 'Dashboard', end: true, icon: <DashboardIcon /> },
+  { to: '/listings/new', label: 'Add Listing', icon: <AddListingIcon /> },
+  { to: '/listings', label: 'My Listings', end: true, badgeKey: 'pendingListings', icon: <ListingsIcon /> },
+  { to: '/enquiries', label: 'Enquiries', badgeKey: 'newLeads', icon: <EnquiriesIcon /> },
+  { to: '/profile', label: 'Profile', icon: <ProfileIcon /> },
 ];
 
 function initials(name?: string | null) {
@@ -109,7 +139,13 @@ export function DealerShell() {
       const badge = n.badgeKey ? badges[n.badgeKey] : 0;
       return (
         <NavLink key={n.to} to={n.to} end={n.end} className={className}>
-          <span>{n.label}</span>
+          {/* QA latest: icon to the LEFT of the label. The icon + label
+              group together on the left; the badge stays pinned right
+              via the wrapper's justify-between. */}
+          <span className="inline-flex items-center gap-3 min-w-0">
+            {n.icon}
+            <span className="truncate">{n.label}</span>
+          </span>
           {badge > 0 ? (
             <span
               aria-label={`${badge} new`}

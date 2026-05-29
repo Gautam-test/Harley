@@ -451,23 +451,19 @@ export function MyListingsPage() {
                         </IconAction>
                       </>
                     )}
+                    {/* QA latest: icon-only power button — the "Turn On"
+                        text label is dropped per spec. Accessible via
+                        aria-label + native title tooltip. */}
                     {l.status === 'DEACTIVATED' && (
-                      // QA: dealers wanted an explicit, labelled "Turn On"
-                      // affordance on the Inactive tab instead of the icon-
-                      // only button (which only revealed its action on
-                      // hover). Promoted to a primary-tone pill — same
-                      // hit-target size class as the surrounding icon
-                      // buttons (h-8) but with the verb visible at rest.
                       <button
                         type="button"
                         onClick={() => turnOn.mutate(l.id)}
                         disabled={turnOn.isPending}
                         aria-label="Turn On"
                         title="Turn On — show this listing to buyers again"
-                        className="inline-flex items-center gap-1.5 h-8 px-3 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange text-[10px] font-subhead uppercase tracking-subhead hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center h-8 w-8 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                        <span>Turn On</span>
                       </button>
                     )}
                     {/* QA: Inactive tab REMOVED rows now show the same
@@ -503,10 +499,9 @@ export function MyListingsPage() {
                         disabled={restoreFromRemoved.isPending}
                         aria-label="Turn On"
                         title="Turn On — restore and re-submit for admin approval"
-                        className="inline-flex items-center gap-1.5 h-8 px-3 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange text-[10px] font-subhead uppercase tracking-subhead hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center h-8 w-8 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                        <span>Turn On</span>
                       </button>
                     )}
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
