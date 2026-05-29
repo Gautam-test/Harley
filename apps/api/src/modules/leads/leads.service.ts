@@ -10,7 +10,11 @@ import { prisma } from '../../config/prisma.js';
 import { logger } from '../../config/logger.js';
 import { encryptPii, decryptPii } from '../../utils/crypto.js';
 import { HttpError } from '../../middleware/error-handler.js';
-import { dealerLeadEmail, emailProvider } from '../email/email.module.js';
+import {
+  dealerLeadEmail,
+  emailProvider,
+  buyerEnquiryConfirmationEmail,
+} from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
 
 interface DealerForEmail {
@@ -45,6 +49,20 @@ async function notifyDealer(
   } catch (e) {
     logger.error({ err: e, dealerId }, 'Dealer email notification failed');
     return false;
+  }
+}
+
+// Fire-and-forget buyer email. Never throws — a mail failure must not
+// fail the lead create/update that triggered it. Callers `void` this.
+async function sendBuyerEmail(
+  to: string,
+  msg: { subject: string; html: string; text?: string },
+): Promise<void> {
+  if (!to) return;
+  try {
+    await emailProvider().send({ to, subject: msg.subject, html: msg.html, text: msg.text });
+  } catch (e) {
+    logger.error({ err: e, to }, 'Buyer email notification failed');
   }
 }
 
@@ -186,6 +204,17 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     `Interested in: ${listing.year} ${listing.modelName}`,
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
+  // Buyer confirmation email (trigger: buyer enquiry submission). The
+  // buyer's plaintext email is in scope here at create time. Fire-and-
+  // forget so a mail failure never fails the enquiry submit.
+  void sendBuyerEmail(
+    input.email,
+    buyerEnquiryConfirmationEmail({
+      buyerName: input.name,
+      bikeLabel: `${listing.year} ${listing.modelName}`,
+      referenceId: enquiry.id,
+    }),
+  );
   return { id: enquiry.id };
 }
 
@@ -228,6 +257,16 @@ export async function createTradeInLead(input: TradeInLeadInput) {
   });
   const ok = await notifyDealer(dealerId, 'TRADE_IN', input.username, input.city, `Bike: ${input.bikeModel}, VIN ${input.vin}`);
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
+  // Seller confirmation email — same trigger family as the buyer enquiry
+  // confirmation (customer submits an enquiry form → confirmation).
+  void sendBuyerEmail(
+    input.email,
+    buyerEnquiryConfirmationEmail({
+      buyerName: input.username,
+      bikeLabel: input.bikeModel,
+      referenceId: lead.id,
+    }),
+  );
   return { id: lead.id, dealerId };
 }
 
