@@ -382,9 +382,22 @@ adminListingsRouter.post(
       // retire-prefix) and the root VIN against every other DRAFT /
       // ACTIVE / DEACTIVATED listing.
       const rootVin = existing.vin.replace(/^(removed|sold|deactivated):[^:]+:/, '');
+      // QA data-integrity fix: the previous query compared each OTHER
+      // row's STORED vin against the clean rootVin only — so a row whose
+      // vin carries a retire-prefix (e.g. a DEACTIVATED listing stored as
+      // `deactivated:<id>:<rootVin>`) never matched, and the admin could
+      // publish a DRAFT sharing that root VIN, leaving two live-ish
+      // listings for the same physical bike. We now also match any
+      // retire-prefixed form that ENDS with `:<rootVin>`, so a
+      // DEACTIVATED (or DRAFT/ACTIVE) row holding the same root VIN in
+      // any stored shape is caught.
       const conflict = (await prisma.listing.findFirst({
         where: {
-          OR: [{ vin: existing.vin }, { vin: rootVin }],
+          OR: [
+            { vin: existing.vin },
+            { vin: rootVin },
+            { vin: { endsWith: `:${rootVin}` } },
+          ],
           id: { not: id },
           status: { in: ['DRAFT', 'ACTIVE', 'DEACTIVATED'] },
         },
