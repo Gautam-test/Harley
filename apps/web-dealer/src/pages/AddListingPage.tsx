@@ -460,10 +460,27 @@ export function AddListingPage() {
                 {fetchVin.error.code === 'VIN_NOT_ASSIGNED'
                   ? 'VIN not assigned to your dealership'
                   : fetchVin.error.code === 'TORQUE_VIN_NOT_FOUND'
-                  ? 'VIN not in Torque'
+                  ? 'VIN not found in Torque DMS'
                   : 'Could not fetch this VIN'}
               </p>
-              <p className="mt-1 leading-snug">{fetchVin.error.message}</p>
+              {/* VIN_NOT_ASSIGNED: show a friendly explanation with the exact
+                  dealer IDs from the server message so the rep knows what to
+                  tell the H-D admin. Only fires in LIVE Torque mode — in mock
+                  mode the dealer-assignment check is skipped entirely. */}
+              {fetchVin.error.code === 'VIN_NOT_ASSIGNED' ? (
+                <p className="mt-1 leading-snug">
+                  {fetchVin.error.message}
+                  <br />
+                  <span className="text-gray-600 text-[11px]">
+                    This error only appears when Torque is in live mode and the VIN's
+                    assigned dealer in the DMS doesn't match your dealership account.
+                    Ask your H-D Network Admin to update the assignment in Torque, or
+                    pick a VIN from your own inventory.
+                  </span>
+                </p>
+              ) : (
+                <p className="mt-1 leading-snug">{fetchVin.error.message}</p>
+              )}
             </div>
           )}
           {s.torque && (

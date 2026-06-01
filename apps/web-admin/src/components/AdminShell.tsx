@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth';
 
-// Mirrors the dealer-portal sidebar layout (apps/web-dealer/src/components/
-// DealerShell.tsx) per QA #6: admin nav was previously a horizontal header
-// menu, which gave inconsistent IA across the two operator portals. The
-// shells now share the same skeleton — slim white header + left sticky
-// sidebar + outlet content area — so a dealer principal who also wears the
-// admin hat doesn't have to re-learn the navigation.
-
 const itemBase =
-  'flex items-center justify-between gap-3 px-5 py-3 font-subhead uppercase tracking-subhead text-[12px] border-l-4 transition';
+  'flex items-center gap-3 px-4 py-3 font-subhead uppercase tracking-subhead text-[12px] border-l-4 transition';
 const itemInactive = 'border-transparent text-gray-700 hover:bg-gray-50 hover:text-text-on-light';
 const itemActive = 'border-hd-orange bg-hd-orange/10 text-text-on-light';
 
@@ -24,9 +17,6 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-// QA latest: inline stroke icons to the left of each sidebar label.
-// Kept inline (no icon-lib dependency) — heroicons-flavoured, 18×18,
-// inherit currentColor so they pick up the active/inactive text colour.
 const iconProps = {
   viewBox: '0 0 24 24',
   fill: 'none',
@@ -69,17 +59,39 @@ const NAV: NavItem[] = [
   { to: '/profile', label: 'Profile', icon: <ProfileIcon /> },
 ];
 
+const SIDEBAR_KEY = 'hd-cpo:admin-sidebar-collapsed';
+
 function initials(name?: string | null) {
   if (!name) return 'AD';
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() ?? '').join('') || 'AD';
 }
 
+const ChevronLeftIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+    <polyline points="15 18 9 12 15 6" />
+  </svg>
+);
+const ChevronRightIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
+
 export function AdminShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, clear } = useAuthStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_KEY) === '1'; } catch { return false; }
+  });
+
+  const toggleSidebar = () => setSidebarCollapsed((v) => {
+    const next = !v;
+    try { localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+    return next;
+  });
 
   const onSignOut = () => {
     clear();
@@ -98,23 +110,33 @@ export function AdminShell() {
 
   const adminName = user?.name ?? 'H-D Admin';
 
-  // Single source of truth for the nav list — used by the desktop sidebar
-  // AND the mobile slide-over so labels never drift between the two.
-  const renderNavLinks = () =>
+  const renderNavLinks = (collapsed: boolean) =>
     NAV.map((n) => (
-      <NavLink key={n.to} to={n.to} end={n.end} className={navClass}>
-        {/* QA latest: icon to the LEFT of the label. */}
-        <span className="inline-flex items-center gap-3 min-w-0">
+      <NavLink
+        key={n.to}
+        to={n.to}
+        end={n.end}
+        title={collapsed ? n.label : undefined}
+        className={({ isActive }) =>
+          `${itemBase} ${isActive ? itemActive : itemInactive} ${
+            collapsed ? 'justify-center px-0' : ''
+          }`
+        }
+      >
+        <span className={`inline-flex items-center min-w-0 ${collapsed ? '' : 'gap-3'}`}>
           {n.icon}
-          <span className="truncate">{n.label}</span>
+          {!collapsed && <span className="truncate">{n.label}</span>}
         </span>
       </NavLink>
     ));
 
+  const sidebarW = sidebarCollapsed ? 'w-16' : 'w-60';
+
   return (
     <div className="min-h-screen bg-surface-light text-text-on-light flex flex-col">
-      <header className="bg-hd-white border-b border-gray-200 sticky top-0 z-30">
-        <div className="px-4 sm:px-6 h-20 flex items-center justify-between gap-3 sm:gap-6">
+      {/* Fixed header */}
+      <header className="bg-hd-white border-b border-gray-200 fixed top-0 left-0 right-0 z-30 h-16">
+        <div className="px-4 sm:px-6 h-full flex items-center justify-between gap-3 sm:gap-6">
           <button
             type="button"
             aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
@@ -122,28 +144,11 @@ export function AdminShell() {
             onClick={() => setDrawerOpen((v) => !v)}
             className="md:hidden inline-flex h-10 w-10 items-center justify-center text-text-on-light hover:text-hd-orange transition shrink-0"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-6 h-6"
-              aria-hidden
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6" aria-hidden>
               {drawerOpen ? (
-                <>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </>
+                <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
               ) : (
-                <>
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </>
+                <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>
               )}
             </svg>
           </button>
@@ -152,7 +157,7 @@ export function AdminShell() {
               <img
                 src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
                 alt="H-D Certified™"
-                className="h-9 w-auto"
+                className="h-8 w-auto"
                 width={193}
                 height={36}
                 decoding="async"
@@ -162,14 +167,14 @@ export function AdminShell() {
               <span className="block font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
                 Admin Portal
               </span>
-              <span className="block font-subhead font-bold tracking-subhead text-lg uppercase text-text-on-light truncate">
+              <span className="block font-subhead font-bold tracking-subhead text-base uppercase text-text-on-light truncate">
                 Network Oversight
               </span>
             </span>
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-sm">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-sm">
               {initials(user?.name)}
             </span>
             <span className="leading-tight text-right hidden sm:block">
@@ -182,36 +187,66 @@ export function AdminShell() {
         </div>
       </header>
 
-      <div className="flex-1 flex">
-        {/* Desktop sticky sidebar — header is 80px tall, so we offset top-20
-            (5rem) and clamp the height to the remaining viewport. Internal
-            flex column lets the nav scroll while Sign Out stays pinned at
-            the bottom. */}
-        <aside className="hidden md:flex md:flex-col w-60 shrink-0 bg-hd-white border-r border-gray-200 sticky top-20 self-start h-[calc(100vh-5rem)]">
-          <nav className="flex-1 overflow-y-auto py-4">{renderNavLinks()}</nav>
-          <div className="p-4 border-t border-gray-200 shrink-0">
+      <div className="flex flex-1 pt-16">
+        {/* Desktop collapsible fixed sidebar */}
+        <aside
+          className={`hidden md:flex md:flex-col ${sidebarW} shrink-0 bg-hd-white border-r border-gray-200 fixed top-16 left-0 bottom-0 z-20 transition-[width] duration-200 overflow-hidden`}
+        >
+          <div className={`flex items-center border-b border-gray-100 h-10 shrink-0 ${sidebarCollapsed ? 'justify-center' : 'justify-end pr-2'}`}>
             <button
-              onClick={onSignOut}
-              className="w-full border border-gray-300 px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition"
+              type="button"
+              onClick={toggleSidebar}
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="inline-flex h-7 w-7 items-center justify-center text-gray-400 hover:text-hd-orange hover:bg-gray-50 transition"
             >
-              Sign Out
+              {sidebarCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
             </button>
           </div>
+
+          <nav className="flex-1 overflow-y-auto py-2">
+            {renderNavLinks(sidebarCollapsed)}
+          </nav>
+
+          {!sidebarCollapsed && (
+            <div className="p-4 border-t border-gray-200 shrink-0">
+              <button
+                onClick={onSignOut}
+                className="w-full border border-gray-300 px-4 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+          {sidebarCollapsed && (
+            <div className="p-2 border-t border-gray-200 shrink-0 flex justify-center">
+              <button
+                onClick={onSignOut}
+                title="Sign Out"
+                aria-label="Sign Out"
+                className="inline-flex h-9 w-9 items-center justify-center text-gray-500 hover:text-danger hover:bg-gray-50 transition"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" aria-hidden>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </aside>
 
-        {/* Mobile drawer — slides in from the left when the hamburger is
-            open. Backdrop covers the rest of the page and dismisses on tap.
-            Hidden above md. */}
+        {/* Mobile drawer */}
         {drawerOpen && (
           <>
             <button
               type="button"
               aria-label="Close menu backdrop"
               onClick={() => setDrawerOpen(false)}
-              className="fixed inset-0 top-20 z-30 bg-hd-black/50 md:hidden"
+              className="fixed inset-0 top-16 z-30 bg-hd-black/50 md:hidden"
             />
-            <aside className="md:hidden fixed top-20 left-0 z-40 w-72 max-w-[85vw] h-[calc(100vh-5rem)] bg-hd-white border-r border-gray-200 shadow-2xl flex flex-col">
-              <nav className="flex-1 overflow-y-auto py-4">{renderNavLinks()}</nav>
+            <aside className="md:hidden fixed top-16 left-0 z-40 w-72 max-w-[85vw] h-[calc(100vh-4rem)] bg-hd-white border-r border-gray-200 shadow-2xl flex flex-col">
+              <nav className="flex-1 overflow-y-auto py-4">{renderNavLinks(false)}</nav>
               <div className="p-4 border-t border-gray-200 shrink-0">
                 <button
                   onClick={onSignOut}
@@ -224,7 +259,7 @@ export function AdminShell() {
           </>
         )}
 
-        <main className="flex-1 min-w-0">
+        <main className={`flex-1 min-w-0 transition-[margin] duration-200 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-60'}`}>
           <Outlet />
         </main>
       </div>
