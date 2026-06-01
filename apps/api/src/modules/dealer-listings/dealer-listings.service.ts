@@ -335,6 +335,39 @@ export async function setActiveToggle(dealerId: string, listingId: string, on: b
   if (!on && listing.status !== 'ACTIVE') {
     throw new HttpError(409, 'INVALID_STATE', 'Only active listings can be turned off');
   }
+
+  // QA Turn-On VIN guard: when bringing DEACTIVATED → ACTIVE, replay
+  // the conflict query the publish + restore paths run. Without it a
+  // dealer can reactivate a previously-deactivated listing whose VIN
+  // is now held by another DRAFT or ACTIVE listing (same dealer or
+  // another), producing two live-ish rows for the same physical bike.
+  // Match the root VIN AND any retire-prefixed form (e.g.
+  // `removed:<id>:<root>`) so prior-prefixed rows are caught too.
+  // Error code + copy mirror createListing's so client + admin paths
+  // see the identical message verbatim. Turn-Off skips this branch.
+  if (on) {
+    const originalVin = rootVin(listing.vin);
+    const conflict = await prisma.listing.findFirst({
+      where: {
+        OR: [
+          { vin: listing.vin },
+          { vin: originalVin },
+          { vin: { endsWith: `:${originalVin}` } },
+        ],
+        id: { not: listingId },
+        status: { in: ['DRAFT', 'ACTIVE'] },
+      },
+      select: { id: true, status: true },
+    });
+    if (conflict) {
+      throw new HttpError(
+        409,
+        'VIN_DUPLICATE',
+        'A listing for this VIN is already live or pending. Mark the previous one Sold or Removed before re-listing.',
+      );
+    }
+  }
+
   return prisma.listing.update({ where: { id: listingId }, data: { status: next } });
 }
 
