@@ -114,12 +114,30 @@ async function flagNotificationFailed(
 // uses — keeps the contract identical between "is the buyer allowed to
 // enquire?" and "should the create call accept this submit?".
 //
-// "Terminal" = the dealer marked the lead Not Interested. That includes
-// the legacy DEAD / LOST (still valid on every kind), and — once the
-// buyer-pipeline-v2 branch merges — NOT_INTERESTED. Until then we list
-// only the values present in this branch's leadStatus enum so the
-// notIn query stays type-safe.
-const TERMINAL_LEAD_STATUSES = ['DEAD', 'LOST'] as const;
+// "Terminal" = the dealer has closed this lead — the buyer may re-enquire.
+//
+// DEAD / LOST  — dealer marked "Not Interested" (the primary closing action
+//                available from every stage as an alt-terminal escape hatch).
+// CLOSED       — "Booking Closed" (dealer moved lead to final buyer pipeline
+//                stage, booking is confirmed; the enquiry is definitively done).
+// SUCCESS      — "Delivered" (bike handed over, lead fully completed).
+// CONVERTED    — legacy terminal used before the 6-stage buyer pipeline; kept
+//                so historical rows still release the gate.
+// TRADE_IN_FINALIZED — terminal stage of the seller/trade-in pipeline.
+//
+// Bug fixed: previously only DEAD/LOST were listed, so a lead marked
+// CLOSED, SUCCESS, or TRADE_IN_FINALIZED still blocked the buyer from
+// submitting a fresh enquiry even though the dealer had definitively
+// finished it. The user requirement "buyer cannot re-enquire until dealer
+// marks it closed" now works correctly across every closing action.
+const TERMINAL_LEAD_STATUSES = [
+  'DEAD',
+  'LOST',
+  'CLOSED',
+  'SUCCESS',
+  'CONVERTED',
+  'TRADE_IN_FINALIZED',
+] as const;
 
 async function findOpenBuyerEnquiryForPhone(
   listingId: string,

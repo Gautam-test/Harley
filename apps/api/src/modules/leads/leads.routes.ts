@@ -105,9 +105,11 @@ publicLeadsRouter.get(
       const rows = await prisma.enquiry.findMany({
         where: {
           listingId: listing.id,
-          // DEAD / LOST = "Not Interested" — the buyer can enquire afresh
-          // once the dealer marks the lead that way.
-          status: { notIn: ['DEAD', 'LOST'] },
+          // A lead is "open" only while it is still active in the pipeline.
+          // Once the dealer moves it to any terminal status the buyer is
+          // free to enquire again. Must match TERMINAL_LEAD_STATUSES in
+          // leads.service.ts — both lists must stay in sync.
+          status: { notIn: ['DEAD', 'LOST', 'CLOSED', 'SUCCESS', 'CONVERTED', 'TRADE_IN_FINALIZED'] },
         },
         orderBy: { createdAt: 'desc' },
         select: { id: true, status: true, phoneEnc: true },
