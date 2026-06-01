@@ -243,21 +243,66 @@ function CreateDealerModal({
     <Modal onClose={onClose} title="Add Dealer">
       <form
         onSubmit={handleSubmit((v) => create.mutate(v))}
-        className="space-y-3"
+        className="space-y-4"
       >
-        <Input placeholder="Username (lowercase, no spaces)" {...register('username', { required: true })} />
-        <Input placeholder="Dealer name" {...register('name', { required: true })} />
-        <Input type="email" placeholder="Email" {...register('email', { required: true })} />
-        <Input placeholder="Phone (+91XXXXXXXXXX)" {...register('phone', { required: true })} />
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Username <span className="text-danger">*</span>
+          </span>
+          <Input placeholder="lowercase, no spaces" {...register('username', { required: true })} />
+        </label>
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Dealer Name <span className="text-danger">*</span>
+          </span>
+          <Input placeholder="e.g. Capital Harley-Davidson Gurgaon" {...register('name', { required: true })} />
+        </label>
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Email <span className="text-danger">*</span>
+          </span>
+          <Input type="email" placeholder="dealer@example.com" {...register('email', { required: true })} />
+        </label>
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Phone <span className="text-danger">*</span>
+          </span>
+          <Input placeholder="+91XXXXXXXXXX" {...register('phone', { required: true })} />
+        </label>
         <div className="grid grid-cols-2 gap-3">
-          <Input placeholder="City" {...register('city', { required: true })} />
-          <Input placeholder="Pincode" maxLength={6} {...register('pincode', { required: true })} />
+          <label className="block">
+            <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+              City <span className="text-danger">*</span>
+            </span>
+            <Input placeholder="Gurgaon" {...register('city', { required: true })} />
+          </label>
+          <label className="block">
+            <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+              Pincode <span className="text-danger">*</span>
+            </span>
+            <Input placeholder="122001" maxLength={6} {...register('pincode', { required: true })} />
+          </label>
         </div>
-        <Input placeholder="State (optional)" {...register('state')} />
-        <Input placeholder="Address (optional)" {...register('address')} />
-        <Input placeholder="Torque dealer ID (optional)" {...register('torqueDealerId')} />
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            State <span className="text-gray-400 normal-case">(optional)</span>
+          </span>
+          <Input placeholder="Haryana" {...register('state')} />
+        </label>
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Address <span className="text-gray-400 normal-case">(optional)</span>
+          </span>
+          <Input placeholder="Plot 12, Sector 18, Gurgaon" {...register('address')} />
+        </label>
+        <label className="block">
+          <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
+            Torque Dealer ID <span className="text-gray-400 normal-case">(optional)</span>
+          </span>
+          <Input placeholder="TQ-DEALER-0001" {...register('torqueDealerId')} />
+        </label>
         {error && <div className="text-danger text-sm">{error}</div>}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
           <Button type="submit" disabled={!formState.isValid || create.isPending}>
             {create.isPending ? 'Creating…' : 'Create'}
