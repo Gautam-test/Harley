@@ -184,6 +184,10 @@ export function MyListingsPage() {
   // feedback immediately, but can collapse it to see the listings table
   // without scrolling past the cards.
   const [attentionOpen, setAttentionOpen] = useState(true);
+  // Slider index for the attention carousel — one card visible at a time.
+  const [attentionIdx, setAttentionIdx] = useState(0);
+  // Clamp idx whenever the list changes (e.g. dealer fixes one listing).
+  const safeIdx = Math.min(attentionIdx, Math.max(0, returnedDrafts.length - 1));
   // QA latest: the removed-by-admin carousel banner was dropped, so we
   // no longer derive a removedWithReason list here. The per-row REMOVAL
   // REASON copy in the table reads l.adminFeedback directly.
@@ -255,34 +259,91 @@ export function MyListingsPage() {
             </svg>
           </button>
 
-          {/* Collapsible card list */}
-          {attentionOpen && (
-            <div className="px-4 pb-4 space-y-3">
-              {returnedDrafts.map((l) => (
-                <div
-                  key={l.id}
-                  className="text-sm bg-hd-white border border-danger/30 rounded p-3 flex flex-wrap gap-3 items-start justify-between"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="font-subhead text-text-on-light">
-                      {l.year} {l.modelName} ·{' '}
-                      <span className="font-mono text-xs text-gray-600">{l.vin}</span>
-                    </p>
-                    <p className="text-gray-700 mt-1">
-                      <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
-                        Admin feedback:
-                      </span>{' '}
-                      {l.adminFeedback}
-                    </p>
+          {/* Collapsible slider — one card visible at a time */}
+          {attentionOpen && returnedDrafts[safeIdx] && (
+            <div className="px-4 pb-4">
+              {/* Single card */}
+              {(() => {
+                const l = returnedDrafts[safeIdx]!;
+                // adminFeedback may contain a newline-separated restoration
+                // note appended by the admin restore route. Split so we can
+                // render each part as a distinct line rather than one long
+                // run-on string.
+                const feedbackParts = (l.adminFeedback ?? '')
+                  .split(/\n+/)
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                return (
+                  <div className="text-sm bg-hd-white border border-danger/30 p-3 flex flex-wrap gap-3 items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-subhead text-text-on-light">
+                        {l.year} {l.modelName} ·{' '}
+                        <span className="font-mono text-xs text-gray-600">{l.vin}</span>
+                      </p>
+                      <div className="mt-1 space-y-0.5">
+                        {feedbackParts.map((part, i) => (
+                          <p key={i} className="text-gray-700">
+                            {i === 0 && (
+                              <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger mr-1">
+                                Admin feedback:
+                              </span>
+                            )}
+                            {part}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <Link
+                      to={`/listings/${l.id}/edit`}
+                      className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                    >
+                      Resume Edit →
+                    </Link>
                   </div>
-                  <Link
-                    to={`/listings/${l.id}/edit`}
-                    className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                );
+              })()}
+
+              {/* Slider nav — prev / counter / next */}
+              {returnedDrafts.length > 1 && (
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setAttentionIdx((i) => Math.max(0, i - 1))}
+                    disabled={safeIdx === 0}
+                    aria-label="Previous listing"
+                    className="inline-flex items-center gap-1 font-subhead uppercase tracking-subhead text-[11px] text-danger disabled:opacity-30 hover:underline disabled:no-underline transition"
                   >
-                    Resume Edit →
-                  </Link>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden><polyline points="15 18 9 12 15 6" /></svg>
+                    Prev
+                  </button>
+
+                  {/* Dot indicators */}
+                  <div className="flex items-center gap-1.5">
+                    {returnedDrafts.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setAttentionIdx(i)}
+                        aria-label={`Go to listing ${i + 1}`}
+                        className={`w-2 h-2 rounded-full transition ${
+                          i === safeIdx ? 'bg-danger' : 'bg-danger/30 hover:bg-danger/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setAttentionIdx((i) => Math.min(returnedDrafts.length - 1, i + 1))}
+                    disabled={safeIdx === returnedDrafts.length - 1}
+                    aria-label="Next listing"
+                    className="inline-flex items-center gap-1 font-subhead uppercase tracking-subhead text-[11px] text-danger disabled:opacity-30 hover:underline disabled:no-underline transition"
+                  >
+                    Next
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden><polyline points="9 18 15 12 9 6" /></svg>
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
