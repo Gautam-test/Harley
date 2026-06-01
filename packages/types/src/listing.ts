@@ -120,6 +120,14 @@ export const createListingInput = z.object({
   images: z.array(z.string()).min(5).max(20),
   inspectionReportUrl: z.string().nullable(),
   certificationStatus: certStatus,
+  // Dealer-internal pricing fields — stored on the listing but never
+  // surfaced on the buyer portal (not included in the public listing
+  // response schema). All four are optional so existing listings and
+  // in-progress wizard sessions stay valid.
+  purchasePrice: z.number().positive().optional().nullable(),
+  refurbishmentPrice: z.number().positive().optional().nullable(),
+  ageingDays: z.number().int().min(0).max(3650).optional().nullable(),
+  finalSellingPrice: z.number().positive().optional().nullable(),
   // AS-IS listings carry no CPO docs — wizard sends `null`. The earlier
   // schema rejected null with "Expected object, received null" because
   // .optional() only accepts an object OR undefined. .nullable() lets
@@ -164,6 +172,11 @@ export const updateListingInput = z.object({
   certificationStatus: certStatus.optional(),
   inspectionReportUrl: z.string().nullable().optional(),
   cpoDocs: z.record(z.string()).nullable().optional(),
+  // Dealer-internal pricing fields (same as create — all optional on edit).
+  purchasePrice: z.number().positive().optional().nullable(),
+  refurbishmentPrice: z.number().positive().optional().nullable(),
+  ageingDays: z.number().int().min(0).max(3650).optional().nullable(),
+  finalSellingPrice: z.number().positive().optional().nullable(),
 });
 export type UpdateListingInput = z.infer<typeof updateListingInput>;
 

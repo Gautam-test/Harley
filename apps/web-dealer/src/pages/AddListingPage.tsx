@@ -19,6 +19,10 @@ interface ExistingListing {
   owners: number | null;
   description: string;
   images: string[];
+  purchasePrice: number | null;
+  refurbishmentPrice: number | null;
+  ageingDays: number | null;
+  finalSellingPrice: number | null;
   inspectionReportUrl: string | null;
   certificationStatus: 'CPO' | 'AS_IS';
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
@@ -103,6 +107,11 @@ interface FormState {
   owners: string;
   description: string;
   images: string[];
+  // Dealer-internal pricing — not shown to buyers.
+  purchasePrice: string;
+  refurbishmentPrice: string;
+  ageingDays: string;
+  finalSellingPrice: string;
   inspectionUrl: string;
   inspectionMeta: { originalName: string; size: number } | null;
   certificationStatus: 'CPO' | 'AS_IS';
@@ -116,6 +125,10 @@ const initial: FormState = {
   owners: '1',
   description: '',
   images: [],
+  purchasePrice: '',
+  refurbishmentPrice: '',
+  ageingDays: '',
+  finalSellingPrice: '',
   inspectionUrl: '',
   inspectionMeta: null,
   certificationStatus: 'CPO',
@@ -173,6 +186,10 @@ export function AddListingPage() {
       owners: String(e.owners ?? 1),
       description: e.description,
       images: e.images,
+      purchasePrice: e.purchasePrice != null ? String(e.purchasePrice) : '',
+      refurbishmentPrice: e.refurbishmentPrice != null ? String(e.refurbishmentPrice) : '',
+      ageingDays: e.ageingDays != null ? String(e.ageingDays) : '',
+      finalSellingPrice: e.finalSellingPrice != null ? String(e.finalSellingPrice) : '',
       inspectionUrl: e.inspectionReportUrl ?? '',
       inspectionMeta: null,
       certificationStatus: e.certificationStatus,
@@ -272,6 +289,12 @@ export function AddListingPage() {
               s.certificationStatus === 'CPO' ? s.inspectionUrl || null : null,
             cpoDocs:
               s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+            // Dealer-internal pricing — send null when blank so the server
+            // stores NULL (not 0) and old listings don't get phantom zeros.
+            purchasePrice: s.purchasePrice ? Number(s.purchasePrice) : null,
+            refurbishmentPrice: s.refurbishmentPrice ? Number(s.refurbishmentPrice) : null,
+            ageingDays: s.ageingDays ? Number(s.ageingDays) : null,
+            finalSellingPrice: s.finalSellingPrice ? Number(s.finalSellingPrice) : null,
           }),
         });
       }
@@ -290,6 +313,10 @@ export function AddListingPage() {
           certificationStatus: s.certificationStatus,
           cpoDocs:
             s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+          purchasePrice: s.purchasePrice ? Number(s.purchasePrice) : null,
+          refurbishmentPrice: s.refurbishmentPrice ? Number(s.refurbishmentPrice) : null,
+          ageingDays: s.ageingDays ? Number(s.ageingDays) : null,
+          finalSellingPrice: s.finalSellingPrice ? Number(s.finalSellingPrice) : null,
         }),
       });
     },
@@ -520,6 +547,63 @@ export function AddListingPage() {
               disabled={torqueLocked}
             />
           </Field>
+
+          {/* ── Dealer-internal pricing fields ────────────────────────────
+              These four figures are for dealership records only — they are
+              stored on the listing row but never surfaced on the buyer
+              portal or in any public API response. All four are optional
+              so the dealer can submit without filling them. */}
+          <div className="mt-2 pt-4 border-t border-gray-100">
+            <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500 mb-3">
+              Internal Pricing (not shown to buyers)
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Purchase Price (₹)">
+                <Input
+                  inputMode="numeric"
+                  placeholder="e.g. 14,00,000"
+                  value={s.purchasePrice}
+                  onChange={(e) =>
+                    update({ purchasePrice: e.target.value.replace(/[^0-9]/g, '') })
+                  }
+                  disabled={torqueLocked}
+                />
+              </Field>
+              <Field label="Refurbishment Price (₹)">
+                <Input
+                  inputMode="numeric"
+                  placeholder="e.g. 55,000"
+                  value={s.refurbishmentPrice}
+                  onChange={(e) =>
+                    update({ refurbishmentPrice: e.target.value.replace(/[^0-9]/g, '') })
+                  }
+                  disabled={torqueLocked}
+                />
+              </Field>
+              <Field label="Ageing Days">
+                <Input
+                  inputMode="numeric"
+                  placeholder="e.g. 45"
+                  value={s.ageingDays}
+                  onChange={(e) =>
+                    update({ ageingDays: e.target.value.replace(/[^0-9]/g, '') })
+                  }
+                  disabled={torqueLocked}
+                />
+              </Field>
+              <Field label="Final Selling Price (₹)">
+                <Input
+                  inputMode="numeric"
+                  placeholder="e.g. 16,50,000"
+                  value={s.finalSellingPrice}
+                  onChange={(e) =>
+                    update({ finalSellingPrice: e.target.value.replace(/[^0-9]/g, '') })
+                  }
+                  disabled={torqueLocked}
+                />
+              </Field>
+            </div>
+          </div>
         </Section>
 
         {/* ─── STEP 3 — INSPECTION & CERTIFICATION ─────────────────────── */}

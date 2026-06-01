@@ -131,6 +131,16 @@ export async function createListing(dealerId: string, input: CreateListingInput)
     certificationStatus: input.certificationStatus,
     inspectionReportUrl: input.inspectionReportUrl,
     cpoDocs: input.cpoDocs ?? undefined,
+    // Dealer-internal pricing fields — stored on the row, never returned
+    // to the buyer portal. Cast to unknown for the same reason as owners
+    // above: Prisma client types haven't been regenerated yet but the
+    // columns exist in the DB after migration 20260601000000.
+    ...({
+      purchasePrice: input.purchasePrice ?? null,
+      refurbishmentPrice: input.refurbishmentPrice ?? null,
+      ageingDays: input.ageingDays ?? null,
+      finalSellingPrice: input.finalSellingPrice ?? null,
+    } as Record<string, unknown>),
     status: autoPublish ? ('ACTIVE' as const) : ('DRAFT' as const),
     publishedAt: autoPublish ? now : null,
   });

@@ -80,6 +80,13 @@ model Listing {
   /// buyer listing detail spec grid. Optional so legacy rows pre-migration
   /// stay valid.
   owners              Int?
+  /// Dealer-internal pricing fields — not surfaced on the buyer portal.
+  /// All four are optional so existing listings stay valid without migration
+  /// defaults. Stored as Decimal(12,2) to match the main price column.
+  purchasePrice       Decimal?      @db.Decimal(12, 2)
+  refurbishmentPrice  Decimal?      @db.Decimal(12, 2)
+  ageingDays          Int?
+  finalSellingPrice   Decimal?      @db.Decimal(12, 2)
   certificationStatus CertStatus
   inspectionReportUrl String?
   cpoDocs             Json?
