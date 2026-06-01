@@ -1,0 +1,76 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# H-D CPO — GitLab CI/CD Pipeline
+#
+# Trigger: every push to `main` branch
+#
+# What it does automatically:
+#   1. SSH into the demo server
+#   2. git pull latest code
+#   3. pnpm install
+#   4. prisma migrate deploy  ← DB migrations auto-run
+#   5. Build API + 3 SPAs
+#   6. pm2 reload (zero downtime restart)
+#
+# ONE-TIME SETUP in GitLab (Settings → CI/CD → Variables):
+#   SSH_PRIVATE_KEY   → Private key to SSH into demo server (type: File)
+#   DEPLOY_SERVER     → e.g. root@harleydavidson.ciadmin.in
+#   DEPLOY_PATH       → e.g. /var/www/hd-cpo-marketplace
+# ─────────────────────────────────────────────────────────────────────────────
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  only:
+    - main
+  image: alpine:latest
+  before_script:
+    # Install SSH client
+    - apk add --no-cache openssh-client bash
+    # Load SSH private key
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    # Trust the server (skip host key prompt)
+    - mkdir -p ~/.ssh
+    - ssh-keyscan -H "$DEPLOY_SERVER_HOST" >> ~/.ssh/known_hosts
+    - chmod 600 ~/.ssh/known_hosts
+  script:
+    - |
+      ssh "$DEPLOY_SERVER_USER@$DEPLOY_SERVER_HOST" bash << 'REMOTE'
+        set -e
+        cd $DEPLOY_PATH
+
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "  H-D CPO Auto Deploy — $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+        echo "→ Pulling latest code..."
+        git pull origin main
+
+        echo "→ Installing dependencies..."
+        pnpm install --frozen-lockfile
+
+        echo "→ Running DB migrations..."
+        pnpm --filter @hd-cpo/api prisma:deploy
+
+        echo "→ Building API..."
+        pnpm --filter @hd-cpo/api build
+
+        echo "→ Building buyer portal..."
+        pnpm --filter @hd-cpo/web-buyer build
+
+        echo "→ Building dealer portal..."
+        pnpm --filter @hd-cpo/web-dealer build
+
+        echo "→ Building admin portal..."
+        pnpm --filter @hd-cpo/web-admin build
+
+        echo "→ Reloading PM2..."
+        pm2 reload ecosystem.config.cjs --update-env
+
+        echo "✅ Deploy complete!"
+      REMOTE
+  environment:
+    name: production
+    url: https://harleydavidson.ciadmin.in
