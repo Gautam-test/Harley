@@ -46,10 +46,6 @@ export function SearchPage() {
   const currentPage = Number(params.get('page') ?? '1');
   const sort = params.get('sort') ?? 'newest';
 
-  // Surface a "Filters" floating button once the user has scrolled past the
-  // filter column — pressing it scrolls them back to it. Avoids the cramped
-  // inner-scroll sidebar UX while keeping filters reachable on long pages.
-  const [showFiltersFab, setShowFiltersFab] = useState(false);
   // Mobile slide-over drawer state. Below lg the sidebar is hidden from
   // the inline layout and lives in this drawer instead so phone/tablet
   // users can still filter.
@@ -63,18 +59,6 @@ export function SearchPage() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  useEffect(() => {
-    const onScroll = () => {
-      const aside = document.getElementById('search-filters');
-      if (!aside) return;
-      const rect = aside.getBoundingClientRect();
-      setShowFiltersFab(rect.bottom < 80);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   const { data, isLoading, isError } = useQuery({
     queryKey: ['listings', queryString],
     queryFn: () => api<SearchResponse>(`/listings?${queryString}`),
@@ -308,35 +292,6 @@ export function SearchPage() {
         </div>
       )}
 
-      {/* Floating "Back to filters" button — appears only when filters are
-          off-screen above (desktop only — mobile uses the drawer above). */}
-      {showFiltersFab && (
-        <button
-          type="button"
-          onClick={() => {
-            const el = document.getElementById('search-filters');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
-          aria-label="Back to filters"
-          className="hidden lg:inline-flex fixed bottom-6 right-6 z-40 items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-3 rounded-full shadow-2xl hover:brightness-110 transition"
-        >
-          <svg
-            className="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="7" y1="12" x2="17" y2="12" />
-            <line x1="10" y1="18" x2="14" y2="18" />
-          </svg>
-          <span>Filters</span>
-        </button>
-      )}
     </>
   );
 }
