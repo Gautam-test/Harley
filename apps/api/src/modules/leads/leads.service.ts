@@ -161,23 +161,57 @@ async function findOpenBuyerEnquiryForPhone(
   return null;
 }
 
-async function findOpenTradeInLeadForPhone(
-  phone: string,
-): Promise<{ id: string } | null> {
-  const rows = (await prisma.tradeInLead.findMany({
-    where: {
-      status: { notIn: [...TERMINAL_LEAD_STATUSES] },
-    },
-    select: { id: true, phoneEnc: true },
-  })) as Array<{ id: string; phoneEnc: string }>;
-  for (const r of rows) {
-    try {
-      if (decryptPii(r.phoneEnc) === phone) return { id: r.id };
-    } catch {
-      // see comment in findOpenBuyerEnquiryForPhone
-    }
+// VIN-based duplicate gate for seller / trade-in leads.
+//
+// Rules (from PRD requirement):
+//
+//   1. OPEN LEAD EXISTS for this VIN → always blocked, regardless of phone.
+//      A seller cannot raise a second enquiry for the same bike while the
+//      first lead is still being worked by the dealer.
+//
+//   2. LEAD IS CLOSED (terminal) but VIN is still listed on the marketplace
+//      in a non-sold status (ACTIVE / DRAFT / DEACTIVATED) → still blocked.
+//      The bike hasn't been sold yet, so a duplicate enquiry would create a
+//      ghost lead for stock that is already in-flight.
+//
+//   3. LEAD IS CLOSED and VIN is SOLD or REMOVED from platform (or never
+//      listed at all) → allowed. The previous deal is fully done; the seller
+//      may enquire again (e.g. they've acquired the bike back, or the
+//      platform listed a different unit with the same VIN after a re-list).
+//
+// Returns a reason string when blocked, null when allowed.
+async function checkTradeInVinGate(
+  vin: string,
+): Promise<'OPEN_LEAD' | 'VIN_STILL_LISTED' | null> {
+  // Step 1: any open (non-terminal) lead for this VIN?
+  const openLead = (await prisma.tradeInLead.findFirst({
+    where: { vin, status: { notIn: [...TERMINAL_LEAD_STATUSES] } },
+    select: { id: true },
+  })) as { id: string } | null;
+  if (openLead) return 'OPEN_LEAD';
+
+  // Step 2: VIN had a lead that is now closed — is the bike still listed
+  // on the platform in a non-sold status?
+  const closedLeadExists = (await prisma.tradeInLead.findFirst({
+    where: { vin, status: { in: [...TERMINAL_LEAD_STATUSES] } },
+    select: { id: true },
+  })) as { id: string } | null;
+
+  if (closedLeadExists) {
+    // Check if listing for this VIN is still live / pending / deactivated
+    // (i.e. not SOLD / REMOVED). We match on the root VIN so retired-prefix
+    // rows (deactivated:cmid:VIN) don't interfere.
+    const activeOnPlatform = (await prisma.listing.findFirst({
+      where: {
+        vin: { endsWith: vin },
+        status: { in: ['ACTIVE', 'DRAFT', 'DEACTIVATED'] },
+      },
+      select: { id: true },
+    })) as { id: true } | null;
+    if (activeOnPlatform) return 'VIN_STILL_LISTED';
   }
-  return null;
+
+  return null; // allowed
 }
 
 // ─── Buyer enquiry on a specific listing (PRD §6.2.7) ─────────────────────
@@ -252,15 +286,23 @@ export async function createTradeInLead(input: TradeInLeadInput) {
   }
   if (!dealerId) dealerId = await nearestActiveDealer();
 
-  // Duplicate-by-mobile gate: trade-in dedup is global by phone (a
-  // seller can only have one open seller-enquiry at a time, regardless
-  // of which bike). Cleared once the dealer marks Not Interested.
-  const existing = await findOpenTradeInLeadForPhone(input.phone);
-  if (existing) {
+  // VIN-based duplicate gate (replaces the old phone-based global check).
+  // A seller cannot raise a second enquiry for the same bike until:
+  //   a) the previous lead is closed by the dealer, AND
+  //   b) the bike is SOLD / REMOVED from the platform (not just listed).
+  const vinBlock = await checkTradeInVinGate(input.vin);
+  if (vinBlock === 'OPEN_LEAD') {
     throw new HttpError(
       409,
       'SELLER_ENQUIRY_ALREADY_OPEN',
-      'Enquiry form already filled with this number. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
+      'An enquiry for this bike is already open. The dealer will be in touch — you can submit a fresh enquiry once they close this one.',
+    );
+  }
+  if (vinBlock === 'VIN_STILL_LISTED') {
+    throw new HttpError(
+      409,
+      'SELLER_VIN_STILL_LISTED',
+      'This bike already has a closed enquiry and is still listed on the platform. A new enquiry can only be raised once the bike is marked Sold or Removed.',
     );
   }
   const lead = await prisma.tradeInLead.create({
@@ -628,15 +670,23 @@ export async function dealerCreateTradeInLead(
   dealerId: string,
   input: DealerTradeInLeadInput,
 ) {
-  // Same duplicate-by-mobile gate as the customer trade-in path. Global
-  // dedup by phone — one open seller-enquiry per number across the
-  // whole system until the dealer closes it as Not Interested.
-  const existing = await findOpenTradeInLeadForPhone(input.phone);
-  if (existing) {
+  // VIN-based duplicate gate — same rules as the customer-portal path.
+  // Dealer logging on behalf of seller cannot create a second lead for
+  // the same bike until: (a) previous lead is closed AND (b) bike is
+  // SOLD / REMOVED from the platform.
+  const vinBlock = await checkTradeInVinGate(input.vin);
+  if (vinBlock === 'OPEN_LEAD') {
     throw new HttpError(
       409,
       'SELLER_ENQUIRY_ALREADY_OPEN',
-      'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+      'An enquiry for this bike is already open. Continue working the existing lead, or mark it closed to log a fresh one.',
+    );
+  }
+  if (vinBlock === 'VIN_STILL_LISTED') {
+    throw new HttpError(
+      409,
+      'SELLER_VIN_STILL_LISTED',
+      'This bike already has a closed enquiry and is still listed on the platform. A new enquiry can only be raised once the bike is marked Sold or Removed.',
     );
   }
   const lead = (await prisma.tradeInLead.create({

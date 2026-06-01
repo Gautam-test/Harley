@@ -899,12 +899,14 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (e) => {
-      if (
-        e instanceof ApiError &&
-        (e.code === 'SELLER_ENQUIRY_ALREADY_OPEN' || e.code === 'ENQUIRY_ALREADY_OPEN')
-      ) {
+      if (e instanceof ApiError && e.code === 'SELLER_ENQUIRY_ALREADY_OPEN') {
         setDupError(
-          'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+          'An enquiry for this bike (VIN) is already open. Continue working the existing lead, or mark it closed to log a fresh one.',
+        );
+        setError(null);
+      } else if (e instanceof ApiError && e.code === 'SELLER_VIN_STILL_LISTED') {
+        setDupError(
+          'This bike already has a closed enquiry and is still listed on the platform. A new enquiry can only be raised once the bike is marked Sold or Removed.',
         );
         setError(null);
       } else {
