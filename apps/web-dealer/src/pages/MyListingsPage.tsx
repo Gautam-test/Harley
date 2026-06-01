@@ -180,6 +180,10 @@ export function MyListingsPage() {
     (l) => l.adminFeedback && (l.status === 'DRAFT' || l.status === 'REMOVED'),
   );
   const returnedDrafts = flaggedListings.filter((l) => l.status === 'DRAFT');
+  // Collapsible attention banner — starts open so the dealer sees the
+  // feedback immediately, but can collapse it to see the listings table
+  // without scrolling past the cards.
+  const [attentionOpen, setAttentionOpen] = useState(true);
   // QA latest: the removed-by-admin carousel banner was dropped, so we
   // no longer derive a removedWithReason list here. The per-row REMOVAL
   // REASON copy in the table reads l.adminFeedback directly.
@@ -220,41 +224,67 @@ export function MyListingsPage() {
         </div>
       )}
 
-      {/* Admin feedback banner — surfaces drafts the admin returned for fixes */}
+      {/* Admin feedback banner — collapsible so the dealer can hide the
+          cards and see the listings table without scrolling. Starts open
+          so feedback is immediately visible on page load. */}
       {returnedDrafts.length > 0 && (
-        <div className="mb-6 bg-danger/10 border border-danger/40 p-4 space-y-3">
-          <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
-            {returnedDrafts.length} listing{returnedDrafts.length === 1 ? '' : 's'} need
-            {returnedDrafts.length === 1 ? 's' : ''} your attention
-          </p>
-          {returnedDrafts.map((l) => (
-            <div
-              key={l.id}
-              className="text-sm bg-hd-white border border-danger/30 rounded p-3 flex flex-wrap gap-3 items-start justify-between"
+        <div className="mb-6 bg-danger/10 border border-danger/40">
+          {/* Clickable header row — always visible, toggles the cards */}
+          <button
+            type="button"
+            onClick={() => setAttentionOpen((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-danger/5 transition"
+            aria-expanded={attentionOpen}
+          >
+            <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
+              {returnedDrafts.length} listing{returnedDrafts.length === 1 ? '' : 's'} need
+              {returnedDrafts.length === 1 ? 's' : ''} your attention
+            </p>
+            {/* Chevron rotates on open/close */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`w-4 h-4 shrink-0 text-danger transition-transform duration-200 ${attentionOpen ? 'rotate-180' : ''}`}
+              aria-hidden
             >
-              <div className="min-w-0 flex-1">
-                <p className="font-subhead text-text-on-light">
-                  {l.year} {l.modelName} ·{' '}
-                  <span className="font-mono text-xs text-gray-600">{l.vin}</span>
-                </p>
-                <p className="text-gray-700 mt-1">
-                  <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
-                    Admin feedback:
-                  </span>{' '}
-                  {l.adminFeedback}
-                </p>
-              </div>
-              {/* Direct CTA so the dealer doesn't have to scroll down to the
-                  table row's tiny Re-submit link. Uses the new edit route
-                  which hydrates the wizard from the existing draft. */}
-              <Link
-                to={`/listings/${l.id}/edit`}
-                className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
-              >
-                Resume Edit →
-              </Link>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+
+          {/* Collapsible card list */}
+          {attentionOpen && (
+            <div className="px-4 pb-4 space-y-3">
+              {returnedDrafts.map((l) => (
+                <div
+                  key={l.id}
+                  className="text-sm bg-hd-white border border-danger/30 rounded p-3 flex flex-wrap gap-3 items-start justify-between"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-subhead text-text-on-light">
+                      {l.year} {l.modelName} ·{' '}
+                      <span className="font-mono text-xs text-gray-600">{l.vin}</span>
+                    </p>
+                    <p className="text-gray-700 mt-1">
+                      <span className="font-subhead uppercase tracking-subhead text-[11px] text-danger">
+                        Admin feedback:
+                      </span>{' '}
+                      {l.adminFeedback}
+                    </p>
+                  </div>
+                  <Link
+                    to={`/listings/${l.id}/edit`}
+                    className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                  >
+                    Resume Edit →
+                  </Link>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
