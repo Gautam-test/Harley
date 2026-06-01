@@ -24,7 +24,20 @@ export async function createListing(dealerId: string, input: CreateListingInput)
 
   const dealer = await prisma.dealer.findUnique({ where: { id: dealerId } });
   if (!dealer) throw new HttpError(404, 'DEALER_NOT_FOUND', 'Dealer not found');
-  if (dealer.torqueDealerId && vehicle.dealerId !== dealer.torqueDealerId) {
+
+  // QA fix: skip the dealer-assignment guard when Torque is in MOCK mode.
+  // The mock fabricates a synthetic dealerId from the VIN's last 4 chars
+  // (TQ-DEALER-XXXX) which can never match any real dealer.torqueDealerId,
+  // so the previous unconditional check rejected *every* brand-new VIN
+  // submitted by any dealer ("VIN not assigned to your dealership" even
+  // though the VIN was never registered anywhere). In LIVE mode the real
+  // Torque API returns the actual owning dealerId, so the check stays.
+  const env = getEnv();
+  if (
+    env.TORQUE_MODE === 'live' &&
+    dealer.torqueDealerId &&
+    vehicle.dealerId !== dealer.torqueDealerId
+  ) {
     throw new HttpError(403, 'VIN_NOT_ASSIGNED', 'VIN is not assigned to this dealer in Torque');
   }
 
