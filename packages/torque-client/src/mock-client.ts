@@ -9,7 +9,8 @@ import type { TorqueClient, TorqueVehicle, TorqueCpoKit } from './types.js';
 // Returns the seven canonical Torque data fields confirmed by the H-D ops
 // team: VIN, ENGINE, MODEL NAME, MODEL FAMILY, COLOR, CUSTOMER NAME, DATE OF
 // INVOICE — plus the operational `dealerId` + `status`.
-const VIN_FORMAT = /^[A-HJ-NPR-Z0-9]{17}$/;
+// Allow all alphanumeric for demo/testing (standard excludes I/O/Q).
+const VIN_FORMAT = /^[A-Z0-9]{17}$/;
 
 interface MockProfile {
   modelFamily: string;

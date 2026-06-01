@@ -419,7 +419,7 @@ export function AddListingPage() {
               // populate the read-only Torque card; that runs from the
               // existing.data effect, not from this form submit.
               if (isEditMode) return;
-              if (/^[A-HJ-NPR-Z0-9]{17}$/.test(s.vin)) fetchVin.mutate(s.vin);
+              if (/^[A-Z0-9]{17}$/.test(s.vin)) fetchVin.mutate(s.vin);
             }}
             className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3"
           >
@@ -435,7 +435,7 @@ export function AddListingPage() {
               // time typing a new VIN they expected to take effect.
               disabled={isEditMode}
               onChange={(e) =>
-                update({ vin: e.target.value.toUpperCase(), torque: null })
+                update({ vin: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), torque: null })
               }
             />
             <Button

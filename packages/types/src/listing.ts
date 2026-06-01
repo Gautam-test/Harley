@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
-// VIN: 17 chars, uppercase alphanumeric, no I/O/Q (PRD §6.2.3 AC1).
+// VIN: 17 chars, uppercase alphanumeric.
+// Note: standard VINs exclude I/O/Q but for demo/testing we allow all
+// letters and digits so clients can test with any 17-char string.
 export const vin = z
   .string()
   .length(17)
-  .regex(/^[A-HJ-NPR-Z0-9]{17}$/, 'Invalid VIN (17 chars, no I/O/Q)');
+  .regex(/^[A-Z0-9]{17}$/, 'VIN must be exactly 17 uppercase letters and numbers');
 
 export const certStatus = z.enum(['CPO', 'AS_IS']);
 export type CertStatus = z.infer<typeof certStatus>;
