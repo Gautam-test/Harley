@@ -589,7 +589,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
           if (hasErrors) return;
           submit.mutate();
         }}
-        className="space-y-5"
+        className="space-y-5 [&_input]:!border-[1.5px] [&_input]:!border-hd-black [&_select]:!border-[1.5px] [&_select]:!border-hd-black [&_textarea]:!border-[1.5px] [&_textarea]:!border-hd-black"
         noValidate
       >
         {/* Duplicate-phone warning — renders as a prominent amber banner at
@@ -772,7 +772,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               maxLength={1000}
               placeholder="Walked in 11 AM, asked about EMI options, wants to bring spouse for second visit…"
               aria-invalid={Boolean(errFor('message'))}
-              className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+              className="w-full bg-hd-white border-[1.5px] border-hd-black px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
         </FormSection>
@@ -925,7 +925,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
           if (hasErrors) return;
           submit.mutate();
         }}
-        className="space-y-5"
+        className="space-y-5 [&_input]:!border-[1.5px] [&_input]:!border-hd-black [&_select]:!border-[1.5px] [&_select]:!border-hd-black [&_textarea]:!border-[1.5px] [&_textarea]:!border-hd-black"
         noValidate
       >
         {dupError && (
@@ -1171,7 +1171,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               maxLength={1000}
               placeholder="Walked in 3 PM, has paperwork ready, prefers WhatsApp follow-up…"
               aria-invalid={Boolean(errFor('message'))}
-              className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+              className="w-full bg-hd-white border-[1.5px] border-hd-black px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
             />
           </Field>
         </FormSection>
@@ -1239,7 +1239,7 @@ function ModalShell({
     >
       <div
         data-modal-form
-        className="bg-hd-white border border-gray-200 max-w-3xl w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
+        className="bg-hd-white border-[1.5px] border-hd-black max-w-3xl w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
