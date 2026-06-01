@@ -89,8 +89,16 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
           latitude: number | null;
           longitude: number | null;
         }>;
-        const withinRange = dealers
-          .filter((d) => d.latitude != null && d.longitude != null)
+        // Separate coords-capable dealers from those missing lat/lng.
+        // When ZERO dealers have coordinates (common on fresh deploys where
+        // the lat/lng columns were added after initial setup and no geocoding
+        // backfill has run), silently degrade: skip the distance filter and
+        // return all active listings so buyers don't see an empty grid just
+        // because the ops team hasn't geocoded the dealer table yet.
+        const dealersWithCoords = dealers.filter(
+          (d) => d.latitude != null && d.longitude != null,
+        );
+        const withinRange = dealersWithCoords
           .map((d) => ({
             id: d.id,
             pincode: d.pincode,
@@ -102,7 +110,13 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
           .filter((d) => d.distance <= (q.distance as number))
           .sort((a, b) => a.distance - b.distance);
 
-        if (withinRange.length === 0) {
+        if (dealersWithCoords.length === 0) {
+          // No dealers have been geocoded yet — degrade gracefully: show all
+          // listings (dealerIdFilter stays undefined = no restriction) so the
+          // buyer sees stock rather than an empty page. The distance filter
+          // effectively becomes a no-op until lat/lng are populated.
+          // NOTE: dealerIdFilter is intentionally left undefined here.
+        } else if (withinRange.length === 0) {
           dealerIdFilter = { in: ['__none__'] };
         } else {
           const inRangeIds = withinRange.map((d) => d.id);
