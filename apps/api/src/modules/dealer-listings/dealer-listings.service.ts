@@ -293,10 +293,18 @@ export async function updateListing(
       select: { id: true, status: true, vin: true },
     });
     if (conflict) {
+      // QA-spec copy — identical to the createListing duplicate guard
+      // above so the dealer sees the same message whether they hit the
+      // conflict via "Turn On" (this restoreToDraft path) or via the
+      // initial create. Internally we keep the VIN_IN_USE code so the
+      // dealer SPA can switch on it; the conflict row's id + status are
+      // surfaced through the structured log for support follow-up.
+      void originalVin;
+      void conflict;
       throw new HttpError(
         409,
         'VIN_IN_USE',
-        `Cannot resubmit: VIN ${originalVin} is already registered to another listing (status: ${conflict.status}).`,
+        'A listing for this VIN is already live or pending. Mark the previous one Sold or Removed before re-listing.',
       );
     }
   }

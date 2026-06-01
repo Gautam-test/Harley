@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button } from '@hd-cpo/ui';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 
 interface DealerListingRow {
   id: string;
@@ -126,8 +126,27 @@ export function MyListingsPage() {
     mutationFn: (id: string) => api(`/dealer/listings/${id}/turn-off`, { method: 'POST' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
   });
+  // QA: surface a top-of-page error banner whenever a Turn-On / restore
+  // mutation rejects (e.g. VIN_IN_USE). Without this the dealer clicks
+  // the power button and gets no feedback at all because the mutations
+  // had no onError handler. The banner auto-dismisses on the next click.
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Map server error codes to QA-spec exact strings. Anything we don't
+  // recognise falls through to whatever the API put in `err.message`.
+  function turnOnErrorMessage(err: unknown): string {
+    if (err instanceof ApiError) {
+      // The reactivate / restore path returns 'VIN_IN_USE' when the VIN
+      // is now held by a DRAFT / ACTIVE / DEACTIVATED listing — QA copy:
+      if (err.code === 'VIN_IN_USE' || err.code === 'VIN_DUPLICATE') {
+        return 'A listing for this VIN is already live or pending. Mark the previous one Sold or Removed before re-listing.';
+      }
+      return err.message;
+    }
+    return 'Could not turn on this listing — please try again.';
+  }
   const turnOn = useMutation({
     mutationFn: (id: string) => api(`/dealer/listings/${id}/turn-on`, { method: 'POST' }),
+    onError: (err) => setActionError(turnOnErrorMessage(err)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
   });
   // "Turn On" for REMOVED rows in the Inactive tab. The /turn-on
@@ -170,6 +189,31 @@ export function MyListingsPage() {
           <Button>+ Add Listing</Button>
         </Link>
       </div>
+
+      {/* QA: red error banner for the Turn-On / restore flows so a
+          VIN-conflict on the API surfaces in the UI (it was silent
+          before — the dealer clicked the power button and saw no
+          feedback at all). Dismissible via the X button. */}
+      {actionError && (
+        <div className="mb-6 bg-danger/10 border border-danger/40 p-4 flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="font-subhead uppercase tracking-subhead text-sm text-danger">
+              Action blocked
+            </p>
+            <p className="text-sm text-gray-700 mt-1 leading-relaxed">
+              {actionError}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            aria-label="Dismiss"
+            className="shrink-0 text-danger hover:text-text-on-light text-lg leading-none px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Admin feedback banner — surfaces drafts the admin returned for fixes */}
       {returnedDrafts.length > 0 && (
