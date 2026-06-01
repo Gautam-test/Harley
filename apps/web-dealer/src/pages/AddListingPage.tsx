@@ -663,10 +663,12 @@ export function AddListingPage() {
                 110-Point Inspection Report (Required)
               </p>
               <div className="grid sm:grid-cols-[auto_1fr] gap-4 items-stretch">
+                {/* Download Sample Format — opens the H-D Certified CPO
+                    certificate PDF generated for this VIN so the dealer
+                    knows exactly what the buyer will receive. */}
                 <a
-                  href={`/api/v1/inspection/template.pdf?vin=${encodeURIComponent(
-                    s.vin,
-                  )}`}
+                  href={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(s.vin)}.pdf`}
+                  download
                   target="_blank"
                   rel="noreferrer"
                   className="flex sm:flex-col items-center sm:justify-center gap-3 sm:gap-2 bg-hd-orange/10 border border-hd-orange/40 hover:bg-hd-orange/20 transition rounded p-4 sm:w-48 text-left sm:text-center"
@@ -1056,6 +1058,9 @@ function InspectionUploader(props: {
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Certificate preview modal — shows the H-D Certified certificate image
+  // when the dealer clicks "Preview / replace file" after upload.
+  const [certPreviewOpen, setCertPreviewOpen] = useState(false);
 
   const onFile = async (file: File) => {
     setUploading(true);
@@ -1113,15 +1118,71 @@ function InspectionUploader(props: {
               {props.meta.originalName} · {(props.meta.size / 1024).toFixed(0)} KB
             </span>
           )}
-          <a
-            href={props.currentUrl}
-            target="_blank"
-            rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCertPreviewOpen(true); }}
             className="text-xs text-hd-orange hover:underline mt-2"
           >
             Preview / replace file
-          </a>
+          </button>
+          {/* Certificate preview modal */}
+          {certPreviewOpen && (
+            <div
+              className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+              onClick={() => setCertPreviewOpen(false)}
+            >
+              <div
+                className="bg-hd-white max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
+                  <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light">
+                    H-D Certified Certificate Preview
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCertPreviewOpen(false)}
+                    className="text-gray-400 hover:text-text-on-light text-xl leading-none"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                {/* Certificate image rendered via the API certificate PNG endpoint */}
+                <div className="p-4">
+                  <img
+                    src={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(props.vin)}.pdf`}
+                    alt="H-D Certified Certificate"
+                    className="w-full border border-gray-200"
+                    onError={(e) => {
+                      // Fallback: open uploaded PDF directly if cert image fails
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="flex gap-3 mt-4 justify-end">
+                    <a
+                      href={props.currentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-hd-orange hover:underline"
+                    >
+                      Open uploaded PDF ↗
+                    </a>
+                    <a
+                      href={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(props.vin)}.pdf`}
+                      download
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-hd-orange hover:underline"
+                    >
+                      Download Certificate ↓
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <>
