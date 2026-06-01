@@ -316,6 +316,13 @@ export async function softRemove(dealerId: string, listingId: string) {
 
 // Dealer "Turn Off" — temporarily hide an ACTIVE listing without removing it.
 // Mirrors the freeze My Listings design's TURN OFF / TURN ON button pair.
+//
+// QA: Turn-On (DEACTIVATED → ACTIVE) must run the same VIN-conflict guard
+// the publish gate + restore path run, otherwise a dealer can reactivate a
+// previously-deactivated listing whose VIN is now held by another DRAFT /
+// ACTIVE listing (same dealer or another). Re-uses the existing
+// "A listing for this VIN is already live or pending" copy + VIN_DUPLICATE
+// code so client + admin paths surface an identical message verbatim.
 export async function setActiveToggle(dealerId: string, listingId: string, on: boolean) {
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing || listing.dealerId !== dealerId) {
