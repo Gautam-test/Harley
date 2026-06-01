@@ -163,6 +163,11 @@ export function MyListingsPage() {
         body: JSON.stringify({}),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
+    // FIX: this mutation was silently swallowing 409 VIN_IN_USE because it
+    // had no onError handler. REMOVED listings use this path (not /turn-on),
+    // so clicking Turn On on a REMOVED listing with a conflicting VIN showed
+    // nothing in the UI while the error was visible in browser DevTools.
+    onError: (err) => setActionError(turnOnErrorMessage(err)),
   });
 
   // Admin-feedback-needs-attention banner: surfaces both DRAFT-returned
