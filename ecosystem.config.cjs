@@ -24,14 +24,29 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
-      // Restart on crash; wait 3 s before each restart to avoid hammering
-      // the DB during a cold-start failure loop.
       restart_delay: 3000,
       max_restarts: 10,
-      // Keep last 30 days of logs, rotate at 10 MB.
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
+      merge_logs: true,
+    },
+    {
+      // Webhook listener — triggers auto-deploy on every git push to main.
+      // GitLab → Settings → Webhooks → http://SERVER_IP:9000/deploy
+      // Set WEBHOOK_SECRET in env to match GitLab secret token.
+      name: 'hd-cpo-webhook',
+      script: './scripts/webhook-server.mjs',
+      interpreter: 'node',
+      env: {
+        NODE_ENV: 'production',
+        WEBHOOK_PORT: '9000',
+        WEBHOOK_SECRET: 'hd-cpo-deploy-secret',  // Change this!
+      },
+      restart_delay: 3000,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss',
+      error_file: './logs/webhook-error.log',
+      out_file: './logs/webhook-out.log',
       merge_logs: true,
     },
   ],
