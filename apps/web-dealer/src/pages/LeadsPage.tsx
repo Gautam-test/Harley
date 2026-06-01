@@ -473,6 +473,11 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
+  // Separate state for duplicate-phone 409 so it renders as a prominent
+  // amber warning banner (not the tiny red generic-error line) and blocks
+  // re-submission until the rep either closes the modal or changes the
+  // phone number to try a different one.
+  const [dupError, setDupError] = useState<string | null>(null);
   const [showFieldErrors, setShowFieldErrors] = useState(false);
 
   // Per-field validation. Required fields are name + phone + email +
@@ -552,7 +557,22 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ['dealer-leads', 'buyer', 'sidebar'] });
       onClose();
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Failed to add lead'),
+    onError: (e) => {
+      if (
+        e instanceof ApiError &&
+        (e.code === 'ENQUIRY_ALREADY_OPEN' || e.code === 'BUYER_ENQUIRY_ALREADY_OPEN')
+      ) {
+        // QA-spec: duplicate phone must surface as a prominent warning,
+        // not a tiny red line buried at the bottom of a 20-field form.
+        setDupError(
+          'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+        );
+        setError(null);
+      } else {
+        setError(e instanceof ApiError ? e.message : 'Failed to add lead');
+        setDupError(null);
+      }
+    },
   });
 
   return (
@@ -561,6 +581,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          setDupError(null);
           // First submit attempt switches on field-level errors. After
           // that they stay visible (and update live) until the rep
           // either fixes them or closes the modal.
@@ -571,6 +592,20 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         className="space-y-5"
         noValidate
       >
+        {/* Duplicate-phone warning — renders as a prominent amber banner at
+            the top of the form so the rep can't miss it. Clears when they
+            change the phone number and attempt a fresh submit. */}
+        {dupError && (
+          <div className="bg-warning/10 border border-warning/60 p-4 flex items-start gap-3">
+            <span className="shrink-0 mt-0.5 text-warning text-lg leading-none" aria-hidden>⚠</span>
+            <div className="min-w-0">
+              <p className="font-subhead uppercase tracking-subhead text-xs text-warning mb-1">
+                Duplicate Phone Number
+              </p>
+              <p className="text-sm text-text-on-light leading-relaxed">{dupError}</p>
+            </div>
+          </div>
+        )}
         <FormSection kicker="1" label="Motorcycle of Interest">
           <Field label="Listing" required error={errFor('listingId')}>
             <Select
@@ -602,7 +637,12 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) => {
+                  // Dismiss the duplicate-phone banner as soon as the rep
+                  // edits the number — they may be trying a different one.
+                  setDupError(null);
+                  setForm((f) => ({ ...f, phone: e.target.value }));
+                }}
                 maxLength={13}
                 inputMode="tel"
                 placeholder="+919812345678"
@@ -737,7 +777,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
           </Field>
         </FormSection>
 
-        {showFieldErrors && hasErrors && !error && (
+        {showFieldErrors && hasErrors && !error && !dupError && (
           <p className="text-xs text-danger">
             Please fix the highlighted fields above before submitting.
           </p>
@@ -747,7 +787,9 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={submit.isPending}>
+          {/* Disabled while duplicate warning is showing — rep must
+              resolve the existing lead (or change the phone) first. */}
+          <Button type="submit" variant="primary" disabled={submit.isPending || Boolean(dupError)}>
             {submit.isPending ? 'Saving…' : 'Save Enquiry'}
           </Button>
         </div>
@@ -786,6 +828,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
+  const [dupError, setDupError] = useState<string | null>(null);
   const [showFieldErrors, setShowFieldErrors] = useState(false);
 
   // Per-field validation. Required: username + phone + email + city +
@@ -855,7 +898,20 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       qc.invalidateQueries({ queryKey: ['dealer-leads', 'trade-in', 'sidebar'] });
       onClose();
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Failed to add lead'),
+    onError: (e) => {
+      if (
+        e instanceof ApiError &&
+        (e.code === 'SELLER_ENQUIRY_ALREADY_OPEN' || e.code === 'ENQUIRY_ALREADY_OPEN')
+      ) {
+        setDupError(
+          'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+        );
+        setError(null);
+      } else {
+        setError(e instanceof ApiError ? e.message : 'Failed to add lead');
+        setDupError(null);
+      }
+    },
   });
 
   return (
@@ -864,6 +920,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          setDupError(null);
           setShowFieldErrors(true);
           if (hasErrors) return;
           submit.mutate();
@@ -871,6 +928,17 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         className="space-y-5"
         noValidate
       >
+        {dupError && (
+          <div className="bg-warning/10 border border-warning/60 p-4 flex items-start gap-3">
+            <span className="shrink-0 mt-0.5 text-warning text-lg leading-none" aria-hidden>⚠</span>
+            <div className="min-w-0">
+              <p className="font-subhead uppercase tracking-subhead text-xs text-warning mb-1">
+                Duplicate Phone Number
+              </p>
+              <p className="text-sm text-text-on-light leading-relaxed">{dupError}</p>
+            </div>
+          </div>
+        )}
         <FormSection kicker="1" label="Seller Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Full Name" required error={errFor('username')}>
@@ -884,7 +952,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                onChange={(e) => {
+                  setDupError(null);
+                  setForm((f) => ({ ...f, phone: e.target.value }));
+                }}
                 maxLength={13}
                 inputMode="tel"
                 placeholder="+919812345678"
@@ -1105,7 +1176,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
           </Field>
         </FormSection>
 
-        {showFieldErrors && hasErrors && !error && (
+        {showFieldErrors && hasErrors && !error && !dupError && (
           <p className="text-xs text-danger">
             Please fix the highlighted fields above before submitting.
           </p>
@@ -1115,7 +1186,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" disabled={submit.isPending}>
+          <Button type="submit" variant="primary" disabled={submit.isPending || Boolean(dupError)}>
             {submit.isPending ? 'Saving…' : 'Save Enquiry'}
           </Button>
         </div>
