@@ -1163,12 +1163,12 @@ function ModalShell({
   };
   return (
     <div
-      className="fixed inset-0 z-50 bg-hd-black/50 flex items-start justify-center pt-10 p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-hd-black/50 flex items-center justify-center px-3 sm:px-4 py-6 overflow-y-auto"
       onClick={closeWithConfirm}
     >
       <div
         data-modal-form
-        className="bg-hd-white border border-gray-200 max-w-3xl w-full p-4 sm:p-6 shadow-2xl"
+        className="bg-hd-white border border-gray-200 max-w-3xl w-full p-4 sm:p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
