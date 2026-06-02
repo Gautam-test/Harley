@@ -335,7 +335,7 @@ export function LeadsPage() {
                   <IconButton
                     as="a"
                     label="Open"
-                    href={`/leads/${l.kind}/${l.id}`}
+                    href={`${import.meta.env.BASE_URL}leads/${l.kind}/${l.id}`.replace(/\/+/g, '/')}
                     target="_self"
                     tone="primary"
                   >
