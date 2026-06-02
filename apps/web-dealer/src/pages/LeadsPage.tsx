@@ -581,10 +581,11 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         e instanceof ApiError &&
         (e.code === 'ENQUIRY_ALREADY_OPEN' || e.code === 'BUYER_ENQUIRY_ALREADY_OPEN')
       ) {
-        // QA-spec: duplicate phone must surface as a prominent warning,
-        // not a tiny red line buried at the bottom of a 20-field form.
+        // QA-spec: buyer dedup is (listing + phone), so the duplicate
+        // condition is the BIKE — banner copy reflects that the rep
+        // must pick a different bike (or close the existing lead).
         setDupError(
-          'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+          'Enquiry form already filled with this bike. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
         );
         setError(null);
       } else {
@@ -619,7 +620,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <span className="shrink-0 mt-0.5 text-warning text-lg leading-none" aria-hidden>⚠</span>
             <div className="min-w-0">
               <p className="font-subhead uppercase tracking-subhead text-xs text-warning mb-1">
-                Duplicate Phone Number
+                Duplicate Bike Entry
               </p>
               <p className="text-sm text-text-on-light leading-relaxed">{dupError}</p>
             </div>
