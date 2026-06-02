@@ -3,21 +3,41 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./auth": "./src/auth.ts",
-    "./listing": "./src/listing.ts",
-    "./lead": "./src/lead.ts",
-    "./dealer": "./src/dealer.ts",
-    "./otp": "./src/otp.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./dist/auth.d.ts",
+      "default": "./dist/auth.js"
+    },
+    "./listing": {
+      "types": "./dist/listing.d.ts",
+      "default": "./dist/listing.js"
+    },
+    "./lead": {
+      "types": "./dist/lead.d.ts",
+      "default": "./dist/lead.js"
+    },
+    "./dealer": {
+      "types": "./dist/dealer.d.ts",
+      "default": "./dist/dealer.js"
+    },
+    "./otp": {
+      "types": "./dist/otp.d.ts",
+      "default": "./dist/otp.js"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'lint-noop'",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
     "zod": "^3.24.1"
