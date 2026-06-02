@@ -948,7 +948,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <span className="shrink-0 mt-0.5 text-warning text-lg leading-none" aria-hidden>⚠</span>
             <div className="min-w-0">
               <p className="font-subhead uppercase tracking-subhead text-xs text-warning mb-1">
-                Duplicate Phone Number
+                Duplicate VIN Entry
               </p>
               <p className="text-sm text-text-on-light leading-relaxed">{dupError}</p>
             </div>
