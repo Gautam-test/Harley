@@ -183,7 +183,7 @@ export function MyListingsPage() {
   // Collapsible attention banner — starts open so the dealer sees the
   // feedback immediately, but can collapse it to see the listings table
   // without scrolling past the cards.
-  const [attentionOpen, setAttentionOpen] = useState(true);
+  const [attentionOpen, setAttentionOpen] = useState(false);
   // Slider index for the attention carousel — one card visible at a time.
   const [attentionIdx, setAttentionIdx] = useState(0);
   // Clamp idx whenever the list changes (e.g. dealer fixes one listing).
