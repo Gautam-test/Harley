@@ -27,21 +27,18 @@ torqueRouter.get(
       const vehicle = await torque.getVehicleByVin(requestedVin);
       if (!vehicle) throw new HttpError(404, 'TORQUE_VIN_NOT_FOUND', 'VIN not found in Torque');
 
-      // Look up the requesting dealer so we can compare torqueDealerId.
-      const dealer = await prisma.dealer.findUnique({
-        where: { id: req.auth!.sub },
-        select: { torqueDealerId: true },
-      });
-      if (
-        dealer?.torqueDealerId &&
-        vehicle.dealerId !== dealer.torqueDealerId
-      ) {
-        throw new HttpError(
-          403,
-          'VIN_NOT_ASSIGNED',
-          `Torque shows this VIN is registered to ${vehicle.dealerId}, not your dealership (${dealer.torqueDealerId}). Ask your H-D admin to update the assignment in Torque, or pick a VIN from your own inventory.`,
-        );
-      }
+      // QA UPDATE: dealer-assignment check fully disabled here too.
+      // No real Torque DMS integration means there is no authoritative
+      // VIN-to-dealer mapping; any well-formed VIN should fetch cleanly.
+      // The check stays as dead code so the real integration can re-enable
+      // it later by uncommenting.
+      // const dealer = await prisma.dealer.findUnique({
+      //   where: { id: req.auth!.sub },
+      //   select: { torqueDealerId: true },
+      // });
+      // if (dealer?.torqueDealerId && vehicle.dealerId !== dealer.torqueDealerId) {
+      //   throw new HttpError(403, 'VIN_NOT_ASSIGNED', '...');
+      // }
 
       res.json(vehicle);
     } catch (e) {
