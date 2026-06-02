@@ -434,42 +434,56 @@ export function MyListingsPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((l, idx) => (
+            {filtered.map((l) => (
               <tr
                 key={l.id}
-                className={`hover:bg-hd-orange/5 transition-colors ${
-                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
-                }`}
+                className="hover:bg-hd-orange/5 transition-colors"
               >
-                <Td>
-                  <div className="flex items-start gap-3">
-                    <div className="w-16 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                      {l.primaryImage && (
+                <Td className="py-2.5">
+                  <div className="flex items-start gap-4">
+                    {/* Thumbnail with proper fallback icon when image
+                        is missing or fails to load — previously showed
+                        a blank grey box which looked broken. */}
+                    <div className="w-20 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-200">
+                      {l.primaryImage ? (
                         <img
                           src={l.primaryImage}
                           alt=""
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className="w-6 h-6 text-gray-300"
+                          aria-hidden
+                        >
+                          <circle cx="5.5" cy="17.5" r="3.5" />
+                          <circle cx="18.5" cy="17.5" r="3.5" />
+                          <path d="M15 6h3l3 4-5 4-4-4" />
+                          <path d="M5 17.5l4.5-7h6" />
+                        </svg>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <div className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-subhead uppercase tracking-subhead text-[14px] text-text-on-light leading-tight">
                         {l.modelName}
                       </div>
-                      <div className="text-[11px] text-gray-500 leading-tight mt-0.5">
+                      <div className="text-[11px] text-gray-600 mt-1">
                         {l.year} · {l.kmsDriven.toLocaleString('en-IN')} km
                       </div>
-                      <div className="font-mono text-[10px] text-gray-400 leading-tight mt-1">
-                        HD-{l.id.slice(-6).toUpperCase()} · VIN&hellip;{l.vin.slice(-7)}
+                      <div className="font-mono text-[10px] text-gray-400 mt-1" title={l.vin}>
+                        VIN…{l.vin.slice(-7)}
                       </div>
-                      {/* Inline removal reason on REMOVED rows so the
-                          dealer sees admin's note even when scrolling
-                          straight to the Removed tab without seeing the
-                          banner above (QA Bug 16). */}
                       {l.status === 'REMOVED' && l.adminFeedback && (
-                        <div className="mt-1.5 text-[10px] text-warning leading-tight max-w-[260px]">
+                        <div className="mt-2 text-[10px] text-warning leading-snug max-w-[280px] bg-warning/10 border-l-2 border-warning px-2 py-1">
                           <span className="font-subhead uppercase tracking-subhead">
-                            REMOVAL REASON:
+                            Removal reason:
                           </span>{' '}
                           {l.adminFeedback}
                         </div>
@@ -477,11 +491,11 @@ export function MyListingsPage() {
                     </div>
                   </div>
                 </Td>
-                <Td>
-                  <div className="font-subhead text-text-on-light whitespace-nowrap">
+                <Td className="py-2.5">
+                  <div className="font-subhead font-bold text-text-on-light whitespace-nowrap">
                     ₹{l.price.toLocaleString('en-IN')}
                   </div>
-                  <div className="mt-1">
+                  <div className="mt-1.5">
                     {l.certificationStatus === 'CPO' ? (
                       <Badge variant="cpo">CPO</Badge>
                     ) : (
@@ -489,47 +503,38 @@ export function MyListingsPage() {
                     )}
                   </div>
                 </Td>
-                <Td>
-                  <StatusBadge status={l.status} />
-                  <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
-                    {l.publishedAt
-                      ? new Date(l.publishedAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: '2-digit',
-                        })
-                      : new Date(l.createdAt).toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: '2-digit',
-                        })}
+                <Td className="py-2.5">
+                  <div className="flex flex-col items-start gap-1.5">
+                    <StatusBadge status={l.status} />
+                    <div className="text-[10px] text-gray-500 whitespace-nowrap">
+                      {l.publishedAt
+                        ? new Date(l.publishedAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : new Date(l.createdAt).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                    </div>
                   </div>
                 </Td>
-                <Td className="text-right pr-4">
-                  {/* Icon-only actions — labels surface on hover via the
-                      tooltip span. Reduces visual weight when several
-                      actions are valid for the row at once. */}
-                  <div className="inline-flex items-center justify-end gap-1">
+                <Td className="text-right pr-4 py-2.5">
+                  {/* Vertical action stack — status hint on top (when
+                      applicable), action icons/links in a row below.
+                      Prevents the cramped horizontal layout where
+                      "AWAITING REVIEW EDIT [trash]" all ran together. */}
+                  <div className="flex flex-col items-end gap-2">
+                  <div className="inline-flex items-center justify-end gap-1.5">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
-                      <>
-                        <span
-                          className="inline-flex items-center gap-1 text-[10px] font-subhead uppercase tracking-subhead text-warning"
-                          title="An H-D admin will review and publish this listing."
-                        >
-                          <span className="w-1.5 h-1.5 bg-warning rounded-full animate-pulse" />
-                          Awaiting review
-                        </span>
-                        {/* Edit link is always available on a DRAFT — the
-                            dealer might spot a typo before admin review or
-                            want to swap a photo. The wizard hydrates from
-                            the saved draft (no localStorage redux). */}
                         <Link
                           to={`/listings/${l.id}/edit`}
-                          className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline ml-2"
+                        className="inline-flex items-center px-2 py-1 text-[10px] font-subhead uppercase tracking-subhead text-hd-orange border border-hd-orange/40 hover:bg-hd-orange/10 transition"
                         >
                           Edit
                         </Link>
-                      </>
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <Link
@@ -681,6 +686,7 @@ export function MyListingsPage() {
                         </span>
                       </Link>
                     )}
+                  </div>
                   </div>
                 </Td>
               </tr>
