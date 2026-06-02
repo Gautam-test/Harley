@@ -219,6 +219,7 @@ export function LeadsPage() {
                     ? 'Motorcycle Offered'
                     : 'Motorcycle'}
               </Th>
+              <Th>Location</Th>
               {tab === 'all' && <Th>Kind</Th>}
               <Th>Status</Th>
               <Th className="text-right pr-4">
@@ -229,14 +230,14 @@ export function LeadsPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={tab === 'all' ? 6 : 5} className="text-center py-8 text-gray-500">
+                <td colSpan={tab === 'all' ? 7 : 6} className="text-center py-8 text-gray-500">
                   Loading…
                 </td>
               </tr>
             )}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={tab === 'all' ? 6 : 5} className="text-center py-12 text-gray-500">
+                <td colSpan={tab === 'all' ? 7 : 6} className="text-center py-12 text-gray-500">
                   No{' '}
                   {tab === 'buyer'
                     ? 'buyer'
@@ -291,6 +292,13 @@ export function LeadsPage() {
                       VIN · {l.vin.slice(-6)}
                     </div>
                   )}
+                </Td>
+                {/* Location — customer city captured at enquiry time.
+                    Falls back to em-dash when not provided. */}
+                <Td className="text-xs">
+                  <div className="text-text-on-light leading-tight" title={l.city ?? ''}>
+                    {l.city || '—'}
+                  </div>
                 </Td>
                 {tab === 'all' && (
                   <Td>
