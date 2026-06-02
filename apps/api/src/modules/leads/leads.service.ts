@@ -234,7 +234,7 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     throw new HttpError(
       409,
       'ENQUIRY_ALREADY_OPEN',
-      'Enquiry form already filled with this number. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
+      'Enquiry form already filled with this bike. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
     );
   }
   const enquiry = await prisma.enquiry.create({
