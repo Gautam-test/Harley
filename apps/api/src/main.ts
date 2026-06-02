@@ -24,28 +24,42 @@ if (process.env.AUTO_MIGRATE !== '0') {
     const apiRoot = path.resolve(__dirname, '..');
     const schemaPath = path.join(apiRoot, 'prisma', 'schema.prisma');
     if (existsSync(schemaPath)) {
+      const spawnEnv = { ...process.env, PRISMA_GENERATE_SKIP_AUTOINSTALL: '1' };
+      const spawnOpts = {
+        cwd: apiRoot,
+        stdio: 'pipe' as const,
+        encoding: 'utf8' as const,
+        shell: process.platform === 'win32',
+        env: spawnEnv,
+      };
+
+      // 1) Apply pending migrations (DB schema)
       logger.info('Running prisma migrate deploy…');
-      const result = spawnSync(
+      const migRes = spawnSync(
         'npx',
         ['--yes', 'prisma', 'migrate', 'deploy', '--schema', schemaPath],
-        {
-          cwd: apiRoot,
-          stdio: 'pipe',
-          encoding: 'utf8',
-          shell: process.platform === 'win32',
-          env: { ...process.env, PRISMA_GENERATE_SKIP_AUTOINSTALL: '1' },
-        },
+        spawnOpts,
       );
-      if (result.status === 0) {
-        logger.info(
-          { migrate: result.stdout.split('\n').slice(-5).join(' ').trim() },
-          '✓ migrate deploy complete',
-        );
+      if (migRes.status === 0) {
+        logger.info({ migrate: migRes.stdout.split('\n').slice(-5).join(' ').trim() }, '✓ migrate deploy complete');
       } else {
-        logger.error(
-          { stdout: result.stdout, stderr: result.stderr },
-          '✗ migrate deploy failed — continuing boot',
-        );
+        logger.error({ stdout: migRes.stdout, stderr: migRes.stderr }, '✗ migrate deploy failed — continuing boot');
+      }
+
+      // 2) Regenerate Prisma client (TS types + runtime) so the just-applied
+      //    columns are queryable. Without this, `prisma.listing.create({ data: {
+      //    registrationNumber: ... } })` throws PrismaClientValidationError
+      //    'Unknown argument registrationNumber' even though the DB column exists.
+      logger.info('Running prisma generate…');
+      const genRes = spawnSync(
+        'npx',
+        ['--yes', 'prisma', 'generate', '--schema', schemaPath],
+        spawnOpts,
+      );
+      if (genRes.status === 0) {
+        logger.info('✓ prisma generate complete');
+      } else {
+        logger.error({ stdout: genRes.stdout, stderr: genRes.stderr }, '✗ prisma generate failed — continuing boot');
       }
     } else {
       logger.warn({ schemaPath }, 'schema.prisma not found, skipping auto-migrate');
