@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { Prisma } from '@prisma/client';
 import type { AdminCreateDealerInput, AdminUpdateDealerInput, DealerStatus } from '@hd-cpo/types';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
@@ -23,23 +24,36 @@ export async function adminCreateDealer(input: AdminCreateDealerInput, ctx: Audi
   const password = input.password ?? generatePassword();
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const dealer = await prisma.dealer.create({
-    data: {
-      username: input.username,
-      passwordHash,
-      name: input.name,
-      legalName: input.legalName,
-      email: input.email,
-      phone: input.phone,
-      address: input.address,
-      city: input.city,
-      state: input.state,
-      pincode: input.pincode,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      torqueDealerId: input.torqueDealerId,
-    },
-  });
+  let dealer;
+  try {
+    dealer = await prisma.dealer.create({
+      data: {
+        username: input.username,
+        passwordHash,
+        name: input.name,
+        legalName: input.legalName,
+        email: input.email,
+        phone: input.phone,
+        address: input.address,
+        city: input.city,
+        state: input.state,
+        pincode: input.pincode,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        torqueDealerId: input.torqueDealerId,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      // Unique constraint violation — torqueDealerId already in use
+      const field = (e.meta?.target as string[] | undefined)?.join(', ') ?? 'field';
+      if (field.includes('torqueDealerId')) {
+        throw new HttpError(409, 'TORQUE_ID_TAKEN', `Torque Dealer ID "${input.torqueDealerId}" is already assigned to another dealer.`);
+      }
+      throw new HttpError(409, 'DUPLICATE_FIELD', `A dealer with this ${field} already exists.`);
+    }
+    throw e;
+  }
 
   await audit({
     actorId: ctx.actorId,
