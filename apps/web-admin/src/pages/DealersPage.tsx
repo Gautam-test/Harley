@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Input, Select } from '@hd-cpo/ui';
+import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { reverseGeocode } from '../lib/reverseGeocode';
 
@@ -102,87 +102,144 @@ export function DealersPage() {
         </div>
       )}
 
+      {/* 7 cols → 4. Dealer cell folds name + username + city; Contact
+          cell stacks email + phone; Status is a badge; Actions are
+          icon-only with hover tooltips. Only legal transitions render
+          per row's current status so admins never see a no-op button. */}
       <div className="bg-hd-white border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50/80 text-text-on-light">
             <tr>
-              <Th>Name</Th>
-              <Th>Username</Th>
-              <Th>City</Th>
-              <Th>Email</Th>
-              <Th>Phone</Th>
+              <Th>Dealer</Th>
+              <Th>Contact</Th>
               <Th>Status</Th>
-              <Th className="text-right">Actions</Th>
+              <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={7} className="text-center py-6 text-gray-500">Loading…</td>
+                <td colSpan={4} className="text-center py-8 text-gray-500">Loading…</td>
               </tr>
             )}
-            {data?.length === 0 && (
+            {!isLoading && data?.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-gray-500">No dealers match.</td>
+                <td colSpan={4} className="text-center py-12 text-gray-500">
+                  No dealers match.
+                </td>
               </tr>
             )}
             {data?.map((d) => (
-              <tr key={d.id} className="hover:bg-gray-50">
-                <Td className="font-subhead">{d.name}</Td>
-                <Td className="font-mono text-xs">{d.username}</Td>
-                <Td>{d.city}</Td>
-                <Td className="text-xs">{d.email}</Td>
-                <Td className="font-mono text-xs">{d.phone}</Td>
+              <tr key={d.id} className="hover:bg-hd-orange/5 transition-colors">
+                <Td>
+                  <div className="flex items-start gap-3">
+                    {/* Person silhouette avatar — bordered light-grey square
+                        so the row never looks broken (rule #7). */}
+                    <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-200">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        className="w-5 h-5 text-gray-400"
+                        aria-hidden
+                      >
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21c0-4 4-7 8-7s8 3 8 7" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className="font-subhead uppercase tracking-subhead text-[13px] text-text-on-light leading-tight truncate"
+                        title={d.name}
+                      >
+                        {d.name}
+                      </div>
+                      <div className="font-mono text-[11px] text-gray-600 mt-0.5 truncate" title={d.username}>
+                        @{d.username}
+                      </div>
+                      <div className="text-[10px] text-gray-500 mt-0.5 truncate" title={d.city}>
+                        {d.city || '—'}
+                      </div>
+                    </div>
+                  </div>
+                </Td>
+                <Td>
+                  <a
+                    href={`mailto:${d.email}`}
+                    className="block text-[11px] text-text-on-light hover:text-hd-orange leading-tight truncate max-w-[220px]"
+                    title={d.email}
+                  >
+                    {d.email}
+                  </a>
+                  <a
+                    href={`tel:${d.phone.replace(/\s+/g, '')}`}
+                    className="block font-mono text-[11px] text-gray-500 hover:text-hd-orange leading-tight mt-0.5 whitespace-nowrap"
+                  >
+                    {d.phone}
+                  </a>
+                </Td>
                 <Td>
                   <StatusBadge status={d.status} />
+                  <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
+                    {new Date(d.createdAt).toLocaleDateString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </div>
                 </Td>
-                <Td className="text-right space-x-2 whitespace-nowrap">
-                  {/* Three transitions are valid: ACTIVE | INACTIVE | SUSPENDED.
-                      Each button only renders when the dealer isn't already in
-                      that state, so the row never shows a no-op button. The
-                      Inactive action was missing entirely (QA blocker — admins
-                      had no way to soft-disable a dealer without a full Suspend). */}
-                  {d.status !== 'ACTIVE' && (
-                    <Button
-                      size="sm"
-                      onClick={() => setStatus.mutate({ id: d.id, status: 'ACTIVE' })}
+                <Td className="text-right pr-4">
+                  <div className="inline-flex items-center justify-end gap-1.5">
+                    {d.status !== 'ACTIVE' && (
+                      <IconButton
+                        label="Activate"
+                        tone="primary"
+                        onClick={() => setStatus.mutate({ id: d.id, status: 'ACTIVE' })}
+                      >
+                        <PowerIcon />
+                      </IconButton>
+                    )}
+                    {d.status !== 'INACTIVE' && (
+                      <IconButton
+                        label="Set Inactive"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Mark "${d.name}" as Inactive? They will be unable to sign in until you reactivate the account.`,
+                            )
+                          ) {
+                            setStatus.mutate({ id: d.id, status: 'INACTIVE' });
+                          }
+                        }}
+                      >
+                        <PauseIcon />
+                      </IconButton>
+                    )}
+                    {d.status !== 'SUSPENDED' && (
+                      <IconButton
+                        label="Suspend"
+                        tone="danger"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Suspend "${d.name}"? They will be blocked from signing in until reactivated.`,
+                            )
+                          ) {
+                            setStatus.mutate({ id: d.id, status: 'SUSPENDED' });
+                          }
+                        }}
+                      >
+                        <BanIcon />
+                      </IconButton>
+                    )}
+                    <IconButton
+                      label="Reset Password"
+                      onClick={() => resetPwd.mutate(d.id)}
                     >
-                      Activate
-                    </Button>
-                  )}
-                  {d.status !== 'INACTIVE' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Mark "${d.name}" as Inactive? They will be unable to sign in until you reactivate the account.`,
-                          )
-                        ) {
-                          setStatus.mutate({ id: d.id, status: 'INACTIVE' });
-                        }
-                      }}
-                    >
-                      Set Inactive
-                    </Button>
-                  )}
-                  {d.status !== 'SUSPENDED' && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setStatus.mutate({ id: d.id, status: 'SUSPENDED' })}
-                    >
-                      Suspend
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => resetPwd.mutate(d.id)}
-                  >
-                    Reset PW
-                  </Button>
+                      <KeyIcon />
+                    </IconButton>
+                  </div>
                 </Td>
               </tr>
             ))}
@@ -587,13 +644,13 @@ function Modal({
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-subhead uppercase tracking-subhead text-gray-500 ${className}`}>
+    <th className={`px-4 py-3 text-left text-[10px] font-subhead uppercase tracking-subhead text-gray-500 ${className}`}>
       {children}
     </th>
   );
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3 align-top ${className}`}>{children}</td>;
 }
 function StatusBadge({ status }: { status: DealerRow['status'] }) {
   const tone = status === 'ACTIVE' ? 'success' : status === 'SUSPENDED' ? 'danger' : 'warning';
@@ -601,6 +658,49 @@ function StatusBadge({ status }: { status: DealerRow['status'] }) {
     <Badge variant="status" tone={tone}>
       {status}
     </Badge>
+  );
+}
+
+// Inline icons — matches the pattern in MyListingsPage / ListingsPage.
+const ICON_PROPS = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 2,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  className: 'w-4 h-4',
+  'aria-hidden': true,
+};
+function PowerIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  );
+}
+function PauseIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+function BanIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+    </svg>
+  );
+}
+function KeyIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+    </svg>
   );
 }
 function Stat({ label, value, good, bad }: { label: string; value: number; good?: boolean; bad?: boolean }) {

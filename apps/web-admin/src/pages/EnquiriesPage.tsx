@@ -229,13 +229,11 @@ export function EnquiriesPage() {
                 </td>
               </tr>
             )}
-            {leads.data?.results.map((l, idx) => (
+            {leads.data?.results.map((l) => (
               <tr
                 key={`${l.kind}-${l.id}`}
                 className={`transition-colors ${
-                  l.stuck
-                    ? 'bg-danger/5 hover:bg-danger/10'
-                    : `hover:bg-hd-orange/5 ${idx % 2 === 1 ? 'bg-gray-50/40' : ''}`
+                  l.stuck ? 'bg-danger/5 hover:bg-danger/10' : 'hover:bg-hd-orange/5'
                 }`}
               >
                 <Td>
@@ -289,7 +287,7 @@ export function EnquiriesPage() {
                     {new Date(l.createdAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
                       month: 'short',
-                      year: '2-digit',
+                      year: 'numeric',
                     })}
                   </div>
                 </Td>

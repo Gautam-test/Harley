@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, Input, Select } from '@hd-cpo/ui';
+import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
@@ -251,12 +251,10 @@ export function LeadsPage() {
                 </td>
               </tr>
             )}
-            {data?.map((l, idx) => (
+            {data?.map((l) => (
               <tr
                 key={`${l.kind}-${l.id}`}
-                className={`hover:bg-hd-orange/5 transition-colors ${
-                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
-                }`}
+                className="hover:bg-hd-orange/5 transition-colors"
               >
                 <Td>
                   <div className="font-mono text-[10px] text-gray-500 leading-none mb-1">
@@ -321,17 +319,32 @@ export function LeadsPage() {
                     {new Date(l.createdAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
                       month: 'short',
-                      year: '2-digit',
+                      year: 'numeric',
                     })}
                   </div>
                 </Td>
                 <Td className="text-right pr-4">
-                  <Link
-                    to={`/leads/${l.kind}/${l.id}`}
-                    className="inline-block border border-gray-300 px-3 py-1.5 font-subhead uppercase tracking-subhead text-[10px] text-text-on-light hover:bg-hd-orange hover:text-hd-black hover:border-hd-orange transition"
+                  <IconButton
+                    as="a"
+                    label="Open"
+                    href={`/leads/${l.kind}/${l.id}`}
+                    target="_self"
+                    tone="primary"
                   >
-                    Open
-                  </Link>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-4 h-4"
+                      aria-hidden
+                    >
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                      <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                  </IconButton>
                 </Td>
               </tr>
             ))}

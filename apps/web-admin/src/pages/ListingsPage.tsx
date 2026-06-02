@@ -263,19 +263,31 @@ export function ListingsPage() {
                 <td colSpan={5} className="text-center py-12 text-gray-500">No listings.</td>
               </tr>
             )}
-            {data?.map((l, idx) => (
+            {data?.map((l) => (
               <tr
                 key={l.id}
-                className={`cursor-pointer transition-colors hover:bg-hd-orange/5 ${
-                  idx % 2 === 1 ? 'bg-gray-50/40' : ''
-                }`}
+                className="cursor-pointer transition-colors hover:bg-hd-orange/5"
                 onClick={() => setPreviewId(l.id)}
               >
                 <Td>
                   <div className="flex items-start gap-3">
-                    <div className="w-16 h-12 bg-gray-200 rounded overflow-hidden flex-shrink-0">
-                      {l.primaryImage && (
+                    <div className="w-16 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0 flex items-center justify-center border border-gray-200">
+                      {l.primaryImage ? (
                         <img src={l.primaryImage} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          className="w-5 h-5 text-gray-300"
+                          aria-hidden
+                        >
+                          <circle cx="5.5" cy="17.5" r="3.5" />
+                          <circle cx="18.5" cy="17.5" r="3.5" />
+                          <path d="M15 6h3l3 4-5 4-4-4" />
+                          <path d="M5 17.5l4.5-7h6" />
+                        </svg>
                       )}
                     </div>
                     <div className="min-w-0">
@@ -317,7 +329,7 @@ export function ListingsPage() {
                     {new Date(l.createdAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
                       month: 'short',
-                      year: '2-digit',
+                      year: 'numeric',
                     })}
                   </div>
                 </Td>
