@@ -89,6 +89,9 @@ model Listing {
   finalSellingPrice   Decimal?      @db.Decimal(12, 2)
   certificationStatus CertStatus
   inspectionReportUrl String?
+  registrationNumber  String?
+  inspectedBy         String?
+  certifiedOn         DateTime?
   cpoDocs             Json?
   status              ListingStatus @default(DRAFT)
   // Set when an admin returns a DRAFT to the dealer for revision (PRD §6.3.4

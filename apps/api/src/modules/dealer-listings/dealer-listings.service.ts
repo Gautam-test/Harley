@@ -111,6 +111,12 @@ export async function createListing(dealerId: string, input: CreateListingInput)
   // up to 3 times with a short random discriminator on collision; that
   // gives 65k^3 distinct fall-back slugs which comfortably outruns realistic
   // collision rates without ever needing to surface the failure to the dealer.
+  // Determine certificate auto-fill fields.
+  // When the dealer submits a CPO listing with an inspection PDF,
+  // auto-stamp inspectedBy = dealer.name and certifiedOn = now.
+  const isCpoWithPdf =
+    input.certificationStatus === 'CPO' && Boolean(input.inspectionReportUrl);
+
   const buildData = (slug: string) => ({
     vin: input.vin,
     slug,
@@ -131,11 +137,15 @@ export async function createListing(dealerId: string, input: CreateListingInput)
     certificationStatus: input.certificationStatus,
     inspectionReportUrl: input.inspectionReportUrl,
     cpoDocs: input.cpoDocs ?? undefined,
-    // Dealer-internal pricing fields — stored on the row, never returned
-    // to the buyer portal. Cast to unknown for the same reason as owners
-    // above: Prisma client types haven't been regenerated yet but the
-    // columns exist in the DB after migration 20260601000000.
+    // Certificate fields — cast to unknown for same reason as owners above:
+    // Prisma client types haven't been regenerated yet but the columns exist
+    // in the DB after migration 20260602000000.
     ...({
+      registrationNumber: input.registrationNumber ?? null,
+      inspectedBy: isCpoWithPdf ? dealer.name : null,
+      certifiedOn: isCpoWithPdf ? now : null,
+      // Dealer-internal pricing fields — stored on the row, never returned
+      // to the buyer portal.
       purchasePrice: input.purchasePrice ?? null,
       refurbishmentPrice: input.refurbishmentPrice ?? null,
       ageingDays: input.ageingDays ?? null,
@@ -282,7 +292,7 @@ export async function updateListing(
   // submit as "re-queuing for admin review", so flip status back to DRAFT
   // (renders as Pending on the dealer's tab) and clear soldAt. Without
   // this, the row stays REMOVED/SOLD and silently disappears from Pending.
-  const { cpoDocs, ...rest } = input;
+  const { cpoDocs, registrationNumber, inspectedBy: _inputInspectedBy, certifiedOn: _inputCertifiedOn, ...rest } = input;
   const restoreToDraft = listing.status === 'REMOVED' || listing.status === 'SOLD';
 
   // VIN-collision guard for restore: if the dealer is restoring a SOLD/
@@ -326,11 +336,39 @@ export async function updateListing(
   const cpoDocsWrite =
     cpoDocs === undefined ? undefined : cpoDocs === null ? Prisma.DbNull : cpoDocs;
 
+  // Auto-fill certificate fields when inspection PDF is being set on a CPO listing.
+  // We check the effective certificationStatus (from input if provided, else from existing row).
+  const effectiveCertStatus = input.certificationStatus ?? listing.certificationStatus;
+  const settingInspectionPdf =
+    input.inspectionReportUrl !== undefined && input.inspectionReportUrl !== null;
+  const isCpoWithNewPdf = effectiveCertStatus === 'CPO' && settingInspectionPdf;
+
+  // Fetch dealer name when we need to stamp inspectedBy.
+  let dealerNameForCert: string | undefined;
+  if (isCpoWithNewPdf) {
+    const dealerRow = await prisma.dealer.findUnique({
+      where: { id: dealerId },
+      select: { name: true },
+    });
+    dealerNameForCert = dealerRow?.name;
+  }
+
+  const certAutoFields = isCpoWithNewPdf
+    ? ({
+        registrationNumber: registrationNumber ?? undefined,
+        inspectedBy: dealerNameForCert ?? null,
+        certifiedOn: new Date(),
+      } as Record<string, unknown>)
+    : ({
+        ...(registrationNumber !== undefined ? { registrationNumber } : {}),
+      } as Record<string, unknown>);
+
   return prisma.listing.update({
     where: { id: listingId },
     data: {
       ...rest,
       ...(cpoDocsWrite === undefined ? {} : { cpoDocs: cpoDocsWrite }),
+      ...(certAutoFields as object),
       adminFeedback: null,
       ...(restoreToDraft ? { status: 'DRAFT' as const, soldAt: null } : {}),
     },
@@ -425,7 +463,7 @@ interface DealerListingDbRow {
 // price, KMs, owners, description, image URLs, inspection URL, cert status.
 // Scoped to the calling dealer to prevent cross-dealer reads.
 export async function getDealerListing(dealerId: string, listingId: string) {
-  const row = await prisma.listing.findFirst({
+  const row = await (prisma.listing.findFirst as Function)({
     where: { id: listingId, dealerId },
     select: {
       id: true,
@@ -447,8 +485,20 @@ export async function getDealerListing(dealerId: string, listingId: string) {
       cpoDocs: true,
       createdAt: true,
       updatedAt: true,
+      // Certificate fields (migration 20260602000000)
+      registrationNumber: true,
+      inspectedBy: true,
+      certifiedOn: true,
     },
-  });
+  }) as {
+    id: string; vin: string; slug: string; modelName: string; modelFamily: string;
+    year: number; colour: string; price: { toString(): string }; kmsDriven: number;
+    owners: number | null; description: string; images: string[];
+    inspectionReportUrl: string | null; certificationStatus: 'CPO' | 'AS_IS';
+    status: string; adminFeedback: string | null; cpoDocs: unknown;
+    createdAt: Date; updatedAt: Date;
+    registrationNumber: string | null; inspectedBy: string | null; certifiedOn: Date | null;
+  } | null;
   if (!row) return null;
   return {
     ...row,

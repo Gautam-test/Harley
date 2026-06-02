@@ -318,6 +318,9 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       // The generated Prisma type is typed-cast here until the next clean
       // regenerate; engine queries already select all columns.
       owners: (listing as unknown as { owners: number | null }).owners ?? null,
+      // registrationNumber added in migration 20260602000000 — cast to unknown
+      // until Prisma client is regenerated.
+      registrationNumber: (listing as unknown as { registrationNumber: string | null }).registrationNumber ?? null,
       publishedAt: listing.publishedAt?.toISOString() ?? null,
       dealerId: listing.dealer.id,
       dealerName: listing.dealer.name,

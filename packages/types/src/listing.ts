@@ -70,6 +70,8 @@ export const listingDetail = listingCard.extend({
   dealerId: z.string(),
   /** Number of previous owners. Null when not captured (legacy listings). */
   owners: z.number().int().min(1).max(20).nullable(),
+  /** Registration number for certificate generation. Null on legacy/AS-IS listings. */
+  registrationNumber: z.string().nullable().optional(),
 });
 export type ListingDetail = z.infer<typeof listingDetail>;
 
@@ -136,6 +138,9 @@ export const createListingInput = z.object({
   // the explicit-null payload pass while still requiring an object on
   // CPO submissions (validated client-side via the form).
   cpoDocs: z.record(z.string()).nullable().optional(),
+  registrationNumber: z.string().max(20).optional().nullable(),
+  inspectedBy: z.string().max(100).optional().nullable(),
+  certifiedOn: z.string().optional().nullable(), // ISO date string
 });
 export type CreateListingInput = z.infer<typeof createListingInput>;
 
@@ -174,6 +179,9 @@ export const updateListingInput = z.object({
   certificationStatus: certStatus.optional(),
   inspectionReportUrl: z.string().nullable().optional(),
   cpoDocs: z.record(z.string()).nullable().optional(),
+  registrationNumber: z.string().max(20).optional().nullable(),
+  inspectedBy: z.string().max(100).optional().nullable(),
+  certifiedOn: z.string().optional().nullable(), // ISO date string
   // Dealer-internal pricing fields (same as create — all optional on edit).
   purchasePrice: z.number().positive().optional().nullable(),
   refurbishmentPrice: z.number().positive().optional().nullable(),

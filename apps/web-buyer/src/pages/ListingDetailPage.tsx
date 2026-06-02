@@ -37,6 +37,7 @@ interface ListingDetail {
   city: string;
   pincode?: string | null;
   state?: string | null;
+  registrationNumber?: string | null;
 }
 
 // "EMI from" hint reuses the shared helper — same defaults as the
@@ -271,6 +272,27 @@ export function ListingDetailPage() {
                 authorised technician and qualifies for the 12-month mechanical &amp; electrical
                 guarantee, roadside assistance, and HOG membership.
               </p>
+            </div>
+          )}
+
+          {/* H-D Certified Certificate — shown when CPO + registrationNumber present */}
+          {data.certificationStatus === 'CPO' && data.registrationNumber && (
+            <div className="mt-6">
+              <h3 className="font-subhead uppercase tracking-subhead text-sm text-text-on-light mb-3">
+                H-D Certified Certificate
+              </h3>
+              <img
+                src={`/api/v1/listings/${data.slug}/certificate.png`}
+                alt="H-D Certified Certificate"
+                className="w-full max-w-2xl border border-gray-200"
+              />
+              <a
+                href={`/api/v1/listings/${data.slug}/certificate.pdf`}
+                download
+                className="mt-3 inline-flex items-center gap-2 text-sm text-hd-orange hover:underline"
+              >
+                Download Certificate PDF ↓
+              </a>
             </div>
           )}
         </div>

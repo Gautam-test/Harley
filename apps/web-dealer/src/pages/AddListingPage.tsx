@@ -10,6 +10,7 @@ import { api, ApiError } from '../lib/api';
 interface ExistingListing {
   id: string;
   vin: string;
+  slug: string;
   modelName: string;
   modelFamily: string;
   year: number;
@@ -27,6 +28,7 @@ interface ExistingListing {
   certificationStatus: 'CPO' | 'AS_IS';
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
   adminFeedback: string | null;
+  registrationNumber: string | null;
 }
 
 // Maps the `cause` field-name in a backend Zod field-error payload to the
@@ -43,6 +45,7 @@ const FIELD_LABEL: Record<string, string> = {
   inspectionReportUrl: 'Inspection Report',
   certificationStatus: 'Certification Tag',
   cpoDocs: 'CPO Documents',
+  registrationNumber: 'Registration Number',
 };
 
 // Legacy auto-save key — earlier builds persisted in-progress wizard state to
@@ -115,6 +118,7 @@ interface FormState {
   inspectionUrl: string;
   inspectionMeta: { originalName: string; size: number } | null;
   certificationStatus: 'CPO' | 'AS_IS';
+  registrationNumber: string;
 }
 
 const initial: FormState = {
@@ -132,6 +136,7 @@ const initial: FormState = {
   inspectionUrl: '',
   inspectionMeta: null,
   certificationStatus: 'CPO',
+  registrationNumber: '',
 };
 
 export function AddListingPage() {
@@ -193,6 +198,7 @@ export function AddListingPage() {
       inspectionUrl: e.inspectionReportUrl ?? '',
       inspectionMeta: null,
       certificationStatus: e.certificationStatus,
+      registrationNumber: e.registrationNumber ?? '',
     });
     // Re-fetch from Torque so Engine, Customer Name and Date of Invoice
     // populate in the read-only "Fetched from Torque DMS" card — the
@@ -289,6 +295,7 @@ export function AddListingPage() {
               s.certificationStatus === 'CPO' ? s.inspectionUrl || null : null,
             cpoDocs:
               s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+            registrationNumber: s.registrationNumber || null,
             // Dealer-internal pricing — send null when blank so the server
             // stores NULL (not 0) and old listings don't get phantom zeros.
             purchasePrice: s.purchasePrice ? Number(s.purchasePrice) : null,
@@ -313,6 +320,7 @@ export function AddListingPage() {
           certificationStatus: s.certificationStatus,
           cpoDocs:
             s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+          registrationNumber: s.registrationNumber || null,
           purchasePrice: s.purchasePrice ? Number(s.purchasePrice) : null,
           refurbishmentPrice: s.refurbishmentPrice ? Number(s.refurbishmentPrice) : null,
           ageingDays: s.ageingDays ? Number(s.ageingDays) : null,
@@ -383,6 +391,8 @@ export function AddListingPage() {
     missing.push(`Description needs ${20 - s.description.length} more characters (Step 2)`);
   if (s.images.length < 5)
     missing.push(`Add ${5 - s.images.length} more photo${5 - s.images.length === 1 ? '' : 's'} (Step 2 — minimum 5)`);
+  if (s.certificationStatus === 'CPO' && !s.registrationNumber)
+    missing.push('Enter the Registration Number (Step 3)');
   if (s.certificationStatus === 'CPO' && !s.inspectionUrl)
     missing.push('Upload the 110-point inspection PDF (Step 3)');
   const formValid = missing.length === 0;
@@ -653,6 +663,19 @@ export function AddListingPage() {
             />
           </div>
 
+          {/* Registration Number — required for CPO certificate generation */}
+          {s.certificationStatus === 'CPO' && (
+            <Field label="Registration Number *">
+              <Input
+                placeholder="e.g. ABC123Y"
+                value={s.registrationNumber}
+                onChange={(e) => update({ registrationNumber: e.target.value.toUpperCase() })}
+                maxLength={20}
+                disabled={torqueLocked}
+              />
+            </Field>
+          )}
+
           {/* Inspection PDF — visible for CPO; hidden for As-Is.
               Always-visible "Download Sample Format" button on the left,
               upload zone on the right (Figma /Dealer/Halrey dealer_page-0002.jpg
@@ -706,6 +729,41 @@ export function AddListingPage() {
                   }
                 />
               </div>
+
+              {/* Certificate preview — shown after inspection uploaded AND
+                  registration number entered. In create mode (no slug yet)
+                  show a placeholder instead since the listing doesn't exist
+                  in the DB yet and the API route would 404. */}
+              {s.inspectionUrl && s.registrationNumber && (
+                isEditMode && existing.data?.slug ? (
+                  <div className="mt-4 border border-hd-orange/40 p-4">
+                    <p className="font-subhead uppercase text-[11px] text-hd-orange mb-2">
+                      Certificate Preview
+                    </p>
+                    <img
+                      src={`/api/v1/listings/${existing.data.slug}/certificate.png`}
+                      alt="Certificate preview"
+                      className="w-full max-w-lg"
+                    />
+                    <a
+                      href={`/api/v1/listings/${existing.data.slug}/certificate.pdf`}
+                      download
+                      className="text-xs text-hd-orange hover:underline mt-2 block"
+                    >
+                      Download Certificate PDF ↓
+                    </a>
+                  </div>
+                ) : (
+                  <div className="mt-4 border border-hd-orange/40 p-4 bg-orange-50/20 text-sm text-gray-700">
+                    <p className="font-subhead uppercase text-[11px] text-hd-orange mb-1">
+                      Certificate
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Certificate will be generated after the listing is submitted and approved.
+                    </p>
+                  </div>
+                )
+              )}
             </div>
           ) : (
             <div className="mt-5 bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-700">

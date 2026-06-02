@@ -30,6 +30,7 @@ import { adminAuditRouter } from './modules/admin/admin-audit.routes.js';
 import { seoRouter } from './modules/seo/seo.routes.js';
 import { inspectionRouter } from './modules/inspection/inspection.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
+import { certificateRouter } from './modules/certificate/certificate.routes.js';
 import { openApiDocument } from './openapi.js';
 
 export function createApp() {
@@ -83,6 +84,7 @@ export function createApp() {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/otp', otpRouter);
   app.use('/api/v1/listings', publicLimiter, listingsRouter);
+  app.use('/api/v1/listings', publicLimiter, certificateRouter);
   app.use('/api/v1/leads', publicLimiter, publicLeadsRouter);
   app.use('/api/v1/orders', publicLimiter, publicOrdersRouter);
   app.use('/api/v1/dealers', publicLimiter, dealersRouter);
