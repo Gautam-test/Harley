@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Input, Select } from '@hd-cpo/ui';
@@ -216,7 +216,7 @@ function CreateDealerModal({
   onClose: () => void;
   onCreated: (creds: { username: string; password: string } | null) => void;
 }) {
-  const { register, handleSubmit, formState: { errors, isValid, isSubmitted }, setError: setFieldError } = useForm<{
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isValid, isSubmitted }, setError: setFieldError } = useForm<{
     username: string;
     name: string;
     email: string;
@@ -228,6 +228,39 @@ function CreateDealerModal({
     torqueDealerId?: string;
   }>({ mode: 'onTouched' });
   const [error, setError] = useState<string | null>(null);
+  const [pincodeLookup, setPincodeLookup] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+
+  // Auto-fill City + State when pincode reaches 6 valid digits.
+  // Uses postalpincode.in — free, CORS-enabled, no API key. Only fills
+  // empty fields so the admin can still override after autofill.
+  const watchedPincode = watch('pincode');
+  useEffect(() => {
+    if (!watchedPincode || !/^\d{6}$/.test(watchedPincode)) {
+      setPincodeLookup('idle');
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setPincodeLookup('loading');
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${watchedPincode}`);
+        const json = (await res.json()) as Array<{ Status: string; PostOffice?: Array<{ District: string; State: string }> }>;
+        if (cancelled) return;
+        const po = json?.[0]?.PostOffice?.[0];
+        if (po) {
+          const current = getValues();
+          if (!current.city) setValue('city', po.District, { shouldValidate: true });
+          if (!current.state) setValue('state', po.State);
+          setPincodeLookup('done');
+        } else {
+          setPincodeLookup('error');
+        }
+      } catch {
+        if (!cancelled) setPincodeLookup('error');
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedPincode, setValue, getValues]);
   const create = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       api<{ id: string; username: string; generatedPassword: string | null }>('/admin/dealers', {
@@ -345,6 +378,9 @@ function CreateDealerModal({
               })}
             />
             {errors.pincode && <p className="text-danger text-xs mt-1">{errors.pincode.message}</p>}
+            {pincodeLookup === 'loading' && <p className="text-xs text-gray-500 mt-1">Looking up city…</p>}
+            {pincodeLookup === 'done' && <p className="text-xs text-success mt-1">✓ City & State auto-filled</p>}
+            {pincodeLookup === 'error' && <p className="text-xs text-warning mt-1">Pincode not found — fill city manually</p>}
           </label>
         </div>
         <label className="block">

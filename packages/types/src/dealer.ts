@@ -17,7 +17,10 @@ export const adminCreateDealerInput = z.object({
   pincode: pincodeIN,
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  torqueDealerId: z.string().max(100).optional(),
+  // Empty string coerced to undefined so the unique constraint doesn't
+  // trip when the admin leaves the optional Torque field blank (multiple
+  // dealers having "" would all collide on the @unique index).
+  torqueDealerId: z.string().max(100).optional().transform((v) => (v && v.trim() ? v.trim() : undefined)),
 });
 export type AdminCreateDealerInput = z.infer<typeof adminCreateDealerInput>;
 
