@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, IconButton } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
@@ -90,6 +90,7 @@ const STATUS_TO_LABEL: Record<DealerListingRow['status'], string> = {
 export function MyListingsPage() {
   const [tab, setTab] = useState<TabId>('ALL');
   const qc = useQueryClient();
+  const navigate = useNavigate();
 
   // Always fetch the full set so we can compute per-tab counts; the table
   // itself filters client-side. With dealer inventories typically <50 listings
@@ -437,7 +438,16 @@ export function MyListingsPage() {
             {filtered.map((l) => (
               <tr
                 key={l.id}
-                className="hover:bg-hd-orange/5 transition-colors"
+                onClick={() => navigate(`/listings/${l.id}/edit`)}
+                className="hover:bg-hd-orange/5 transition-colors cursor-pointer"
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/listings/${l.id}/edit`);
+                  }
+                }}
               >
                 <Td className="py-2.5">
                   <div className="flex items-start gap-4">
@@ -521,7 +531,10 @@ export function MyListingsPage() {
                     </div>
                   </div>
                 </Td>
-                <Td className="text-right pr-4 py-2.5">
+                <Td
+                  className="text-right pr-4 py-2.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {/* Vertical action stack — status hint on top (when
                       applicable), action icons/links in a row below.
                       Prevents the cramped horizontal layout where
@@ -687,8 +700,20 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
     </th>
   );
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-4 py-3.5 align-top ${className}`}>{children}</td>;
+function Td({
+  children,
+  className = '',
+  onClick,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: (e: React.MouseEvent<HTMLTableCellElement>) => void;
+}) {
+  return (
+    <td className={`px-4 py-3.5 align-top ${className}`} onClick={onClick}>
+      {children}
+    </td>
+  );
 }
 
 // Inline 16×16 stroke icons. Heroicons-flavoured but kept inline so we don't
