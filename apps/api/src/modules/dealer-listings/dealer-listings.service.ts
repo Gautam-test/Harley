@@ -32,12 +32,20 @@ export async function createListing(dealerId: string, input: CreateListingInput)
   // submitted by any dealer ("VIN not assigned to your dealership" even
   // though the VIN was never registered anywhere). In LIVE mode the real
   // Torque API returns the actual owning dealerId, so the check stays.
+  //
+  // QA UPDATE: even in 'live' mode, only enforce the dealer-assignment
+  // check when BOTH the dealer has a real torqueDealerId AND the vehicle's
+  // dealerId follows the real Torque format (starts with "HD-" — the
+  // production prefix). Mock-style synthetic IDs like "TQ-DEALER-XXXX"
+  // mean the connected Torque is still returning fake data, so blocking
+  // dealers on those would be wrong. Real production rollout will
+  // happen once H-D ops confirms the Torque integration is fully live.
   const env = getEnv();
-  if (
+  const realTorqueData =
     env.TORQUE_MODE === 'live' &&
-    dealer.torqueDealerId &&
-    vehicle.dealerId !== dealer.torqueDealerId
-  ) {
+    dealer.torqueDealerId?.startsWith('HD-') &&
+    vehicle.dealerId.startsWith('HD-');
+  if (realTorqueData && vehicle.dealerId !== dealer.torqueDealerId) {
     throw new HttpError(403, 'VIN_NOT_ASSIGNED', 'VIN is not assigned to this dealer in Torque');
   }
 
