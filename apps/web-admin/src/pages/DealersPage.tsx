@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Input, Select } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
+import { reverseGeocode } from '../lib/reverseGeocode';
 
 interface DealerRow {
   id: string;
@@ -229,6 +230,43 @@ function CreateDealerModal({
   }>({ mode: 'onTouched' });
   const [error, setError] = useState<string | null>(null);
   const [pincodeLookup, setPincodeLookup] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // 📍 Use my current location — fills City + State + Pincode from
+  // browser geolocation + BigDataCloud reverse geocoding (same pattern
+  // as buyer SellBikeModal).
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Geolocation not supported by this browser');
+      return;
+    }
+    setGeoBusy(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const r = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+          if (r.city) setValue('city', r.city, { shouldValidate: true });
+          if (r.state) setValue('state', r.state);
+          if (r.pincode) setValue('pincode', r.pincode, { shouldValidate: true });
+          if (r.countryCode && r.countryCode !== 'IN') {
+            setGeoError('Outside India — please verify the address manually.');
+          }
+        } catch (e) {
+          setGeoError(e instanceof Error ? e.message : 'Could not resolve location');
+        } finally {
+          setGeoBusy(false);
+        }
+      },
+      (err) => {
+        setGeoBusy(false);
+        if (err.code === 1) setGeoError('Location permission denied');
+        else setGeoError('Could not get your location');
+      },
+      { timeout: 8000, maximumAge: 60_000 },
+    );
+  };
 
   // Auto-fill City + State when pincode reaches 6 valid digits.
   // Uses postalpincode.in — free, CORS-enabled, no API key. Only fills
@@ -356,14 +394,28 @@ function CreateDealerModal({
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
-              City <span className="text-danger">*</span>
+            <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1 flex items-center justify-between">
+              <span>City <span className="text-danger">*</span></span>
+              <button
+                type="button"
+                onClick={useMyLocation}
+                disabled={geoBusy}
+                className={`text-hd-orange hover:brightness-110 text-[10px] inline-flex items-center gap-1 normal-case font-normal tracking-normal ${geoBusy ? 'animate-pulse' : ''}`}
+                title="Use my current location"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {geoBusy ? 'Locating…' : 'Use my location'}
+              </button>
             </span>
             <Input
-              placeholder="Gurgaon"
+              placeholder={geoBusy ? 'Locating…' : 'Gurgaon'}
               {...register('city', { required: 'City is required' })}
             />
             {errors.city && <p className="text-danger text-xs mt-1">{errors.city.message}</p>}
+            {geoError && <p className="text-warning text-xs mt-1">{geoError}</p>}
           </label>
           <label className="block">
             <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
