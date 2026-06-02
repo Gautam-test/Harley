@@ -452,7 +452,7 @@ export function AddListingPage() {
               type="submit"
               disabled={
                 isEditMode ||
-                !/^[A-HJ-NPR-Z0-9]{17}$/.test(s.vin) ||
+                !/^[A-Z0-9]{17}$/.test(s.vin) ||
                 fetchVin.isPending
               }
             >
