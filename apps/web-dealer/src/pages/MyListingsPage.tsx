@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button } from '@hd-cpo/ui';
+import { Badge, Button, IconButton } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 
 interface DealerListingRow {
@@ -529,33 +529,39 @@ export function MyListingsPage() {
                   <div className="flex flex-col items-end gap-2">
                   <div className="inline-flex items-center justify-end gap-1.5">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
-                        <Link
-                          to={`/listings/${l.id}/edit`}
-                        className="inline-flex items-center px-2 py-1 text-[10px] font-subhead uppercase tracking-subhead text-hd-orange border border-hd-orange/40 hover:bg-hd-orange/10 transition"
-                        >
-                          Edit
-                        </Link>
+                      <IconButton
+                        as="a"
+                        label="Edit"
+                        href={`/listings/${l.id}/edit`}
+                        target="_self"
+                        tone="primary"
+                      >
+                        <PencilIcon />
+                      </IconButton>
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
-                      <Link
-                        to={`/listings/${l.id}/edit`}
-                        className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-danger hover:underline"
+                      <IconButton
+                        as="a"
+                        label="Re-submit"
+                        href={`/listings/${l.id}/edit`}
+                        target="_self"
+                        tone="danger"
                       >
-                        Re-submit
-                      </Link>
+                        <RefreshIcon />
+                      </IconButton>
                     )}
                     {/* Preview opens the buyer-facing detail page, which only
                         renders ACTIVE listings. DEACTIVATED ("Off") rows are
                         hidden from buyers, so previewing them just lands on
                         a 404 — hiding the icon avoids that dead-end (QA #11). */}
                     {l.status === 'ACTIVE' && (
-                      <IconAction
+                      <IconButton
                         as="a"
                         label="Preview"
                         href={buyerListingHref(l.slug)}
                       >
                         <EyeIcon />
-                      </IconAction>
+                      </IconButton>
                     )}
                     {l.status === 'ACTIVE' && (
                       <>
@@ -565,7 +571,7 @@ export function MyListingsPage() {
                             confirms include the model + last-5 of VIN so
                             the dealer knows *exactly* which row they're
                             about to mutate. Same pattern as admin Publish. */}
-                        <IconAction
+                        <IconButton
                           label="Mark Sold"
                           onClick={() => {
                             if (
@@ -578,8 +584,8 @@ export function MyListingsPage() {
                           }}
                         >
                           <SoldIcon />
-                        </IconAction>
-                        <IconAction
+                        </IconButton>
+                        <IconButton
                           label="Turn Off"
                           onClick={() => {
                             if (
@@ -593,45 +599,30 @@ export function MyListingsPage() {
                           disabled={turnOff.isPending}
                         >
                           <PowerIcon />
-                        </IconAction>
+                        </IconButton>
                       </>
                     )}
                     {/* QA latest: icon-only power button — the "Turn On"
                         text label is dropped per spec. Accessible via
                         aria-label + native title tooltip. */}
                     {l.status === 'DEACTIVATED' && (
-                      <button
-                        type="button"
+                      <IconButton
+                        label="Turn On"
+                        tone="primary"
                         onClick={() => turnOn.mutate(l.id)}
                         disabled={turnOn.isPending}
-                        aria-label="Turn On"
-                        title="Turn On — show this listing to buyers again"
-                        className="inline-flex items-center justify-center h-8 w-8 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                      </button>
+                      </IconButton>
                     )}
                     {/* QA: Inactive tab REMOVED rows now show the same
                         Turn-On power button DEACTIVATED rows have, so the
                         dealer has one consistent affordance to bring an
-                        inactive listing back. The action PATCHes with
-                        empty body which trips updateListing's
-                        restoreToDraft branch — flips status to DRAFT and
-                        the listing re-enters the admin queue. We can't
-                        skip admin approval client-side (PRD §6.3.4 keeps
-                        publish admin-only), so the listing lands in
-                        Pending rather than Live; the dealer's "+N items
-                        left" banner on the Pending tab will tell them
-                        admin review is the next step. The previous
-                        eye/View affordance is dropped for REMOVED — the
-                        dealer can still review the listing post-restore
-                        from the Pending tab's edit flow. */}
+                        inactive listing back. */}
                     {l.status === 'REMOVED' && (
-                      // Same labelled pill as the DEACTIVATED branch above —
-                      // dealers were asking why the Inactive tab had only an
-                      // icon (looked like a Preview eye to some of them).
-                      <button
-                        type="button"
+                      <IconButton
+                        label="Turn On"
+                        tone="primary"
                         onClick={() => {
                           if (
                             window.confirm(
@@ -642,15 +633,12 @@ export function MyListingsPage() {
                           }
                         }}
                         disabled={restoreFromRemoved.isPending}
-                        aria-label="Turn On"
-                        title="Turn On — restore and re-submit for admin approval"
-                        className="inline-flex items-center justify-center h-8 w-8 border border-hd-orange bg-hd-orange/10 rounded text-hd-orange hover:bg-hd-orange hover:text-hd-black transition disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         <PowerIcon />
-                      </button>
+                      </IconButton>
                     )}
                     {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
-                      <IconAction
+                      <IconButton
                         label="Remove"
                         onClick={() => {
                           if (
@@ -664,27 +652,19 @@ export function MyListingsPage() {
                         tone="danger"
                       >
                         <TrashIcon />
-                      </IconAction>
+                      </IconButton>
                     )}
                     {/* SOLD rows keep the View affordance for record-
-                        keeping (photos, price, VIN, admin feedback). The
-                        REMOVED branch above replaces what used to be the
-                        eye icon with the Turn On action. */}
+                        keeping (photos, price, VIN, admin feedback). */}
                     {l.status === 'SOLD' && (
-                      <Link
-                        to={`/listings/${l.id}/edit`}
-                        aria-label="View Details"
-                        title="View Details"
-                        className="group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50"
+                      <IconButton
+                        as="a"
+                        label="View Details"
+                        href={`/listings/${l.id}/edit`}
+                        target="_self"
                       >
                         <EyeIcon />
-                        <span
-                          role="tooltip"
-                          className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
-                        >
-                          View Details
-                        </span>
-                      </Link>
+                      </IconButton>
                     )}
                   </div>
                   </div>
@@ -709,65 +689,6 @@ function Th({ children, className = '' }: { children: React.ReactNode; className
 }
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-4 py-3.5 align-top ${className}`}>{children}</td>;
-}
-
-// Square icon button with a hover tooltip. Used in the Actions column to
-// keep the table light when several actions stack up on a single row. The
-// label is announced to screen readers via aria-label and shown to sighted
-// users via a CSS-driven tooltip on hover/focus — no JS state required.
-type IconActionProps = {
-  label: string;
-  children: React.ReactNode;
-  tone?: 'default' | 'danger' | 'primary';
-  disabled?: boolean;
-} & (
-  | { as?: 'button'; onClick?: () => void; href?: undefined }
-  | { as: 'a'; href: string; onClick?: undefined }
-);
-
-function IconAction(props: IconActionProps) {
-  const { label, children, tone = 'default', disabled } = props;
-  const toneClasses =
-    tone === 'danger'
-      ? 'text-gray-500 hover:text-danger hover:border-danger/40 hover:bg-danger/5'
-      : tone === 'primary'
-      ? 'text-gray-500 hover:text-hd-orange hover:border-hd-orange hover:bg-hd-orange/5'
-      : 'text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50';
-  const base = `group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition disabled:opacity-40 disabled:cursor-not-allowed ${toneClasses}`;
-  const tooltip = (
-    <span
-      role="tooltip"
-      className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
-    >
-      {label}
-    </span>
-  );
-  if (props.as === 'a') {
-    return (
-      <a
-        href={props.href}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={label}
-        className={base}
-      >
-        {children}
-        {tooltip}
-      </a>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={props.onClick}
-      disabled={disabled}
-      aria-label={label}
-      className={base}
-    >
-      {children}
-      {tooltip}
-    </button>
-  );
 }
 
 // Inline 16×16 stroke icons. Heroicons-flavoured but kept inline so we don't
@@ -805,6 +726,23 @@ function PowerIcon() {
     <svg {...ICON_PROPS}>
       <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
       <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  );
+}
+function PencilIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  );
+}
+function RefreshIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <polyline points="23 4 23 10 17 10" />
+      <polyline points="1 20 1 14 7 14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   );
 }

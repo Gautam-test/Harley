@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, Input } from '@hd-cpo/ui';
+import { Badge, Button, IconButton, Input } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { ListingPreviewDrawer } from '../components/ListingPreviewDrawer';
 
@@ -345,7 +345,7 @@ export function ListingsPage() {
                             previously fired this on a single mis-click; we
                             now confirm so the admin acknowledges the bike
                             is going live. */}
-                        <IconAction
+                        <IconButton
                           label="Publish"
                           tone="primary"
                           onClick={() => {
@@ -360,18 +360,18 @@ export function ListingsPage() {
                           disabled={publish.isPending}
                         >
                           <PublishIcon />
-                        </IconAction>
-                        <IconAction
+                        </IconButton>
+                        <IconButton
                           label="Return to Dealer"
                           onClick={() => setReturning(l)}
                         >
                           <ReturnIcon />
-                        </IconAction>
+                        </IconButton>
                       </>
                     )}
                     {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
                       <>
-                        <IconAction
+                        <IconButton
                           label="Deactivate"
                           onClick={() => {
                             if (
@@ -384,14 +384,14 @@ export function ListingsPage() {
                           }}
                         >
                           <PowerIcon />
-                        </IconAction>
-                        <IconAction
+                        </IconButton>
+                        <IconButton
                           label="Remove"
                           tone="danger"
                           onClick={() => setRemoving(l)}
                         >
                           <TrashIcon />
-                        </IconAction>
+                        </IconButton>
                       </>
                     )}
                     {/* Off-market rows still surface an action so the column
@@ -403,12 +403,12 @@ export function ListingsPage() {
                         listing back through the DRAFT review queue (the
                         dealer is told to re-upload missing assets). */}
                     {l.status === 'SOLD' && (
-                      <IconAction label="View" onClick={() => setPreviewId(l.id)}>
+                      <IconButton label="View" onClick={() => setPreviewId(l.id)}>
                         <EyeIcon />
-                      </IconAction>
+                      </IconButton>
                     )}
                     {l.status === 'DEACTIVATED' && (
-                      <IconAction
+                      <IconButton
                         label="Reactivate"
                         tone="primary"
                         onClick={() => {
@@ -423,10 +423,10 @@ export function ListingsPage() {
                         disabled={reactivate.isPending}
                       >
                         <PowerIcon />
-                      </IconAction>
+                      </IconButton>
                     )}
                     {l.status === 'REMOVED' && (
-                      <IconAction
+                      <IconButton
                         label="Restore"
                         tone="primary"
                         onClick={() => {
@@ -441,7 +441,7 @@ export function ListingsPage() {
                         disabled={restore.isPending}
                       >
                         <RestoreIcon />
-                      </IconAction>
+                      </IconButton>
                     )}
                   </div>
                 </Td>
@@ -599,44 +599,6 @@ function Td({
     </td>
   );
 }
-// Square icon button with a hover tooltip — same pattern as MyListingsPage.
-// Duplicated rather than lifted into @hd-cpo/ui for now since the admin and
-// dealer apps use slightly different tone palettes; promote to shared when
-// a third surface needs it.
-type IconActionProps = {
-  label: string;
-  children: React.ReactNode;
-  tone?: 'default' | 'danger' | 'primary';
-  disabled?: boolean;
-  onClick?: () => void;
-};
-
-function IconAction({ label, children, tone = 'default', disabled, onClick }: IconActionProps) {
-  const toneClasses =
-    tone === 'danger'
-      ? 'text-gray-500 hover:text-danger hover:border-danger/40 hover:bg-danger/5'
-      : tone === 'primary'
-      ? 'text-gray-500 hover:text-hd-orange hover:border-hd-orange hover:bg-hd-orange/5'
-      : 'text-gray-500 hover:text-text-on-light hover:border-gray-400 hover:bg-gray-50';
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={label}
-      className={`group relative inline-flex items-center justify-center w-8 h-8 border border-gray-200 rounded transition disabled:opacity-40 disabled:cursor-not-allowed ${toneClasses}`}
-    >
-      {children}
-      <span
-        role="tooltip"
-        className="pointer-events-none absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap bg-hd-black text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-2 py-1 rounded opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition z-10"
-      >
-        {label}
-      </span>
-    </button>
-  );
-}
-
 const ICON_PROPS = {
   viewBox: '0 0 24 24',
   fill: 'none',
