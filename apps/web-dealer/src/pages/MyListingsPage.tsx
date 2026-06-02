@@ -532,7 +532,7 @@ export function MyListingsPage() {
                       <IconButton
                         as="a"
                         label="Edit"
-                        href={`/listings/${l.id}/edit`}
+                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
                         target="_self"
                         tone="primary"
                       >
@@ -543,7 +543,7 @@ export function MyListingsPage() {
                       <IconButton
                         as="a"
                         label="Re-submit"
-                        href={`/listings/${l.id}/edit`}
+                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
                         target="_self"
                         tone="danger"
                       >
@@ -660,7 +660,7 @@ export function MyListingsPage() {
                       <IconButton
                         as="a"
                         label="View Details"
-                        href={`/listings/${l.id}/edit`}
+                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
                         target="_self"
                       >
                         <EyeIcon />
