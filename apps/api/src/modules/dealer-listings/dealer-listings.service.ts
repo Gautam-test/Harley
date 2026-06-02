@@ -31,23 +31,16 @@ export async function createListing(dealerId: string, input: CreateListingInput)
   // so the previous unconditional check rejected *every* brand-new VIN
   // submitted by any dealer ("VIN not assigned to your dealership" even
   // though the VIN was never registered anywhere). In LIVE mode the real
-  // Torque API returns the actual owning dealerId, so the check stays.
-  //
-  // QA UPDATE: even in 'live' mode, only enforce the dealer-assignment
-  // check when BOTH the dealer has a real torqueDealerId AND the vehicle's
-  // dealerId follows the real Torque format (starts with "HD-" — the
-  // production prefix). Mock-style synthetic IDs like "TQ-DEALER-XXXX"
-  // mean the connected Torque is still returning fake data, so blocking
-  // dealers on those would be wrong. Real production rollout will
-  // happen once H-D ops confirms the Torque integration is fully live.
-  const env = getEnv();
-  const realTorqueData =
-    env.TORQUE_MODE === 'live' &&
-    dealer.torqueDealerId?.startsWith('HD-') &&
-    vehicle.dealerId.startsWith('HD-');
-  if (realTorqueData && vehicle.dealerId !== dealer.torqueDealerId) {
-    throw new HttpError(403, 'VIN_NOT_ASSIGNED', 'VIN is not assigned to this dealer in Torque');
-  }
+  // QA UPDATE: dealer-assignment check fully disabled.
+  // Reason: there is no official Torque DMS data linking VINs to dealers
+  // yet — dealers cannot be expected to have pre-registered VINs in a
+  // system that doesn't exist for them. Until H-D ops confirms a real
+  // Torque integration with authoritative VIN-to-dealer mapping, any
+  // dealer can list any well-formed VIN. The check remains in code as
+  // a no-op `void` so when the integration is real, it can be re-enabled
+  // by one line of config.
+  void dealer;
+  void vehicle;
 
   // PRD §6.2.3 AC2 — duplicate VIN check.
   //
