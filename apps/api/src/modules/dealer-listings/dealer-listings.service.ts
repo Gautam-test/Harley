@@ -490,6 +490,14 @@ export async function getDealerListing(dealerId: string, listingId: string) {
       registrationNumber: true,
       inspectedBy: true,
       certifiedOn: true,
+      // Dealer-internal pricing (migration 20260601000000) — required for
+      // the edit wizard to pre-fill the Internal Pricing block. QA bug:
+      // these were missing from select{}, so edit mode rendered the four
+      // inputs blank even when the dealer had saved values.
+      purchasePrice: true,
+      refurbishmentPrice: true,
+      ageingDays: true,
+      finalSellingPrice: true,
     },
   }) as {
     id: string; vin: string; slug: string; modelName: string; modelFamily: string;
@@ -499,6 +507,10 @@ export async function getDealerListing(dealerId: string, listingId: string) {
     status: string; adminFeedback: string | null; cpoDocs: unknown;
     createdAt: Date; updatedAt: Date;
     registrationNumber: string | null; inspectedBy: string | null; certifiedOn: Date | null;
+    purchasePrice: { toString(): string } | null;
+    refurbishmentPrice: { toString(): string } | null;
+    ageingDays: number | null;
+    finalSellingPrice: { toString(): string } | null;
   } | null;
   if (!row) return null;
   return {
@@ -508,6 +520,11 @@ export async function getDealerListing(dealerId: string, listingId: string) {
     // failure mode this avoids).
     vin: rootVin(row.vin),
     price: Number(row.price),
+    // Decimal columns come back as Prisma Decimal objects — coerce to
+    // plain numbers for the JSON wire format and SPA pre-fill.
+    purchasePrice: row.purchasePrice != null ? Number(row.purchasePrice) : null,
+    refurbishmentPrice: row.refurbishmentPrice != null ? Number(row.refurbishmentPrice) : null,
+    finalSellingPrice: row.finalSellingPrice != null ? Number(row.finalSellingPrice) : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
