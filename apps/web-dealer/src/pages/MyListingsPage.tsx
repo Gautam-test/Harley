@@ -543,10 +543,8 @@ export function MyListingsPage() {
                   <div className="inline-flex items-center justify-end gap-1.5">
                     {l.status === 'DRAFT' && !l.adminFeedback && (
                       <IconButton
-                        as="a"
+                        to={`/listings/${l.id}/edit`}
                         label="Edit"
-                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
-                        target="_self"
                         tone="primary"
                       >
                         <PencilIcon />
@@ -554,10 +552,8 @@ export function MyListingsPage() {
                     )}
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <IconButton
-                        as="a"
+                        to={`/listings/${l.id}/edit`}
                         label="Re-submit"
-                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
-                        target="_self"
                         tone="danger"
                       >
                         <RefreshIcon />
@@ -670,12 +666,7 @@ export function MyListingsPage() {
                     {/* SOLD rows keep the View affordance for record-
                         keeping (photos, price, VIN, admin feedback). */}
                     {l.status === 'SOLD' && (
-                      <IconButton
-                        as="a"
-                        label="View Details"
-                        href={`${import.meta.env.BASE_URL}listings/${l.id}/edit`.replace(/\/+/g, '/')}
-                        target="_self"
-                      >
+                      <IconButton to={`/listings/${l.id}/edit`} label="View Details">
                         <EyeIcon />
                       </IconButton>
                     )}

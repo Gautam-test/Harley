@@ -4,7 +4,17 @@ import { cn } from '../cn.js';
 // Square 32×32 icon-only action button used in table action columns
 // across the dealer + admin portals. Renders a visible tooltip on
 // hover/focus via a CSS-only span so we don't ship JS for tooltips.
-// Two render modes: <button> (default) or <a> when `href` is set.
+//
+// Three render modes:
+//   1. <button>           (default) — onClick handler
+//   2. <a href=...>       (as="a")  — external links, opens in new tab
+//   3. <a href=BASE+to>   (to=...)  — internal SPA navigation; href is
+//                                     resolved with import.meta.env.BASE_URL
+//                                     so the link stays inside the current
+//                                     SPA (e.g. /dealer/, /admin/) — fixes
+//                                     the "lands on buyer 404" bug where
+//                                     raw <a href="/listings/:id/edit">
+//                                     bypassed React Router's basename.
 export type IconButtonTone = 'default' | 'danger' | 'primary';
 
 type CommonProps = {
@@ -20,6 +30,7 @@ type ButtonProps = CommonProps & {
   as?: 'button';
   onClick?: () => void;
   href?: undefined;
+  to?: undefined;
   target?: undefined;
 };
 
@@ -29,9 +40,22 @@ type AnchorProps = CommonProps & {
   /** Defaults to "_blank" + noreferrer for external preview links. */
   target?: string;
   onClick?: undefined;
+  to?: undefined;
 };
 
-export type IconButtonProps = ButtonProps | AnchorProps;
+type InternalNavProps = CommonProps & {
+  /** Internal SPA path (without basename). Will be prepended with
+   *  import.meta.env.BASE_URL so it routes inside the current SPA.
+   *  Use this for Edit / View / detail links within the dealer or
+   *  admin portals — not for cross-SPA links. */
+  to: string;
+  as?: undefined;
+  href?: undefined;
+  target?: undefined;
+  onClick?: undefined;
+};
+
+export type IconButtonProps = ButtonProps | AnchorProps | InternalNavProps;
 
 const toneClasses: Record<IconButtonTone, string> = {
   default:
@@ -41,6 +65,15 @@ const toneClasses: Record<IconButtonTone, string> = {
   primary:
     'text-gray-500 hover:text-hd-orange hover:border-hd-orange hover:bg-hd-orange/5',
 };
+
+/** Resolve an internal SPA path to a full href that respects the
+ *  current Vite BASE_URL (e.g. /dealer/, /admin/). Collapses any
+ *  duplicate slashes so the result is always a clean single-slash path. */
+function resolveInternalHref(to: string): string {
+  const base = (import.meta.env.BASE_URL ?? '/').replace(/\/+$/, '/');
+  const path = to.replace(/^\/+/, '');
+  return `${base}${path}`.replace(/\/+/g, '/');
+}
 
 export function IconButton(props: IconButtonProps) {
   const { label, children, tone = 'default', disabled, className } = props;
@@ -57,6 +90,23 @@ export function IconButton(props: IconButtonProps) {
       {label}
     </span>
   );
+  // Internal SPA navigation: auto-prepend BASE_URL so href stays inside
+  // the current portal's React Router. target=_self so the SPA doesn't
+  // do a full page reload.
+  if ('to' in props && props.to !== undefined) {
+    return (
+      <a
+        href={resolveInternalHref(props.to)}
+        target="_self"
+        aria-label={label}
+        title={label}
+        className={base}
+      >
+        {children}
+        {tooltip}
+      </a>
+    );
+  }
   if (props.as === 'a') {
     return (
       <a

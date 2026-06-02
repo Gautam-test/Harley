@@ -333,10 +333,8 @@ export function LeadsPage() {
                 </Td>
                 <Td className="text-right pr-4">
                   <IconButton
-                    as="a"
+                    to={`/leads/${l.kind}/${l.id}`}
                     label="Open"
-                    href={`${import.meta.env.BASE_URL}leads/${l.kind}/${l.id}`.replace(/\/+/g, '/')}
-                    target="_self"
                     tone="primary"
                   >
                     <svg
