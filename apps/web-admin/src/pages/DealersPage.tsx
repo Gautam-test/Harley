@@ -216,7 +216,7 @@ function CreateDealerModal({
   onClose: () => void;
   onCreated: (creds: { username: string; password: string } | null) => void;
 }) {
-  const { register, handleSubmit, formState } = useForm<{
+  const { register, handleSubmit, formState: { errors, isValid, isSubmitted }, setError: setFieldError } = useForm<{
     username: string;
     name: string;
     email: string;
@@ -226,7 +226,7 @@ function CreateDealerModal({
     state?: string;
     address?: string;
     torqueDealerId?: string;
-  }>();
+  }>({ mode: 'onTouched' });
   const [error, setError] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
@@ -237,7 +237,33 @@ function CreateDealerModal({
     onSuccess: (res) => {
       onCreated(res.generatedPassword ? { username: res.username, password: res.generatedPassword } : null);
     },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not create'),
+    onError: (e) => {
+      if (e instanceof ApiError) {
+        // Surface per-field server errors when the API returns Zod field errors
+        // in the message JSON (VALIDATION_ERROR format). Fall back to generic.
+        try {
+          const parsed = JSON.parse(e.message) as {
+            fieldErrors?: Record<string, string[]>;
+          };
+          if (parsed.fieldErrors && typeof parsed.fieldErrors === 'object') {
+            Object.entries(parsed.fieldErrors).forEach(([field, msgs]) => {
+              if (Array.isArray(msgs) && msgs.length) {
+                setFieldError(
+                  field as Parameters<typeof setFieldError>[0],
+                  { message: msgs[0] },
+                );
+              }
+            });
+            return;
+          }
+        } catch {
+          // message wasn't JSON — fall through to generic error
+        }
+        setError(e.message);
+      } else {
+        setError('Could not create');
+      }
+    },
   });
   return (
     <Modal onClose={onClose} title="Add Dealer">
@@ -249,38 +275,76 @@ function CreateDealerModal({
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             Username <span className="text-danger">*</span>
           </span>
-          <Input placeholder="lowercase, no spaces" {...register('username', { required: true })} />
+          <Input
+            placeholder="lowercase, no spaces"
+            {...register('username', {
+              required: 'Username is required',
+              pattern: { value: /^[a-z0-9_-]+$/, message: 'Lowercase letters, numbers, hyphens only' },
+            })}
+          />
+          {errors.username && <p className="text-danger text-xs mt-1">{errors.username.message}</p>}
         </label>
         <label className="block">
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             Dealer Name <span className="text-danger">*</span>
           </span>
-          <Input placeholder="e.g. Capital Harley-Davidson Gurgaon" {...register('name', { required: true })} />
+          <Input
+            placeholder="e.g. Capital Harley-Davidson Gurgaon"
+            {...register('name', { required: 'Dealer name is required' })}
+          />
+          {errors.name && <p className="text-danger text-xs mt-1">{errors.name.message}</p>}
         </label>
         <label className="block">
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             Email <span className="text-danger">*</span>
           </span>
-          <Input type="email" placeholder="dealer@example.com" {...register('email', { required: true })} />
+          <Input
+            type="email"
+            placeholder="dealer@example.com"
+            {...register('email', {
+              required: 'Email is required',
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email' },
+            })}
+          />
+          {errors.email && <p className="text-danger text-xs mt-1">{errors.email.message}</p>}
         </label>
         <label className="block">
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             Phone <span className="text-danger">*</span>
           </span>
-          <Input placeholder="+91XXXXXXXXXX" {...register('phone', { required: true })} />
+          <Input
+            placeholder="+91XXXXXXXXXX"
+            {...register('phone', {
+              required: 'Phone is required',
+              pattern: { value: /^\+91[0-9]{10}$/, message: 'Format: +91XXXXXXXXXX' },
+            })}
+          />
+          {errors.phone && <p className="text-danger text-xs mt-1">{errors.phone.message}</p>}
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
               City <span className="text-danger">*</span>
             </span>
-            <Input placeholder="Gurgaon" {...register('city', { required: true })} />
+            <Input
+              placeholder="Gurgaon"
+              {...register('city', { required: 'City is required' })}
+            />
+            {errors.city && <p className="text-danger text-xs mt-1">{errors.city.message}</p>}
           </label>
           <label className="block">
             <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
               Pincode <span className="text-danger">*</span>
             </span>
-            <Input placeholder="122001" maxLength={6} {...register('pincode', { required: true })} />
+            <Input
+              placeholder="122001"
+              maxLength={6}
+              {...register('pincode', {
+                required: 'Pincode is required',
+                pattern: { value: /^[0-9]{6}$/, message: '6-digit pincode required' },
+              })}
+            />
+            {errors.pincode && <p className="text-danger text-xs mt-1">{errors.pincode.message}</p>}
           </label>
         </div>
         <label className="block">
@@ -304,7 +368,7 @@ function CreateDealerModal({
         {error && <div className="text-danger text-sm">{error}</div>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={!formState.isValid || create.isPending}>
+          <Button type="submit" disabled={(!isValid && isSubmitted) || create.isPending}>
             {create.isPending ? 'Creating…' : 'Create'}
           </Button>
         </div>

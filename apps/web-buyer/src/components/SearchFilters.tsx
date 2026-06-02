@@ -304,12 +304,15 @@ export function SearchFilters() {
             until a valid 6-digit pincode is entered, then it enables
             with a #FFFFFF background — mirroring the hero banner
             behaviour (distance is only meaningful relative to a
-            pincode). */}
+            pincode).
+            Fix: also check the URL param directly so the dropdown is
+            enabled immediately when navigating from the hero (pincode
+            arrives in the URL before the RHF watch fires). */}
         <Field label="Distance">
           <Select
-            disabled={!/^\d{6}$/.test(watchedPincode ?? '')}
+            disabled={!/^\d{6}$/.test(watchedPincode ?? '') && !/^\d{6}$/.test(params.get('pincode') ?? '')}
             style={
-              /^\d{6}$/.test(watchedPincode ?? '')
+              /^\d{6}$/.test(watchedPincode ?? '') || /^\d{6}$/.test(params.get('pincode') ?? '')
                 ? { backgroundColor: '#FFFFFF' }
                 : { backgroundColor: '#C0C0C0', borderColor: '#C0C0C0' }
             }

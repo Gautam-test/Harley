@@ -281,27 +281,26 @@ export function LeadDetailPage() {
               </div>
             )}
 
+            {/* Pipeline stage bar — buyer uses 6 stages, seller uses 7.
+                On mobile we collapse to a 2-col grid so the circles are
+                readable; wider viewports expand to match stage count.
+                Long seller labels (e.g. "Legal Transfer & Documentation")
+                wrap inside each cell rather than overflowing into
+                neighbours — each <li> is flex-col with break-words. */}
             <ol
-              className={`mt-5 grid grid-cols-2 gap-3 relative ${
-                // Buyer = 6 stages, seller = 7 stages (QA round 3 expanded
-                // the trade-in flow). Grid cols match stage counts so the
-                // numbered bar lays out one row deep on desktop and never
-                // wraps to a second row at the lg breakpoint.
+              className={`mt-5 grid gap-x-2 gap-y-4 ${
                 kind === 'buyer'
-                  ? 'sm:grid-cols-3 lg:grid-cols-6'
-                  : 'sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7'
+                  ? 'grid-cols-3 sm:grid-cols-6'
+                  : 'grid-cols-3 sm:grid-cols-4 md:grid-cols-7'
               }`}
             >
               {basePipeline.map((stage, idx) => {
-                // `currentIdx` is computed once at the top of the component
-                // off the shared `basePipeline`, so the bar can't drift from
-                // the dropdown.
                 const reached = currentIdx >= 0 && idx <= currentIdx;
                 const isCurrent = stage === lead.status;
                 return (
-                  <li key={stage} className="flex flex-col items-center text-center">
+                  <li key={stage} className="flex flex-col items-center text-center gap-2 min-w-0">
                     <span
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full border-2 font-subhead text-xs ${
+                      className={`inline-flex shrink-0 h-8 w-8 items-center justify-center rounded-full border-2 font-subhead text-xs ${
                         isCurrent
                           ? 'bg-hd-orange border-hd-orange text-hd-black'
                           : reached
@@ -312,7 +311,9 @@ export function LeadDetailPage() {
                       {idx + 1}
                     </span>
                     <span
-                      className={`mt-2 font-subhead uppercase tracking-subhead text-[10px] leading-tight ${
+                      className={`font-subhead uppercase tracking-subhead leading-tight break-words w-full ${
+                        kind === 'buyer' ? 'text-[10px]' : 'text-[9px]'
+                      } ${
                         isCurrent ? 'text-text-on-light' : reached ? 'text-gray-700' : 'text-gray-400'
                       }`}
                     >
@@ -323,7 +324,7 @@ export function LeadDetailPage() {
               })}
             </ol>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+            <div className="mt-6 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3 text-sm">
               <span className="font-subhead uppercase tracking-subhead text-xs text-gray-500">
                 Move To:
               </span>

@@ -31,7 +31,7 @@ interface SearchResponse {
   };
 }
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 9;
 
 const SORT_OPTIONS: { value: string; label: string }[] = [
   { value: 'newest', label: 'Newest' },
