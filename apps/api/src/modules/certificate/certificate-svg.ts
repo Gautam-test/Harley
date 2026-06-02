@@ -42,102 +42,105 @@ export function generateCertificateSvg(fields: CertificateFields): string | null
   const on = esc(fmt(certifiedOn));
 
   // Viewbox: 900 × 640.  All coordinates are in px units.
+  // Palette:
+  //   #000000  black border + headings
+  //   #FF6600  H-D orange (underline bar, accent, star fill)
+  //   #E8EAF8  light blue/lavender row highlight
+  //   #D4AF37  gold (seal)
+  //   #B8860B  dark gold (seal stroke + curved text)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" width="900" height="640" font-family="Helvetica, Arial, sans-serif">
   <!-- White background -->
   <rect width="900" height="640" fill="#ffffff"/>
-  <!-- Thick outer border -->
-  <rect x="6" y="6" width="888" height="628" fill="none" stroke="#000000" stroke-width="6"/>
-  <!-- Thin inner border -->
-  <rect x="14" y="14" width="872" height="612" fill="none" stroke="#000000" stroke-width="1.5"/>
+  <!-- Thick black outer border -->
+  <rect x="8" y="8" width="884" height="624" fill="none" stroke="#000000" stroke-width="8"/>
 
   <!-- ── TOP LEFT BLOCK ── -->
-  <!-- H–D CERTIFIED™ heading -->
-  <text x="38" y="62" font-size="34" font-weight="bold" fill="#FF6600" letter-spacing="2">H–D CERTIFIED&#x2122;</text>
+  <!-- H–D CERTIFIED heading in bold black with small orange ™ -->
+  <text x="40" y="70" font-size="42" font-weight="bold" fill="#000000" letter-spacing="2">H–D CERTIFIED</text>
+  <text x="338" y="48" font-size="14" font-weight="bold" fill="#FF6600">&#x2122;</text>
   <!-- PRE-OWNED HARLEY-DAVIDSON® subtitle -->
-  <text x="38" y="84" font-size="13" font-weight="normal" fill="#111111" letter-spacing="1">PRE-OWNED HARLEY-DAVIDSON&#xAE;</text>
-  <!-- Orange underline below subtitle -->
-  <rect x="38" y="91" width="320" height="3" fill="#FF6600"/>
+  <text x="40" y="92" font-size="14" font-weight="bold" fill="#000000" letter-spacing="1.5">PRE-OWNED HARLEY-DAVIDSON&#xAE;</text>
+  <!-- Orange underline bar below subtitle -->
+  <rect x="40" y="100" width="160" height="5" fill="#FF6600"/>
 
   <!-- ── TOP RIGHT: GOLD SEAL ── -->
-  <!-- Outer gold ring -->
-  <circle cx="780" cy="100" r="84" fill="none" stroke="#C9A800" stroke-width="3"/>
-  <!-- Inner gold ring -->
-  <circle cx="780" cy="100" r="76" fill="none" stroke="#C9A800" stroke-width="1.5"/>
-  <!-- Gold fill background for seal -->
-  <circle cx="780" cy="100" r="73" fill="#FFF8DC"/>
-
-  <!-- Bar & Shield icon (simplified) -->
-  <!-- Shield shape -->
-  <path d="M780,52 L800,62 L800,90 Q800,112 780,122 Q760,112 760,90 L760,62 Z" fill="#C9A800" stroke="#8B6914" stroke-width="1.5"/>
-  <!-- Bar across shield -->
-  <rect x="760" y="76" width="40" height="10" fill="#111111"/>
-  <!-- H-D text on shield -->
-  <text x="780" y="100" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="1">H-D</text>
-
-  <!-- Circular text path for seal label -->
   <defs>
-    <path id="sealTopArc" d="M 720,100 A 60,60 0 0,1 840,100"/>
-    <path id="sealBottomArc" d="M 840,100 A 60,60 0 0,1 720,100"/>
+    <path id="sealTopArc" d="M 720,115 A 65,65 0 0,1 850,115"/>
+    <path id="sealBottomArc" d="M 720,115 A 65,65 1 0,0 850,115"/>
   </defs>
-  <text font-size="9.5" font-weight="bold" fill="#8B6914" letter-spacing="2.5">
-    <textPath href="#sealTopArc" startOffset="5%">12 MONTH GUARANTEE</textPath>
+  <!-- Outer gold ring -->
+  <circle cx="785" cy="115" r="70" fill="#D4AF37" stroke="#8B6914" stroke-width="2"/>
+  <!-- Inner gold ring (lighter) -->
+  <circle cx="785" cy="115" r="58" fill="#F5D76E" stroke="#8B6914" stroke-width="1"/>
+  <!-- Curved text along top arc -->
+  <text font-size="8.5" font-weight="bold" fill="#5C4A00" letter-spacing="1.5">
+    <textPath href="#sealTopArc" startOffset="8%">12 MONTH GUARANTEE</textPath>
   </text>
-  <text font-size="9.5" font-weight="bold" fill="#8B6914" letter-spacing="2.5">
-    <textPath href="#sealBottomArc" startOffset="3%">&amp; ROADSIDE ASSISTANCE</textPath>
+  <!-- Curved text along bottom arc -->
+  <text font-size="8.5" font-weight="bold" fill="#5C4A00" letter-spacing="1.5">
+    <textPath href="#sealBottomArc" startOffset="8%">&amp; ROADSIDE ASSISTANCE</textPath>
   </text>
+  <!-- Bar & Shield logo (simplified) -->
+  <!-- Shield body -->
+  <path d="M785,82 L808,92 L808,118 Q808,138 785,148 Q762,138 762,118 L762,92 Z" fill="#1a1a1a" stroke="#000000" stroke-width="1"/>
+  <!-- Bar across shield -->
+  <rect x="762" y="108" width="46" height="12" fill="#FF6600"/>
+  <!-- H-D wordmark on bar -->
+  <text x="785" y="118" font-size="9" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">H-D</text>
+  <!-- MOTOR / CYCLES text above/below bar -->
+  <text x="785" y="103" font-size="6" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">MOTOR</text>
+  <text x="785" y="132" font-size="6" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">CYCLES</text>
 
-  <!-- ── BODY TEXT ── -->
-  <text x="38" y="130" font-size="12" fill="#333333" xml:space="preserve">This is to certify that the following motorcycle has been thoroughly</text>
-  <text x="38" y="147" font-size="12" fill="#333333" xml:space="preserve">inspected and reconditioned by a qualified H-D&#xAE; technician and is</text>
-  <text x="38" y="164" font-size="12" fill="#333333" xml:space="preserve">backed by a comprehensive minimum 12 month guarantee.</text>
+  <!-- ── BODY CERTIFICATION PARAGRAPH ── -->
+  <text x="40" y="150" font-size="13" fill="#222222" xml:space="preserve">This is to certify that the following motorcycle has been thoroughly</text>
+  <text x="40" y="170" font-size="13" fill="#222222" xml:space="preserve">inspected and reconditioned by a qualified H-D&#xAE; technician and is</text>
+  <text x="40" y="190" font-size="13" fill="#222222" xml:space="preserve">backed by a comprehensive minimum 12 month guarantee.</text>
 
-  <!-- Divider -->
-  <line x1="38" y1="178" x2="862" y2="178" stroke="#cccccc" stroke-width="1"/>
+  <!-- ── MODEL ROW ── (light blue/lavender highlight) -->
+  <rect x="40" y="215" width="820" height="56" fill="#E8EAF8"/>
+  <text x="56" y="237" font-size="12" font-weight="bold" fill="#000000" letter-spacing="2">MODEL:</text>
+  <text x="56" y="262" font-size="24" font-weight="bold" fill="#000000" letter-spacing="1">${bikeLabel}</text>
 
-  <!-- MODEL label + value -->
-  <text x="38" y="210" font-size="11" font-weight="bold" fill="#FF6600" letter-spacing="2">MODEL:</text>
-  <text x="38" y="240" font-size="28" font-weight="bold" fill="#111111" letter-spacing="1">${bikeLabel}</text>
+  <!-- ── REGISTRATION ROW ── (light blue/lavender highlight) -->
+  <rect x="40" y="280" width="820" height="56" fill="#E8EAF8"/>
+  <text x="56" y="302" font-size="12" font-weight="bold" fill="#000000" letter-spacing="2">REGISTRATION:</text>
+  <text x="56" y="327" font-size="24" font-weight="bold" fill="#000000" letter-spacing="1">${reg}</text>
 
-  <!-- REGISTRATION label + value -->
-  <text x="38" y="278" font-size="11" font-weight="bold" fill="#FF6600" letter-spacing="2">REGISTRATION:</text>
-  <text x="38" y="308" font-size="28" font-weight="bold" fill="#111111" letter-spacing="1">${reg}</text>
+  <!-- ── FEATURES HEADER ── -->
+  <text x="40" y="370" font-size="14" font-weight="bold" fill="#000000" letter-spacing="2">FEATURES OF THIS CERTIFIED MACHINE</text>
 
-  <!-- Section divider -->
-  <line x1="38" y1="322" x2="862" y2="322" stroke="#cccccc" stroke-width="1"/>
+  <!-- Four bullet rows — orange circle with white star ★ -->
+  <!-- Row 1 left -->
+  <circle cx="52" cy="397" r="11" fill="#FF6600"/>
+  <text x="52" y="402" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">&#x2605;</text>
+  <text x="72" y="402" font-size="12" font-weight="bold" fill="#000000" letter-spacing="1">12 MONTHS ROADSIDE ASSISTANCE</text>
+  <!-- Row 1 right -->
+  <circle cx="462" cy="397" r="11" fill="#FF6600"/>
+  <text x="462" y="402" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">&#x2605;</text>
+  <text x="482" y="402" font-size="12" font-weight="bold" fill="#000000" letter-spacing="1">COMPREHENSIVE 12 MONTH GUARANTEE</text>
 
-  <!-- FEATURES header -->
-  <text x="38" y="346" font-size="12" font-weight="bold" fill="#111111" letter-spacing="3">FEATURES OF THIS CERTIFIED MACHINE</text>
+  <!-- Row 2 left -->
+  <circle cx="52" cy="432" r="11" fill="#FF6600"/>
+  <text x="52" y="437" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">&#x2605;</text>
+  <text x="72" y="437" font-size="12" font-weight="bold" fill="#000000" letter-spacing="1">110-POINT QUALITY ASSURANCE INSPECTION</text>
+  <!-- Row 2 right -->
+  <circle cx="462" cy="432" r="11" fill="#FF6600"/>
+  <text x="462" y="437" font-size="14" font-weight="bold" fill="#ffffff" text-anchor="middle">&#x2605;</text>
+  <text x="482" y="437" font-size="12" font-weight="bold" fill="#000000" letter-spacing="1">ACCESS TO H.O.G.&#xAE; MEMBERSHIP</text>
 
-  <!-- Four bullet rows — orange star ★ + feature text -->
-  <!-- Row 1 -->
-  <text x="38" y="376" font-size="14" fill="#FF6600">&#x2605;</text>
-  <text x="58" y="376" font-size="12" font-weight="bold" fill="#111111" letter-spacing="1">12 MONTHS ROADSIDE ASSISTANCE</text>
-  <text x="430" y="376" font-size="14" fill="#FF6600">&#x2605;</text>
-  <text x="450" y="376" font-size="12" font-weight="bold" fill="#111111" letter-spacing="1">COMPREHENSIVE 12 MONTH GUARANTEE</text>
+  <!-- ── BOTTOM ROW: INSPECTED BY | CERTIFIED ON ── (light blue/lavender highlight) -->
+  <rect x="40" y="475" width="820" height="56" fill="#E8EAF8"/>
+  <text x="56" y="497" font-size="12" font-weight="bold" fill="#000000" letter-spacing="2">INSPECTED BY:</text>
+  <text x="56" y="521" font-size="18" font-weight="bold" fill="#000000">${by}</text>
 
-  <!-- Row 2 -->
-  <text x="38" y="406" font-size="14" fill="#FF6600">&#x2605;</text>
-  <text x="58" y="406" font-size="12" font-weight="bold" fill="#111111" letter-spacing="1">110-POINT QUALITY ASSURANCE INSPECTION</text>
-  <text x="430" y="406" font-size="14" fill="#FF6600">&#x2605;</text>
-  <text x="450" y="406" font-size="12" font-weight="bold" fill="#111111" letter-spacing="1">ACCESS TO H.O.G.&#xAE; MEMBERSHIP</text>
+  <!-- Vertical divider between columns -->
+  <line x1="460" y1="485" x2="460" y2="521" stroke="#999999" stroke-width="1"/>
 
-  <!-- Section divider -->
-  <line x1="38" y1="428" x2="862" y2="428" stroke="#cccccc" stroke-width="1"/>
-
-  <!-- Bottom row: INSPECTED BY | CERTIFIED ON -->
-  <text x="38" y="458" font-size="10" font-weight="bold" fill="#FF6600" letter-spacing="2">INSPECTED BY:</text>
-  <text x="38" y="478" font-size="16" font-weight="bold" fill="#111111">${by}</text>
-
-  <line x1="450" y1="428" x2="450" y2="500" stroke="#cccccc" stroke-width="1"/>
-
-  <text x="470" y="458" font-size="10" font-weight="bold" fill="#FF6600" letter-spacing="2">CERTIFIED ON:</text>
-  <text x="470" y="478" font-size="16" font-weight="bold" fill="#111111">${on}</text>
-
-  <!-- Bottom border accent line -->
-  <rect x="38" y="510" width="824" height="3" fill="#FF6600"/>
+  <text x="476" y="497" font-size="12" font-weight="bold" fill="#000000" letter-spacing="2">CERTIFIED ON:</text>
+  <text x="476" y="521" font-size="18" font-weight="bold" fill="#000000">${on}</text>
 
   <!-- Fine print -->
-  <text x="450" y="535" font-size="9" fill="#888888" text-anchor="middle">H-D CERTIFIED™ · PRE-OWNED HARLEY-DAVIDSON® · 12-MONTH GUARANTEE</text>
-  <text x="450" y="550" font-size="9" fill="#888888" text-anchor="middle">This certificate is issued by an authorised Harley-Davidson dealer.</text>
+  <text x="450" y="565" font-size="9" fill="#888888" text-anchor="middle">H-D CERTIFIED&#x2122; · PRE-OWNED HARLEY-DAVIDSON&#xAE; · 12-MONTH GUARANTEE</text>
+  <text x="450" y="580" font-size="9" fill="#888888" text-anchor="middle">This certificate is issued by an authorised Harley-Davidson dealer.</text>
 </svg>`;
 }

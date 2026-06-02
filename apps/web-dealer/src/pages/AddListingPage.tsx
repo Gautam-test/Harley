@@ -724,6 +724,7 @@ export function AddListingPage() {
                 </a>
                 <InspectionUploader
                   vin={s.vin}
+                  slug={isEditMode ? existing.data?.slug ?? null : null}
                   currentUrl={s.inspectionUrl}
                   meta={s.inspectionMeta}
                   disabled={torqueLocked}
@@ -1112,6 +1113,7 @@ function KitDoc({
 
 function InspectionUploader(props: {
   vin: string;
+  slug?: string | null;
   currentUrl: string;
   meta: { originalName: string; size: number } | null;
   disabled?: boolean;
@@ -1210,36 +1212,60 @@ function InspectionUploader(props: {
                     ×
                   </button>
                 </div>
-                {/* Certificate image rendered via the API certificate PNG endpoint */}
+                {/* Certificate image rendered via the API certificate PNG endpoint.
+                    In create mode (no slug yet) show a friendly placeholder
+                    since the listing doesn't exist in the DB yet. */}
                 <div className="p-4">
-                  <img
-                    src={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(props.vin)}.pdf`}
-                    alt="H-D Certified Certificate"
-                    className="w-full border border-gray-200"
-                    onError={(e) => {
-                      // Fallback: open uploaded PDF directly if cert image fails
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="flex gap-3 mt-4 justify-end">
-                    <a
-                      href={props.currentUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-hd-orange hover:underline"
-                    >
-                      Open uploaded PDF ↗
-                    </a>
-                    <a
-                      href={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(props.vin)}.pdf`}
-                      download
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-hd-orange hover:underline"
-                    >
-                      Download Certificate ↓
-                    </a>
-                  </div>
+                  {props.slug ? (
+                    <>
+                      <img
+                        src={`/api/v1/listings/${props.slug}/certificate.png`}
+                        alt="H-D Certified Certificate"
+                        className="w-full border border-gray-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="flex gap-3 mt-4 justify-end">
+                        <a
+                          href={props.currentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-hd-orange hover:underline"
+                        >
+                          Open uploaded PDF ↗
+                        </a>
+                        <a
+                          href={`/api/v1/listings/${props.slug}/certificate.pdf`}
+                          download
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-hd-orange hover:underline"
+                        >
+                          Download Certificate ↓
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="border border-gray-200 bg-gray-50 p-6 text-center">
+                      <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light mb-2">
+                        Certificate Not Yet Available
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        The H-D Certified certificate will be available once you submit this listing.
+                      </p>
+                      <div className="flex gap-3 mt-4 justify-center">
+                        <a
+                          href={props.currentUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-hd-orange hover:underline"
+                        >
+                          Open uploaded PDF ↗
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
