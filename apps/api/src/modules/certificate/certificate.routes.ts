@@ -47,8 +47,29 @@ async function resolveListing(slug: string) {
     certifiedOn: Date | null;
   } | null;
 
-  if (!row || row.status !== 'ACTIVE' || row.certificationStatus !== 'CPO') {
-    throw new HttpError(404, 'NOT_FOUND', 'Certificate not found for this listing');
+  if (!row) {
+    throw new HttpError(404, 'NOT_FOUND', 'Listing not found');
+  }
+  if (row.certificationStatus !== 'CPO') {
+    throw new HttpError(404, 'NOT_CPO', 'Certificate only available for CPO listings');
+  }
+  // Allow DRAFT/ACTIVE/DEACTIVATED — dealer can preview their own draft.
+  // Block SOLD/REMOVED so retired listings don't surface stale certs.
+  if (row.status === 'SOLD' || row.status === 'REMOVED') {
+    throw new HttpError(404, 'NOT_ACTIVE', 'Certificate not available for sold/removed listings');
+  }
+  // Surface a clear message when the required cert metadata is missing
+  // so the dealer can see exactly what to fill in to get the cert.
+  const missing: string[] = [];
+  if (!row.registrationNumber) missing.push('registration number');
+  if (!row.inspectedBy) missing.push('inspector name');
+  if (!row.certifiedOn) missing.push('certified-on date');
+  if (missing.length > 0) {
+    throw new HttpError(
+      404,
+      'CERT_INCOMPLETE',
+      `Certificate cannot be generated — missing: ${missing.join(', ')}. Complete the listing details to enable certificate.`,
+    );
   }
 
   return row;
