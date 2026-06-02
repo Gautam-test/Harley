@@ -629,7 +629,14 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
           <Field label="Listing" required error={errFor('listingId')}>
             <Select
               value={form.listingId}
-              onChange={(e) => setForm((f) => ({ ...f, listingId: e.target.value }))}
+              onChange={(e) => {
+                // Buyer dedup is (listing + phone) — banner must clear
+                // only when the rep picks a DIFFERENT bike, not when
+                // they edit phone/email/etc. Save stays disabled until
+                // listing actually changes.
+                setDupError(null);
+                setForm((f) => ({ ...f, listingId: e.target.value }));
+              }}
               aria-invalid={Boolean(errFor('listingId'))}
             >
               <option value="">Select a motorcycle…</option>
@@ -656,12 +663,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => {
-                  // Dismiss the duplicate-phone banner as soon as the rep
-                  // edits the number — they may be trying a different one.
-                  setDupError(null);
-                  setForm((f) => ({ ...f, phone: e.target.value }));
-                }}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 maxLength={13}
                 inputMode="tel"
                 placeholder="+919812345678"
