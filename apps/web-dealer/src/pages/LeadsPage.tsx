@@ -973,10 +973,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => {
-                  setDupError(null);
-                  setForm((f) => ({ ...f, phone: e.target.value }));
-                }}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 maxLength={13}
                 inputMode="tel"
                 placeholder="+919812345678"
@@ -1043,7 +1040,14 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="VIN" required error={errFor('vin')}>
               <Input
                 value={form.vin.toUpperCase()}
-                onChange={(e) => setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }))}
+                onChange={(e) => {
+                  // Seller dedup is VIN-based — clear the duplicate-VIN
+                  // banner only when the rep actually changes the VIN.
+                  // Changing the phone (which is the wrong field) keeps
+                  // the banner + disabled Save button until VIN is fixed.
+                  setDupError(null);
+                  setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }));
+                }}
                 maxLength={17}
                 placeholder="17-char VIN, no I/O/Q"
                 className="font-mono"
