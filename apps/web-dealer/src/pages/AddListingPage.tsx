@@ -686,11 +686,14 @@ export function AddListingPage() {
                 110-Point Inspection Report (Required)
               </p>
               <div className="grid sm:grid-cols-[auto_1fr] gap-4 items-stretch">
-                {/* Download Sample Format — opens the H-D Certified CPO
-                    certificate PDF generated for this VIN so the dealer
-                    knows exactly what the buyer will receive. */}
+                {/* Download Sample Format — 110-point inspection
+                    checklist template (blank, VIN pre-filled). The
+                    dealer prints this, performs the inspection, scans
+                    the filled copy, and uploads it via the right-hand
+                    drop zone. The certificate (separate PDF on the
+                    listing page) is auto-generated AFTER upload. */}
                 <a
-                  href={`/api/v1/torque/mock-docs/cpo-cert/${encodeURIComponent(s.vin)}.pdf`}
+                  href={`/api/v1/inspection/template.pdf?vin=${encodeURIComponent(s.vin)}`}
                   download
                   target="_blank"
                   rel="noreferrer"
