@@ -149,7 +149,9 @@ const initial: FormState = {
 // `extractMileage` peels it off when hydrating an edit; `withMileage`
 // re-attaches it on save. The pattern is restrictive enough that it
 // won't false-positive on a dealer-written description.
-const MILEAGE_PREFIX = /^Mileage:\s*(\d{1,3})\s*km\/l(?:\s*—\s*|\s*$)/;
+// Captures integer or decimal mileage (e.g. "18" or "18.5") followed by
+// the km/l unit and the em-dash separator (or end-of-string).
+const MILEAGE_PREFIX = /^Mileage:\s*(\d{1,3}(?:\.\d{1,2})?)\s*km\/l(?:\s*—\s*|\s*$)/;
 
 function extractMileage(description: string | null | undefined): {
   mileage: string;
@@ -599,12 +601,25 @@ export function AddListingPage() {
             </Field>
             <Field label="Mileage (Optional)">
               <Input
-                inputMode="numeric"
-                placeholder="e.g. 18 km/l"
+                inputMode="decimal"
+                placeholder="e.g. 18.5 km/l"
                 value={s.mileage}
-                onChange={(e) =>
-                  update({ mileage: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })
-                }
+                onChange={(e) => {
+                  // Allow digits + a single decimal point. Cap at 3 digits
+                  // before the dot and 2 after so the value stays in the
+                  // realistic km/l range without runaway precision.
+                  let raw = e.target.value.replace(/[^0-9.]/g, '');
+                  // Collapse multiple dots to just the first one.
+                  const firstDot = raw.indexOf('.');
+                  if (firstDot !== -1) {
+                    raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+                  }
+                  const [intPart = '', decPart = ''] = raw.split('.');
+                  const trimmed = raw.includes('.')
+                    ? `${intPart.slice(0, 3)}.${decPart.slice(0, 2)}`
+                    : intPart.slice(0, 3);
+                  update({ mileage: trimmed });
+                }}
                 disabled={torqueLocked}
               />
             </Field>

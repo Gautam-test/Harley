@@ -872,7 +872,8 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       source: validators.requiredSelect('a lead source'),
       year: validators.intInRange(1903, currentYearLocal, 'Year'),
       kmsDriven: validators.intInRange(0, 500_000, 'KMs driven'),
-      mileage: validators.intInRange(5, 80, 'Mileage'),
+      // Decimals allowed (e.g. 18.5 km/l).
+      mileage: validators.numberInRange(5, 80, 'Mileage'),
       askingPrice: validators.intInRange(0, 100_000_000, 'Asking price'),
       colour: validators.optionalCity, // letters + spaces only
       message: validators.message,
@@ -1098,10 +1099,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 type="number"
                 min={5}
                 max={80}
-                step={1}
+                step={0.1}
                 value={form.mileage}
                 onChange={(e) => setForm((f) => ({ ...f, mileage: e.target.value }))}
-                placeholder="e.g. 18"
+                placeholder="e.g. 18.5"
                 aria-invalid={Boolean(errFor('mileage'))}
               />
             </Field>

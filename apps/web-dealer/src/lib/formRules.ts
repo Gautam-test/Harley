@@ -108,6 +108,20 @@ export const validators = {
       return null;
     },
 
+  /** Numeric value (integer or decimal) in the inclusive range [min, max]. */
+  numberInRange:
+    (min: number, max: number, label: string): FieldValidator =>
+    (v: unknown): string | null => {
+      if (v === '' || v === null || v === undefined) return null; // optional
+      const s = String(v).trim();
+      // One or more digits, optional single decimal point with one or more digits after.
+      if (!/^[0-9]+(\.[0-9]+)?$/.test(s)) return `${label} must be a number`;
+      const n = Number(s);
+      if (!Number.isFinite(n) || n < min || n > max)
+        return `${label} must be between ${min.toLocaleString('en-IN')} and ${max.toLocaleString('en-IN')}`;
+      return null;
+    },
+
   requiredIntInRange:
     (min: number, max: number, label: string): FieldValidator =>
     (v: unknown): string | null => {
