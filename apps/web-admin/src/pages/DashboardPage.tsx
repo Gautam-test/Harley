@@ -367,7 +367,7 @@ export function DashboardPage() {
               </h2>
             </div>
             <a
-              href={`${import.meta.env.BASE_URL.replace(/\/+$/, '/')}listings`.replace(/\/+/g, '/')}
+              href={`${import.meta.env.BASE_URL.replace(/\/+$/, '/')}listings?tab=DRAFT`.replace(/\/+/g, '/')}
               className="text-[11px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
             >
               View all
@@ -396,7 +396,7 @@ export function DashboardPage() {
                       {l.dealerName} · {ageDays(l.createdAt)}d in queue
                     </p>
                   </div>
-                  <IconButton label="Review listing" to={`/listings?focus=${l.id}`}>
+                  <IconButton label="Review listing" to={`/listings?tab=DRAFT&focus=${l.id}`}>
                     <ChevronIcon />
                   </IconButton>
                 </li>

@@ -41,7 +41,14 @@ export function ListingSidebarCard({
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
   )}&output=embed`;
-  const dealersHref = `/dealers#${dealerId}`;
+  // QA: "View Dealer Details" must NOT navigate. The DealerLocator
+  // section ("Find your dealer") already renders further down the same
+  // ListingDetailPage — anchor-scroll to its heading instead so the
+  // buyer stays on the VDP.
+  const scrollToDealerLocator = () => {
+    const el = document.getElementById('dealer-locator-heading');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleVerified = async (data: {
     phone: string;
@@ -193,12 +200,13 @@ export function ListingSidebarCard({
                   409 handler) is the only place we now surface "already
                   submitted" copy, because that fires on a real attempt
                   with a real phone and has full context. */}
-              <Link
-                to={dealersHref}
+              <button
+                type="button"
+                onClick={scrollToDealerLocator}
                 className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:bg-hd-black hover:text-hd-white transition"
               >
                 View Dealer Details
-              </Link>
+              </button>
               {error && (
                 <p className="text-xs text-danger mt-1">{error}</p>
               )}

@@ -64,7 +64,15 @@ const TABS: { id: string; label: string; statusFilter: string }[] = [
 ];
 
 export function ListingsPage() {
-  const [tabId, setTabId] = useState<string>('ACTIVE');
+  // QA: support deep-linking via ?tab=DRAFT (or any other known tab id) so
+  // the Dashboard's "Pending Approval Queue" widget can land directly on
+  // the Drafts filter instead of the Ongoing default. One-shot read at
+  // mount — admins still drive the tabs from the UI after that.
+  const [tabId, setTabId] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'ACTIVE';
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    return requested && TABS.some((t) => t.id === requested) ? requested : 'ACTIVE';
+  });
   const status = TABS.find((t) => t.id === tabId)?.statusFilter ?? '';
   const [q, setQ] = useState('');
   const [removing, setRemoving] = useState<AdminListingRow | null>(null);
