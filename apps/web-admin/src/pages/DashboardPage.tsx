@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, Select } from '@hd-cpo/ui';
+import { Card, IconButton } from '@hd-cpo/ui';
 import { api } from '../lib/api';
+
+// ─── Server payloads (subset) ────────────────────────────────────────────
 
 interface Metrics {
   range: { from: string; to: string };
@@ -18,123 +20,640 @@ interface Metrics {
   topDealersByLeads: { dealerId: string; name: string; count: number }[];
 }
 
-const RANGES = [
-  { v: 'today', l: 'Today' },
-  { v: '7d', l: 'Last 7 days' },
-  { v: '30d', l: 'Last 30 days' },
-];
+interface AdminListingRow {
+  id: string;
+  vin: string;
+  modelName: string;
+  year: number;
+  status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
+  primaryImage: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  dealerId: string;
+  dealerName: string;
+}
 
+interface DealerRow {
+  id: string;
+  name: string;
+  email: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  createdAt: string;
+}
+
+interface AuditRow {
+  id: string;
+  createdAt: string;
+  actorRole: string;
+  actorName: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+}
+
+interface AdminEnquiryRow {
+  id: string;
+  kind: 'buyer' | 'trade-in';
+  name: string;
+  status: string;
+  bikeModel?: string;
+  dealerId: string;
+  dealerName: string;
+  createdAt: string;
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+const STALE_DAYS = 60;
+
+const TERMINAL_BUYER = new Set(['CLOSED', 'SUCCESS', 'CONVERTED', 'DEAD', 'LOST']);
+const SUCCESS_BUYER = new Set(['SUCCESS', 'CONVERTED']);
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+function ageDays(iso: string | null): number {
+  if (!iso) return 0;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / DAY);
+}
+
+// Friendly humanisation of audit log action codes.
+function humanAction(a: string): string {
+  return a
+    .toLowerCase()
+    .split('_')
+    .map((w) => w[0]?.toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────
 export function DashboardPage() {
-  const [range, setRange] = useState<'today' | '7d' | '30d'>('7d');
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-metrics', range],
-    queryFn: () => api<Metrics>(`/admin/metrics?range=${range}`),
+  const { data: metrics7, isLoading: m7Loading } = useQuery({
+    queryKey: ['admin-metrics', '7d'],
+    queryFn: () => api<Metrics>(`/admin/metrics?range=7d`),
+    refetchOnMount: 'always',
   });
+  const { data: metricsPrev, isLoading: mpLoading } = useQuery({
+    queryKey: ['admin-metrics-prev-7d'],
+    queryFn: () => {
+      const to = new Date(Date.now() - 7 * DAY).toISOString();
+      const from = new Date(Date.now() - 14 * DAY).toISOString();
+      return api<Metrics>(`/admin/metrics?range=custom&from=${from}&to=${to}`);
+    },
+    refetchOnMount: 'always',
+  });
+  const { data: metrics30 } = useQuery({
+    queryKey: ['admin-metrics', '30d'],
+    queryFn: () => api<Metrics>(`/admin/metrics?range=30d`),
+    refetchOnMount: 'always',
+  });
+  const { data: listings, isLoading: lLoading } = useQuery({
+    queryKey: ['admin-listings-all-dashboard'],
+    queryFn: () => api<AdminListingRow[]>('/admin/listings'),
+    refetchOnMount: 'always',
+  });
+  const { data: dealers, isLoading: dLoading } = useQuery({
+    queryKey: ['admin-dealers-all-dashboard'],
+    queryFn: () => api<DealerRow[]>('/admin/dealers'),
+    refetchOnMount: 'always',
+  });
+  const { data: audit, isLoading: aLoading } = useQuery({
+    queryKey: ['admin-audit-recent'],
+    queryFn: () => api<AuditRow[]>('/admin/audit?limit=10'),
+    refetchOnMount: 'always',
+  });
+  const { data: enquiriesPayload } = useQuery({
+    queryKey: ['admin-enquiries-all'],
+    queryFn: () =>
+      api<{ results: AdminEnquiryRow[]; total: number; stuckCount: number }>(
+        '/admin/leads?kind=all',
+      ),
+    refetchOnMount: 'always',
+  });
+  const enquiries = enquiriesPayload?.results;
+
+  const loading = m7Loading || mpLoading || lLoading || dLoading || aLoading;
+
+  const m = useMemo(() => {
+    const L = listings ?? [];
+    const D = dealers ?? [];
+    const E = enquiries ?? [];
+    const now = Date.now();
+    const month = now - 30 * DAY;
+
+    // KPI 1 — Active dealers + monthly growth.
+    const activeDealers = D.filter((d) => d.status === 'ACTIVE');
+    const addedThisMonth = D.filter((d) => new Date(d.createdAt).getTime() >= month).length;
+
+    // KPI 2 — Listings pending approval.
+    const pending = L.filter((l) => l.status === 'DRAFT');
+    const pendingSorted = [...pending].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const oldestPendingDays = pendingSorted[0] ? ageDays(pendingSorted[0].createdAt) : 0;
+
+    // KPI 3 — Network enquiries (7d) + WoW delta.
+    const net7 = metrics7?.leads.total ?? 0;
+    const netPrev = metricsPrev?.leads.total ?? 0;
+
+    // KPI 4 — Conversion rate.
+    const convNow = metrics7?.leads.conversionPct ?? 0;
+    const convPrev = metricsPrev?.leads.conversionPct ?? 0;
+
+    // Pending approval queue (top 5 by age).
+    const queue = pendingSorted.slice(0, 5);
+
+    // Top dealers by activity this month — combine listings + enquiries.
+    const activeListingsByDealer = new Map<string, number>();
+    for (const l of L) {
+      if (l.status === 'ACTIVE') {
+        activeListingsByDealer.set(l.dealerId, (activeListingsByDealer.get(l.dealerId) ?? 0) + 1);
+      }
+    }
+    const enquiriesByDealer = new Map<string, { total: number; success: number; closed: number }>();
+    for (const e of E.filter((x) => new Date(x.createdAt).getTime() >= month)) {
+      const prev = enquiriesByDealer.get(e.dealerId) ?? { total: 0, success: 0, closed: 0 };
+      prev.total += 1;
+      if (e.kind === 'buyer') {
+        if (TERMINAL_BUYER.has(e.status)) prev.closed += 1;
+        if (SUCCESS_BUYER.has(e.status)) prev.success += 1;
+      }
+      enquiriesByDealer.set(e.dealerId, prev);
+    }
+    const dealerLookup = new Map(D.map((d) => [d.id, d]));
+    const dealerIds = new Set<string>([
+      ...activeListingsByDealer.keys(),
+      ...enquiriesByDealer.keys(),
+    ]);
+    const topDealers = [...dealerIds]
+      .map((id) => {
+        const dealer = dealerLookup.get(id);
+        const stats = enquiriesByDealer.get(id) ?? { total: 0, success: 0, closed: 0 };
+        return {
+          id,
+          name: dealer?.name ?? id,
+          listings: activeListingsByDealer.get(id) ?? 0,
+          enquiries: stats.total,
+          conversionPct:
+            stats.closed === 0 ? 0 : Math.round((stats.success / stats.closed) * 1000) / 10,
+        };
+      })
+      .sort((a, b) => b.enquiries - a.enquiries)
+      .slice(0, 5);
+
+    // Network health — dealers with 0 listings, stale stock, or no recent enquiries.
+    const listingsByDealer = new Map<string, AdminListingRow[]>();
+    for (const l of L) {
+      const arr = listingsByDealer.get(l.dealerId) ?? [];
+      arr.push(l);
+      listingsByDealer.set(l.dealerId, arr);
+    }
+    const recentEnquirerIds = new Set(
+      E.filter((e) => new Date(e.createdAt).getTime() >= now - 14 * DAY).map((e) => e.dealerId),
+    );
+
+    const noListings = activeDealers.filter((d) => {
+      const arr = listingsByDealer.get(d.id) ?? [];
+      return arr.length === 0;
+    });
+    const staleStock = activeDealers.filter((d) => {
+      const arr = listingsByDealer.get(d.id) ?? [];
+      return arr.some(
+        (l) => l.status === 'ACTIVE' && l.publishedAt && ageDays(l.publishedAt) >= STALE_DAYS,
+      );
+    });
+    const noEnquiries14d = activeDealers.filter(
+      (d) => !recentEnquirerIds.has(d.id) && (listingsByDealer.get(d.id) ?? []).length > 0,
+    );
+
+    // System notifications — basic anomaly detection from the data we already have.
+    const notifications: { kind: 'warning' | 'danger' | 'info'; text: string }[] = [];
+    const suspended = D.filter((d) => d.status === 'SUSPENDED');
+    if (suspended.length > 0) {
+      notifications.push({
+        kind: 'warning',
+        text: `${suspended.length} dealer${suspended.length === 1 ? '' : 's'} suspended — review status before they appear in queues again.`,
+      });
+    }
+    if (pending.length > 10) {
+      notifications.push({
+        kind: 'warning',
+        text: `Approval queue has ${pending.length} pending listings — backlog may delay dealer go-live.`,
+      });
+    }
+    if (oldestPendingDays >= 3) {
+      notifications.push({
+        kind: 'danger',
+        text: `Oldest pending listing has been in queue ${oldestPendingDays} days — SLA at risk.`,
+      });
+    }
+    if (noListings.length > 0) {
+      notifications.push({
+        kind: 'info',
+        text: `${noListings.length} active dealer${noListings.length === 1 ? ' has' : 's have'} no inventory live.`,
+      });
+    }
+
+    return {
+      activeDealers,
+      addedThisMonth,
+      pending,
+      oldestPendingDays,
+      net7,
+      netPrev,
+      convNow,
+      convPrev,
+      queue,
+      topDealers,
+      noListings,
+      staleStock,
+      noEnquiries14d,
+      notifications,
+    };
+  }, [listings, dealers, enquiries, metrics7, metricsPrev]);
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-baseline justify-between flex-wrap gap-4 mb-8">
+      <div className="flex items-baseline justify-between flex-wrap gap-3 mb-8">
         <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
           Network Overview
         </h1>
-        <Select
-          value={range}
-          onChange={(e) => setRange(e.target.value as typeof range)}
-          className="w-48"
-        >
-          {RANGES.map((r) => (
-            <option key={r.v} value={r.v}>
-              {r.l}
-            </option>
-          ))}
-        </Select>
+        <p className="text-xs font-subhead uppercase tracking-subhead text-gray-500">
+          Last 7 days · vs prior 7 days
+        </p>
       </div>
 
-      {isLoading || !data ? (
-        <div className="text-gray-500">Loading…</div>
-      ) : (
-        <>
-          <section>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Tile label="Active Dealers" value={data.dealers.byStatus.ACTIVE ?? 0} />
-              <Tile label="Active Listings" value={data.listings.active} />
-              <Tile label="Total Leads" value={data.leads.total} />
-              <Tile label="Conversion %" value={`${data.leads.conversionPct}%`} />
+      {/* Row 1 — Network KPIs */}
+      <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {loading ? (
+          <>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <KpiSkeleton key={i} />
+            ))}
+          </>
+        ) : (
+          <>
+            <Kpi
+              label="Active Dealers"
+              value={m.activeDealers.length}
+              delta={delta(m.addedThisMonth, 0)}
+              caption={`${m.addedThisMonth} added this month`}
+            />
+            <Kpi
+              label="Listings Pending Approval"
+              value={m.pending.length}
+              delta={{ arrow: '–', pct: 0, positive: false }}
+              caption={
+                m.pending.length === 0
+                  ? 'Queue clear'
+                  : `Oldest ${m.oldestPendingDays} day${m.oldestPendingDays === 1 ? '' : 's'}`
+              }
+              captionTone={m.oldestPendingDays >= 3 ? 'warning' : 'neutral'}
+            />
+            <Kpi
+              label="Network Enquiries (7d)"
+              value={m.net7}
+              delta={delta(m.net7, m.netPrev)}
+              caption={`vs ${m.netPrev} last week`}
+            />
+            <Kpi
+              label="Conversion Rate"
+              value={`${m.convNow}%`}
+              delta={delta(m.convNow, m.convPrev)}
+              caption={`${metrics30?.leads.conversions ?? 0} conversions (30d)`}
+            />
+          </>
+        )}
+      </section>
+
+      {/* Row 2 — Pending queue + Top dealers */}
+      <section className="mt-8 grid lg:grid-cols-2 gap-4">
+        <Card className="bg-hd-white border-gray-200 p-5">
+          <div className="flex items-baseline justify-between">
+            <SectionTitle>Pending Approval Queue</SectionTitle>
+            <a
+              href={`${import.meta.env.BASE_URL.replace(/\/+$/, '/')}listings`.replace(/\/+/g, '/')}
+              className="text-xs font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
+            >
+              View all
+            </a>
+          </div>
+          {loading ? (
+            <SkeletonRows n={5} />
+          ) : m.queue.length === 0 ? (
+            <Empty>Approval queue is empty — nothing waiting on you.</Empty>
+          ) : (
+            <ul className="mt-4 divide-y divide-gray-100">
+              {m.queue.map((l) => (
+                <li key={l.id} className="flex items-center gap-3 py-2.5">
+                  <div className="w-12 h-12 bg-surface-light border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {l.primaryImage ? (
+                      <img src={l.primaryImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] text-gray-400">No image</span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-headline text-text-on-light truncate">
+                      {l.year} {l.modelName}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {l.dealerName} · {ageDays(l.createdAt)}d in queue
+                    </p>
+                  </div>
+                  <IconButton label="Review listing" to={`/listings?focus=${l.id}`}>
+                    <ChevronIcon />
+                  </IconButton>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card className="bg-hd-white border-gray-200 p-5">
+          <SectionTitle>Top Dealers by Activity (this month)</SectionTitle>
+          {loading ? (
+            <SkeletonRows n={5} />
+          ) : m.topDealers.length === 0 ? (
+            <Empty>No dealer activity yet this month.</Empty>
+          ) : (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
+                    <th className="pb-2 font-subhead font-normal">Dealer</th>
+                    <th className="pb-2 font-subhead font-normal text-right">Active</th>
+                    <th className="pb-2 font-subhead font-normal text-right">Enquiries</th>
+                    <th className="pb-2 font-subhead font-normal text-right">Conv%</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {m.topDealers.map((d) => (
+                    <tr key={d.id}>
+                      <td className="py-2 text-text-on-light truncate max-w-[180px]">{d.name}</td>
+                      <td className="py-2 text-right font-headline text-text-on-light">{d.listings}</td>
+                      <td className="py-2 text-right font-headline text-text-on-light">{d.enquiries}</td>
+                      <td className="py-2 text-right font-headline text-text-on-light">{d.conversionPct}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </section>
+          )}
+        </Card>
+      </section>
 
-          <section className="mt-8 grid lg:grid-cols-2 gap-4">
-            <Card className="bg-hd-white border-gray-200 p-6">
-              <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-sm">
-                Lead Mix
-              </h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <Row label="Listing enquiries" value={data.leads.buyerEnquiries} />
-                <Row label="Trade-in enquiries" value={data.leads.tradeIn} />
-                <Row label="Conversions" value={data.leads.conversions} />
-              </dl>
-            </Card>
-            <Card className="bg-hd-white border-gray-200 p-6">
-              <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-sm">
-                Dealers by Status
-              </h2>
-              <dl className="mt-4 space-y-2 text-sm">
-                <Row label="Active" value={data.dealers.byStatus.ACTIVE ?? 0} />
-                <Row label="Inactive" value={data.dealers.byStatus.INACTIVE ?? 0} />
-                <Row label="Suspended" value={data.dealers.byStatus.SUSPENDED ?? 0} />
-              </dl>
-            </Card>
-          </section>
+      {/* Row 3 — Audit feed + Network health */}
+      <section className="mt-8 grid lg:grid-cols-2 gap-4">
+        <Card className="bg-hd-white border-gray-200 p-5">
+          <SectionTitle>Recent Admin Actions</SectionTitle>
+          {loading ? (
+            <SkeletonRows n={6} />
+          ) : !audit || audit.length === 0 ? (
+            <Empty>No recent admin actions logged.</Empty>
+          ) : (
+            <ul className="mt-4 space-y-2.5">
+              {audit.map((a) => (
+                <li key={a.id} className="flex items-start gap-3 text-sm">
+                  <span className="mt-1.5 w-1.5 h-1.5 bg-info shrink-0 rounded-full" />
+                  <span className="flex-1 text-text-on-light leading-snug">
+                    <span className="font-headline">{a.actorName ?? a.actorRole}</span>{' '}
+                    <span className="text-gray-600">{humanAction(a.action)}</span>
+                    {a.entityType && (
+                      <span className="text-gray-500"> · {a.entityType}</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {relativeTime(a.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card className="bg-hd-white border-gray-200 p-5">
+          <SectionTitle>Network Health</SectionTitle>
+          {loading ? (
+            <SkeletonRows n={4} />
+          ) : (
+            <ul className="mt-4 space-y-3 text-sm">
+              <HealthCategory
+                title="Dealers with 0 listings"
+                items={m.noListings.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
+              />
+              <HealthCategory
+                title="Dealers with stale stock (60d+)"
+                items={m.staleStock.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
+              />
+              <HealthCategory
+                title="Dealers with no enquiries in 14d"
+                items={m.noEnquiries14d.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
+              />
+            </ul>
+          )}
+        </Card>
+      </section>
 
-          <section className="mt-8 grid lg:grid-cols-2 gap-4">
-            <Card className="bg-hd-white border-gray-200 p-6">
-              <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-sm">
-                Top Dealers — Listings
-              </h2>
-              <ol className="mt-4 space-y-2 text-sm">
-                {data.topDealersByListings.length === 0 && <p className="text-gray-500">No data.</p>}
-                {data.topDealersByListings.map((d) => (
-                  <li key={d.dealerId} className="flex justify-between border-b border-gray-100 pb-2">
-                    <span>{d.name}</span>
-                    <span className="font-headline">{d.count}</span>
-                  </li>
-                ))}
-              </ol>
-            </Card>
-            <Card className="bg-hd-white border-gray-200 p-6">
-              <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-sm">
-                Top Dealers — Leads
-              </h2>
-              <ol className="mt-4 space-y-2 text-sm">
-                {data.topDealersByLeads.length === 0 && <p className="text-gray-500">No data.</p>}
-                {data.topDealersByLeads.map((d) => (
-                  <li key={d.dealerId} className="flex justify-between border-b border-gray-100 pb-2">
-                    <span>{d.name}</span>
-                    <span className="font-headline">{d.count}</span>
-                  </li>
-                ))}
-              </ol>
-            </Card>
-          </section>
-        </>
-      )}
+      {/* Row 4 — System Notifications */}
+      <section className="mt-8">
+        <Card className="bg-hd-white border-gray-200 p-5">
+          <SectionTitle>System Notifications</SectionTitle>
+          {loading ? (
+            <SkeletonRows n={2} />
+          ) : m.notifications.length === 0 ? (
+            <Empty>All systems normal. No alerts.</Empty>
+          ) : (
+            <ul className="mt-4 space-y-2">
+              {m.notifications.map((n, i) => (
+                <li
+                  key={i}
+                  className={`flex items-start gap-3 text-sm border-l-4 px-3 py-2 ${
+                    n.kind === 'danger'
+                      ? 'border-danger bg-danger/5 text-danger'
+                      : n.kind === 'warning'
+                      ? 'border-warning bg-warning/10 text-text-on-light'
+                      : 'border-info bg-info/5 text-text-on-light'
+                  }`}
+                >
+                  <span className="mt-0.5">
+                    <AlertIcon />
+                  </span>
+                  <span className="flex-1">{n.text}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </section>
     </div>
   );
 }
 
-function Tile({ label, value }: { label: string; value: string | number }) {
+// ─── Subcomponents ───────────────────────────────────────────────────────
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <Card className="bg-hd-white border-gray-200 p-6">
-      <div className="text-xs font-subhead uppercase tracking-subhead text-gray-500">{label}</div>
-      <div className="text-3xl font-headline text-text-on-light mt-2">{value}</div>
+    <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
+      {children}
+    </h2>
+  );
+}
+
+interface Delta {
+  arrow: '↑' | '↓' | '–';
+  pct: number;
+  positive: boolean;
+}
+
+function delta(current: number, previous: number): Delta {
+  if (previous === 0 && current === 0) return { arrow: '–', pct: 0, positive: false };
+  if (previous === 0) return { arrow: '↑', pct: 100, positive: true };
+  const change = ((current - previous) / previous) * 100;
+  const rounded = Math.round(Math.abs(change));
+  if (rounded === 0) return { arrow: '–', pct: 0, positive: false };
+  return { arrow: change > 0 ? '↑' : '↓', pct: rounded, positive: change > 0 };
+}
+
+function DeltaPill({ d }: { d: Delta }) {
+  if (d.arrow === '–') {
+    return <span className="text-xs font-subhead text-gray-500">–</span>;
+  }
+  return (
+    <span className={`text-xs font-subhead ${d.positive ? 'text-success' : 'text-danger'}`}>
+      {d.arrow} {d.pct}%
+    </span>
+  );
+}
+
+function Kpi({
+  label,
+  value,
+  delta,
+  caption,
+  captionTone = 'neutral',
+}: {
+  label: string;
+  value: string | number;
+  delta: Delta;
+  caption: string;
+  captionTone?: 'neutral' | 'warning';
+}) {
+  return (
+    <Card className="bg-hd-white border-gray-200 p-5">
+      <div className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
+        {label}
+      </div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="text-3xl font-headline text-text-on-light leading-none">{value}</span>
+        <DeltaPill d={delta} />
+      </div>
+      <p
+        className={`mt-2 text-xs ${captionTone === 'warning' ? 'text-warning' : 'text-gray-500'}`}
+      >
+        {caption}
+      </p>
     </Card>
   );
 }
-function Row({ label, value }: { label: string; value: string | number }) {
+
+function KpiSkeleton() {
   return (
-    <div className="flex items-baseline justify-between">
-      <dt className="text-gray-600">{label}</dt>
-      <dd className="font-headline text-text-on-light">{value}</dd>
+    <Card className="bg-hd-white border-gray-200 p-5">
+      <div className="h-3 w-24 bg-gray-200 animate-pulse" />
+      <div className="h-8 w-16 bg-gray-200 animate-pulse mt-3" />
+      <div className="h-3 w-32 bg-gray-200 animate-pulse mt-3" />
+    </Card>
+  );
+}
+
+function SkeletonRows({ n }: { n: number }) {
+  return (
+    <div className="mt-4 space-y-2">
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="h-6 w-full bg-gray-100 animate-pulse" />
+      ))}
     </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-gray-500 mt-4">{children}</p>;
+}
+
+function HealthCategory({
+  title,
+  items,
+}: {
+  title: string;
+  items: { id: string; name: string; email: string }[];
+}) {
+  return (
+    <li>
+      <div className="flex items-baseline justify-between">
+        <span className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
+          {title}
+        </span>
+        <span className="text-xs font-headline text-text-on-light">{items.length}</span>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-400 mt-1">None</p>
+      ) : (
+        <ul className="mt-1 space-y-1">
+          {items.slice(0, 4).map((d) => (
+            <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate text-text-on-light">{d.name}</span>
+              <a
+                href={`mailto:${d.email}`}
+                className="text-xs text-hd-orange font-subhead uppercase tracking-subhead hover:underline shrink-0"
+              >
+                Contact
+              </a>
+            </li>
+          ))}
+          {items.length > 4 && (
+            <li className="text-xs text-gray-500">+{items.length - 4} more</li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="w-4 h-4"
+      aria-hidden
+    >
+      <polyline points="7 4 13 10 7 16" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="w-4 h-4"
+      aria-hidden
+    >
+      <path d="M10 2L1.5 17h17L10 2z" strokeLinejoin="round" />
+      <line x1="10" y1="8" x2="10" y2="12" strokeLinecap="round" />
+      <circle cx="10" cy="14.5" r="0.5" fill="currentColor" />
+    </svg>
   );
 }
