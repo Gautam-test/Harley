@@ -831,6 +831,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     vin: '',
     year: '',
     kmsDriven: '',
+    mileage: '',
     owners: '1',
     colour: '',
     askingPrice: '',
@@ -871,6 +872,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       source: validators.requiredSelect('a lead source'),
       year: validators.intInRange(1903, currentYearLocal, 'Year'),
       kmsDriven: validators.intInRange(0, 500_000, 'KMs driven'),
+      mileage: validators.intInRange(5, 80, 'Mileage'),
       askingPrice: validators.intInRange(0, 100_000_000, 'Asking price'),
       colour: validators.optionalCity, // letters + spaces only
       message: validators.message,
@@ -907,7 +909,13 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       if (form.insuranceValidUntil) body.insuranceValidUntil = form.insuranceValidUntil;
       if (form.modifications.trim()) body.modifications = form.modifications.trim();
       if (form.reasonForSelling.trim()) body.reasonForSelling = form.reasonForSelling.trim();
-      if (form.message.trim()) body.message = form.message.trim();
+      // Mileage isn't yet a first-class column on the seller lead model;
+      // until that migration ships, prepend it to the freeform message so
+      // the dealer doesn't lose the value the rep keyed in. Trims cleanly
+      // when message is otherwise empty.
+      const mileageNote = form.mileage ? `Mileage: ${form.mileage} km/l` : '';
+      const noteParts = [mileageNote, form.message.trim()].filter(Boolean);
+      if (noteParts.length > 0) body.message = noteParts.join(' — ');
       return api<{ id: string }>('/dealer/leads/trade-in', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -1058,7 +1066,11 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* QA: restructured from a single 4-col row to two balanced rows
+              so the new Mileage field fits without shrinking inputs.
+              Row 1 — three numeric measurements (Year / KMs / Mileage).
+              Row 2 — two descriptive attributes (Owner / Colour). */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Year" error={errFor('year')}>
               <Input
                 type="number"
@@ -1081,6 +1093,20 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 aria-invalid={Boolean(errFor('kmsDriven'))}
               />
             </Field>
+            <Field label="Mileage (km/l)" error={errFor('mileage')}>
+              <Input
+                type="number"
+                min={5}
+                max={80}
+                step={1}
+                value={form.mileage}
+                onChange={(e) => setForm((f) => ({ ...f, mileage: e.target.value }))}
+                placeholder="e.g. 18"
+                aria-invalid={Boolean(errFor('mileage'))}
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Owner">
               <Select
                 value={form.owners}
