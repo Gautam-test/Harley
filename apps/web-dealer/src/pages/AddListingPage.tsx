@@ -158,6 +158,17 @@ export function AddListingPage() {
   useEffect(() => {
     if (!isEditMode) clearLegacyDraft();
   }, [isEditMode]);
+
+  // QA fix: when the user navigates Edit → Add Listing via the sidebar,
+  // React Router KEEPS this component mounted (same route component, only
+  // params change). Without this reset, the previous bike's `s` state
+  // would persist — including the VIN, photos, and pricing — and the
+  // VIN field would unlock (because isEditMode is now false) showing the
+  // old bike's VIN as editable text. Whenever editId changes or
+  // disappears, snap `s` back to `initial`.
+  useEffect(() => {
+    if (!isEditMode) setS(initial);
+  }, [editId, isEditMode]);
   const update = (patch: Partial<FormState>) => setS((p) => ({ ...p, ...patch }));
 
   // Edit-mode hydration. Fetches the listing once on mount and seeds the
