@@ -434,10 +434,25 @@ export async function updateLeadStatus(
     return { fromStatus: existing.status, toStatus: status, changed: false };
   }
 
+  // QA: when a lead is marked Not Interested (DEAD/LOST), snapshot the
+  // prior pipeline stage in notes.frozenStatus so the detail page's
+  // pipeline UI can keep the historical progress visually highlighted
+  // (instead of going fully grey).
+  const isMovingToTerminal = status === 'DEAD' || status === 'LOST';
+  const dataPatch: Record<string, unknown> = { status };
+  if (isMovingToTerminal) {
+    const row =
+      kind === 'buyer'
+        ? await prisma.enquiry.findFirst({ where, select: { notes: true } })
+        : await prisma.tradeInLead.findFirst({ where, select: { notes: true } });
+    const prevNotes = (row?.notes as Record<string, unknown> | null) ?? {};
+    dataPatch.notes = { ...prevNotes, frozenStatus: existing.status };
+  }
+
   if (kind === 'buyer') {
-    await prisma.enquiry.update({ where, data: { status } });
+    await prisma.enquiry.update({ where, data: dataPatch });
   } else {
-    await prisma.tradeInLead.update({ where, data: { status } });
+    await prisma.tradeInLead.update({ where, data: dataPatch });
   }
 
   // Buyer dealer-response notification (trigger: dealer updates the lead
@@ -530,6 +545,11 @@ export async function getLeadDetail(
       pincode: row.pincode,
       message: row.message,
       status: row.status,
+      // Last pipeline stage before the lead was marked Not Interested.
+      // Used by the dealer detail page to keep the historical progress
+      // highlighted on the pipeline bar instead of showing all stages grey.
+      frozenStatus:
+        (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
       createdAt: row.createdAt.toISOString(),
       listing: row.listing
         ? {
@@ -552,6 +572,8 @@ export async function getLeadDetail(
     bikeModel: row.bikeModel,
     vin: row.vin,
     status: row.status,
+    frozenStatus:
+      (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }

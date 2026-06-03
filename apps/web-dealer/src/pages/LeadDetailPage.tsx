@@ -164,7 +164,15 @@ export function LeadDetailPage() {
   const basePipeline =
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
   const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST';
-  const currentIdx = isTerminal ? -1 : basePipeline.indexOf(lead.status as never);
+  // QA: when the lead is in a terminal state (Not Interested), freeze
+  // the pipeline display at the last stage reached BEFORE the terminal
+  // transition — `frozenStatus` is captured by updateLeadStatus into
+  // notes.frozenStatus. Falls back to NEW (idx 0) so we never render
+  // a fully grey bar on legacy rows that pre-date the snapshot.
+  const frozenStatus = (lead as { frozenStatus?: string | null }).frozenStatus ?? null;
+  const currentIdx = isTerminal
+    ? (frozenStatus ? basePipeline.indexOf(frozenStatus as never) : -1)
+    : basePipeline.indexOf(lead.status as never);
   // Dropdown offers every stage on the pipeline plus the single Not
   // Interested alt-terminal. Dealers routinely walk a lead backwards
   // ("buyer ghosted, then came back", "Closed by mistake, reopen at Loan
