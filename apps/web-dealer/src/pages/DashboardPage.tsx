@@ -278,11 +278,26 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-baseline justify-between flex-wrap gap-3">
-        <h1 className="font-headline text-3xl tracking-headline text-text-on-light">Dashboard</h1>
-        <p className="text-xs font-subhead uppercase tracking-subhead text-gray-500">
-          {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+      {/* Header band — orange accent bar + tagline.
+          Pure visual: same h1 text, same date label. */}
+      <div className="relative pl-4 sm:pl-5">
+        <span
+          aria-hidden
+          className="absolute left-0 top-1 bottom-1 w-1 bg-hd-orange"
+        />
+        <div className="flex items-baseline justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
+              Dashboard
+            </h1>
+            <p className="mt-1 text-xs font-subhead uppercase tracking-subhead text-gray-500">
+              Your store at a glance
+            </p>
+          </div>
+          <p className="text-xs font-subhead uppercase tracking-subhead text-gray-500">
+            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
       </div>
 
       {/* Row 1 — Headline KPIs */}
@@ -300,6 +315,8 @@ export function DashboardPage() {
               value={m.active.length}
               delta={delta(m.newThisWeek.length, m.newPrevWeek.length)}
               caption={`${m.newThisWeek.length} newly listed this week`}
+              icon={<KpiIcon kind="listings" />}
+              accent="orange"
             />
             <Kpi
               label="Open Enquiries"
@@ -307,12 +324,16 @@ export function DashboardPage() {
               delta={delta(m.openLeadsLastWk.length, m.openLeadsPrevWk.length)}
               caption={`${m.awaiting24.length} awaiting response >24h`}
               captionTone={m.awaiting24.length > 0 ? 'warning' : 'neutral'}
+              icon={<KpiIcon kind="enquiries" />}
+              accent="info"
             />
             <Kpi
               label="Conversion Rate"
               value={`${m.conversionPct}%`}
               delta={delta(m.conversionPct, m.conversionPrevPct)}
               caption={`${m.deliveredThisMonth} delivered this month`}
+              icon={<KpiIcon kind="conversion" />}
+              accent="success"
             />
             <Kpi
               label="Stock Health"
@@ -320,6 +341,8 @@ export function DashboardPage() {
               delta={delta(m.staleAvgPrev, m.avgAge)} /* lower-is-better */
               caption={`${m.stale.length} stale (${STALE_DAYS}+ days)`}
               captionTone={m.stale.length > 0 ? 'warning' : 'neutral'}
+              icon={<KpiIcon kind="stock" />}
+              accent="warning"
             />
           </>
         )}
@@ -327,7 +350,7 @@ export function DashboardPage() {
 
       {/* Row 2 — Pipeline + Top Bikes */}
       <section className="mt-8 grid lg:grid-cols-2 gap-4">
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Buyer Pipeline Funnel</SectionTitle>
           {loading ? (
             <SkeletonRows n={6} />
@@ -364,7 +387,7 @@ export function DashboardPage() {
             </div>
           )}
         </Card>
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Top 5 Bikes by Enquiries (this month)</SectionTitle>
           {loading ? (
             <SkeletonRows n={5} />
@@ -397,7 +420,7 @@ export function DashboardPage() {
 
       {/* Row 3 — Activity feed + stock mix */}
       <section className="mt-8 grid lg:grid-cols-2 gap-4">
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Recent Activity</SectionTitle>
           {loading ? (
             <SkeletonRows n={6} />
@@ -427,7 +450,7 @@ export function DashboardPage() {
             </ul>
           )}
         </Card>
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Stock Mix</SectionTitle>
           {loading ? (
             <SkeletonRows n={3} />
@@ -461,7 +484,7 @@ export function DashboardPage() {
 
       {/* Row 4 — Pending action items */}
       <section className="mt-8">
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Needs Your Attention</SectionTitle>
           {loading ? (
             <SkeletonRows n={3} />
@@ -506,10 +529,16 @@ export function DashboardPage() {
 // ─── Building blocks ─────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  // Pure visual: a 2px orange tick + uppercase subhead label + hairline
+  // divider keeps every Card's header consistent and gives the dashboard
+  // a stronger editorial rhythm than the plain caption alone.
   return (
-    <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
-      {children}
-    </h2>
+    <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+      <span aria-hidden className="w-1 h-3 bg-hd-orange" />
+      <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-600">
+        {children}
+      </h2>
+    </div>
   );
 }
 
@@ -541,26 +570,58 @@ function DeltaPill({ d }: { d: Delta }) {
   );
 }
 
+type Accent = 'orange' | 'info' | 'success' | 'warning';
+
+const ACCENT_BAR: Record<Accent, string> = {
+  orange: 'bg-hd-orange',
+  info: 'bg-info',
+  success: 'bg-success',
+  warning: 'bg-warning',
+};
+const ACCENT_CHIP: Record<Accent, string> = {
+  orange: 'bg-hd-orange/10 text-hd-orange',
+  info: 'bg-info/10 text-info',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/15 text-warning',
+};
+
 function Kpi({
   label,
   value,
   delta,
   caption,
   captionTone = 'neutral',
+  icon,
+  accent = 'orange',
 }: {
   label: string;
   value: string | number;
   delta: Delta;
   caption: string;
   captionTone?: 'neutral' | 'warning';
+  icon?: React.ReactNode;
+  accent?: Accent;
 }) {
   return (
-    <Card className="bg-hd-white border-gray-200 p-5">
-      <div className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
-        {label}
+    <Card className="relative bg-hd-white border-gray-200 p-5 pl-6 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      {/* Left accent stripe — purely decorative; colour-codes the metric's
+          tone at a glance (orange=stock, blue=enquiries, green=conv, amber=health) */}
+      <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-1 ${ACCENT_BAR[accent]}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500 leading-tight">
+          {label}
+        </div>
+        {icon && (
+          <span
+            aria-hidden
+            className={`inline-flex items-center justify-center w-8 h-8 ${ACCENT_CHIP[accent]}`}
+          >
+            {icon}
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-3xl font-headline text-text-on-light leading-none">{value}</span>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="text-4xl font-headline text-text-on-light leading-none">{value}</span>
         <DeltaPill d={delta} />
       </div>
       <p
@@ -574,11 +635,50 @@ function Kpi({
 
 function KpiSkeleton() {
   return (
-    <Card className="bg-hd-white border-gray-200 p-5">
+    <Card className="bg-hd-white border-gray-200 p-5 shadow-sm">
       <div className="h-3 w-24 bg-gray-200 animate-pulse" />
-      <div className="h-8 w-16 bg-gray-200 animate-pulse mt-3" />
+      <div className="h-9 w-20 bg-gray-200 animate-pulse mt-3" />
       <div className="h-3 w-32 bg-gray-200 animate-pulse mt-3" />
     </Card>
+  );
+}
+
+function KpiIcon({ kind }: { kind: 'listings' | 'enquiries' | 'conversion' | 'stock' }) {
+  const common = {
+    viewBox: '0 0 20 20',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.6,
+    className: 'w-4 h-4',
+    'aria-hidden': true,
+  } as const;
+  if (kind === 'listings')
+    return (
+      <svg {...common}>
+        <rect x="3" y="3" width="6" height="6" />
+        <rect x="11" y="3" width="6" height="6" />
+        <rect x="3" y="11" width="6" height="6" />
+        <rect x="11" y="11" width="6" height="6" />
+      </svg>
+    );
+  if (kind === 'enquiries')
+    return (
+      <svg {...common}>
+        <path d="M17 12a2 2 0 0 1-2 2H7l-3 3V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2z" strokeLinejoin="round" />
+      </svg>
+    );
+  if (kind === 'conversion')
+    return (
+      <svg {...common}>
+        <polyline points="3 14 8 9 12 13 17 6" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points="13 6 17 6 17 10" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <circle cx="10" cy="10" r="7" />
+      <polyline points="10 5 10 10 13 12" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 

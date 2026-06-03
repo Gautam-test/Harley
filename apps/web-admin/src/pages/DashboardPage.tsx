@@ -282,13 +282,25 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
-      <div className="flex items-baseline justify-between flex-wrap gap-3 mb-8">
-        <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
-          Network Overview
-        </h1>
-        <p className="text-xs font-subhead uppercase tracking-subhead text-gray-500">
-          Last 7 days · vs prior 7 days
-        </p>
+      {/* Header band — orange accent bar + tagline (purely visual). */}
+      <div className="relative pl-4 sm:pl-5 mb-8">
+        <span
+          aria-hidden
+          className="absolute left-0 top-1 bottom-1 w-1 bg-hd-orange"
+        />
+        <div className="flex items-baseline justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
+              Network Overview
+            </h1>
+            <p className="mt-1 text-xs font-subhead uppercase tracking-subhead text-gray-500">
+              Marketplace health at a glance
+            </p>
+          </div>
+          <p className="text-xs font-subhead uppercase tracking-subhead text-gray-500">
+            Last 7 days · vs prior 7 days
+          </p>
+        </div>
       </div>
 
       {/* Row 1 — Network KPIs */}
@@ -306,6 +318,8 @@ export function DashboardPage() {
               value={m.activeDealers.length}
               delta={delta(m.addedThisMonth, 0)}
               caption={`${m.addedThisMonth} added this month`}
+              icon={<KpiIcon kind="dealers" />}
+              accent="orange"
             />
             <Kpi
               label="Listings Pending Approval"
@@ -317,18 +331,24 @@ export function DashboardPage() {
                   : `Oldest ${m.oldestPendingDays} day${m.oldestPendingDays === 1 ? '' : 's'}`
               }
               captionTone={m.oldestPendingDays >= 3 ? 'warning' : 'neutral'}
+              icon={<KpiIcon kind="pending" />}
+              accent="warning"
             />
             <Kpi
               label="Network Enquiries (7d)"
               value={m.net7}
               delta={delta(m.net7, m.netPrev)}
               caption={`vs ${m.netPrev} last week`}
+              icon={<KpiIcon kind="enquiries" />}
+              accent="info"
             />
             <Kpi
               label="Conversion Rate"
               value={`${m.convNow}%`}
               delta={delta(m.convNow, m.convPrev)}
               caption={`${metrics30?.leads.conversions ?? 0} conversions (30d)`}
+              icon={<KpiIcon kind="conversion" />}
+              accent="success"
             />
           </>
         )}
@@ -336,12 +356,19 @@ export function DashboardPage() {
 
       {/* Row 2 — Pending queue + Top dealers */}
       <section className="mt-8 grid lg:grid-cols-2 gap-4">
-        <Card className="bg-hd-white border-gray-200 p-5">
-          <div className="flex items-baseline justify-between">
-            <SectionTitle>Pending Approval Queue</SectionTitle>
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            {/* Match SectionTitle structure inline so the "View all" link sits
+                flush with the orange tick + label and shares the divider. */}
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="w-1 h-3 bg-hd-orange" />
+              <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-600">
+                Pending Approval Queue
+              </h2>
+            </div>
             <a
               href={`${import.meta.env.BASE_URL.replace(/\/+$/, '/')}listings`.replace(/\/+/g, '/')}
-              className="text-xs font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
+              className="text-[11px] font-subhead uppercase tracking-subhead text-hd-orange hover:underline"
             >
               View all
             </a>
@@ -377,7 +404,7 @@ export function DashboardPage() {
             </ul>
           )}
         </Card>
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Top Dealers by Activity (this month)</SectionTitle>
           {loading ? (
             <SkeletonRows n={5} />
@@ -412,7 +439,7 @@ export function DashboardPage() {
 
       {/* Row 3 — Audit feed + Network health */}
       <section className="mt-8 grid lg:grid-cols-2 gap-4">
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Recent Admin Actions</SectionTitle>
           {loading ? (
             <SkeletonRows n={6} />
@@ -438,7 +465,7 @@ export function DashboardPage() {
             </ul>
           )}
         </Card>
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Network Health</SectionTitle>
           {loading ? (
             <SkeletonRows n={4} />
@@ -463,7 +490,7 @@ export function DashboardPage() {
 
       {/* Row 4 — System Notifications */}
       <section className="mt-8">
-        <Card className="bg-hd-white border-gray-200 p-5">
+        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>System Notifications</SectionTitle>
           {loading ? (
             <SkeletonRows n={2} />
@@ -499,10 +526,15 @@ export function DashboardPage() {
 // ─── Subcomponents ───────────────────────────────────────────────────────
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
+  // Pure visual: orange tick + subhead label + hairline divider for
+  // consistent editorial rhythm across every Card on the page.
   return (
-    <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
-      {children}
-    </h2>
+    <div className="flex items-center gap-2 pb-3 border-b border-gray-100">
+      <span aria-hidden className="w-1 h-3 bg-hd-orange" />
+      <h2 className="text-[11px] font-subhead uppercase tracking-subhead text-gray-600">
+        {children}
+      </h2>
+    </div>
   );
 }
 
@@ -532,26 +564,56 @@ function DeltaPill({ d }: { d: Delta }) {
   );
 }
 
+type Accent = 'orange' | 'info' | 'success' | 'warning';
+
+const ACCENT_BAR: Record<Accent, string> = {
+  orange: 'bg-hd-orange',
+  info: 'bg-info',
+  success: 'bg-success',
+  warning: 'bg-warning',
+};
+const ACCENT_CHIP: Record<Accent, string> = {
+  orange: 'bg-hd-orange/10 text-hd-orange',
+  info: 'bg-info/10 text-info',
+  success: 'bg-success/10 text-success',
+  warning: 'bg-warning/15 text-warning',
+};
+
 function Kpi({
   label,
   value,
   delta,
   caption,
   captionTone = 'neutral',
+  icon,
+  accent = 'orange',
 }: {
   label: string;
   value: string | number;
   delta: Delta;
   caption: string;
   captionTone?: 'neutral' | 'warning';
+  icon?: React.ReactNode;
+  accent?: Accent;
 }) {
   return (
-    <Card className="bg-hd-white border-gray-200 p-5">
-      <div className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
-        {label}
+    <Card className="relative bg-hd-white border-gray-200 p-5 pl-6 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+      <span aria-hidden className={`absolute left-0 top-0 bottom-0 w-1 ${ACCENT_BAR[accent]}`} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500 leading-tight">
+          {label}
+        </div>
+        {icon && (
+          <span
+            aria-hidden
+            className={`inline-flex items-center justify-center w-8 h-8 ${ACCENT_CHIP[accent]}`}
+          >
+            {icon}
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-3xl font-headline text-text-on-light leading-none">{value}</span>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="text-4xl font-headline text-text-on-light leading-none">{value}</span>
         <DeltaPill d={delta} />
       </div>
       <p
@@ -565,11 +627,50 @@ function Kpi({
 
 function KpiSkeleton() {
   return (
-    <Card className="bg-hd-white border-gray-200 p-5">
+    <Card className="bg-hd-white border-gray-200 p-5 shadow-sm">
       <div className="h-3 w-24 bg-gray-200 animate-pulse" />
-      <div className="h-8 w-16 bg-gray-200 animate-pulse mt-3" />
+      <div className="h-9 w-20 bg-gray-200 animate-pulse mt-3" />
       <div className="h-3 w-32 bg-gray-200 animate-pulse mt-3" />
     </Card>
+  );
+}
+
+function KpiIcon({ kind }: { kind: 'dealers' | 'pending' | 'enquiries' | 'conversion' }) {
+  const common = {
+    viewBox: '0 0 20 20',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.6,
+    className: 'w-4 h-4',
+    'aria-hidden': true,
+  } as const;
+  if (kind === 'dealers')
+    return (
+      <svg {...common}>
+        <circle cx="7" cy="7" r="3" />
+        <circle cx="14" cy="8" r="2.4" />
+        <path d="M2 17c0-2.8 2.2-5 5-5s5 2.2 5 5" strokeLinecap="round" />
+        <path d="M12.5 16c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5" strokeLinecap="round" />
+      </svg>
+    );
+  if (kind === 'pending')
+    return (
+      <svg {...common}>
+        <circle cx="10" cy="10" r="7" />
+        <polyline points="10 5 10 10 13 12" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  if (kind === 'enquiries')
+    return (
+      <svg {...common}>
+        <path d="M17 12a2 2 0 0 1-2 2H7l-3 3V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2z" strokeLinejoin="round" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <polyline points="3 14 8 9 12 13 17 6" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points="13 6 17 6 17 10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
