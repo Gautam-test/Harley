@@ -258,41 +258,36 @@ export function ListingDetailPage() {
               link remains accessible via the dealer card / future
               spec-sheet link if needed. */}
           {data.certificationStatus === 'CPO' && (
-            <div className="mt-12 bg-hd-white border border-gray-200 grid md:grid-cols-[auto_1fr] gap-0 items-stretch">
-              <div className="bg-hd-orange text-hd-white px-6 py-5 flex flex-col justify-center text-center min-w-[120px]">
-                <span className="font-subhead font-bold tracking-subhead text-3xl leading-none">
-                  110 PT
-                </span>
-                <span className="font-subhead font-bold tracking-subhead text-[11px] mt-1.5 uppercase">
-                  Inspection
-                </span>
+            <div className="mt-12">
+              <div className="bg-hd-white border border-gray-200 grid md:grid-cols-[auto_1fr] gap-0 items-stretch">
+                <div className="bg-hd-orange text-hd-white px-6 py-5 flex flex-col justify-center text-center min-w-[120px]">
+                  <span className="font-subhead font-bold tracking-subhead text-3xl leading-none">
+                    110 PT
+                  </span>
+                  <span className="font-subhead font-bold tracking-subhead text-[11px] mt-1.5 uppercase">
+                    Inspection
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed px-6 py-5">
+                  This motorcycle has passed the H-D Certified&trade; 110-Point inspection by an
+                  authorised technician and qualifies for the 12-month mechanical &amp; electrical
+                  guarantee, roadside assistance, and HOG membership.
+                </p>
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed px-6 py-5">
-                This motorcycle has passed the H-D Certified&trade; 110-Point inspection by an
-                authorised technician and qualifies for the 12-month mechanical &amp; electrical
-                guarantee, roadside assistance, and HOG membership.
-              </p>
-            </div>
-          )}
-
-          {/* H-D Certified Certificate — shown when CPO + registrationNumber present */}
-          {data.certificationStatus === 'CPO' && data.registrationNumber && (
-            <div className="mt-6">
-              <h3 className="font-subhead uppercase tracking-subhead text-sm text-text-on-light mb-3">
-                H-D Certified Certificate
-              </h3>
-              <img
-                src={`/api/v1/listings/${data.slug}/certificate.png`}
-                alt="H-D Certified Certificate"
-                className="w-full max-w-2xl border border-gray-200"
-              />
-              <a
-                href={`/api/v1/listings/${data.slug}/certificate.pdf`}
-                download
-                className="mt-3 inline-flex items-center gap-2 text-sm text-hd-orange hover:underline"
-              >
-                Download Certificate PDF ↓
-              </a>
+              {/* QA: the large H-D Certified Certificate image preview was
+                  removed per spec. Only the PDF download remains, sitting
+                  flush-right directly below the 110 PT inspection banner. */}
+              {data.registrationNumber && (
+                <div className="mt-3 flex justify-end">
+                  <a
+                    href={`/api/v1/listings/${data.slug}/certificate.pdf`}
+                    download
+                    className="inline-flex items-center gap-2 text-sm text-hd-orange hover:underline"
+                  >
+                    Download Certificate PDF ↓
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
