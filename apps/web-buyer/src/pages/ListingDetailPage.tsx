@@ -43,6 +43,25 @@ interface ListingDetail {
 // "EMI from" hint reuses the shared helper — same defaults as the
 // calculator + search-filter slider so all three figures stay in sync.
 
+// QA: dealers store the bike's km/l mileage as a `Mileage: NN km/l — `
+// prefix on the listing description (the API doesn't yet have a
+// dedicated column). Peel it off here so we can:
+//   1) surface the value in the spec highlights + Specification tab
+//   2) keep the human-written part of the description clean in the
+//      Overview tab (no leaking of the metadata prefix).
+// Falls back to {mileage: null, body: original-description} when there
+// is no prefix — older listings just continue to show "—".
+const MILEAGE_PREFIX = /^Mileage:\s*(\d{1,3}(?:\.\d{1,2})?)\s*km\/l(?:\s*—\s*|\s*$)/;
+function parseMileagePrefix(description: string | null | undefined): {
+  mileage: string | null;
+  body: string;
+} {
+  const text = description ?? '';
+  const m = text.match(MILEAGE_PREFIX);
+  if (!m) return { mileage: null, body: text };
+  return { mileage: m[1] ?? null, body: text.slice(m[0].length) };
+}
+
 export function ListingDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, isError, error } = useQuery({
@@ -62,6 +81,11 @@ export function ListingDetailPage() {
 
   const heading = `${data.year} ${data.modelName}`;
   const stockCode = data.vin.slice(-5).toUpperCase();
+  // Peel the dealer-keyed Mileage off the description so it can be
+  // surfaced in the spec grid + Specification tab, and the Overview
+  // copy below shows only the dealer's prose (no metadata prefix).
+  const { mileage: mileageValue, body: descriptionBody } = parseMileagePrefix(data.description);
+  const mileageDisplay = mileageValue ? `${mileageValue} km/l` : '—';
   // Header meta strip — keeps the H1's quick context tight without
   // repeating the labelled spec rows below. Stock Code is its own row in
   // the at-a-glance strip so it's NOT included here.
@@ -194,7 +218,7 @@ export function ListingDetailPage() {
                     label: 'Inspection',
                     value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'As-Is',
                   },
-                  { label: 'Mileage', value: '—' },
+                  { label: 'Mileage', value: mileageDisplay },
                   { label: 'Colour', value: data.colour },
                   {
                     label: 'Location',
@@ -230,7 +254,7 @@ export function ListingDetailPage() {
                 <div className="p-6">
                   {tab === 'overview' ? (
                     <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
-                      {data.description}
+                      {descriptionBody}
                     </p>
                   ) : (
                     <SpecsTable data={data} />
@@ -344,6 +368,10 @@ function SpecRow({
 }
 
 function SpecsTable({ data }: { data: ListingDetail }) {
+  // Mileage lives in the description prefix until the API has its own
+  // column — parse here so the Specification tab mirrors the value
+  // shown in the top spec highlights grid.
+  const mileage = parseMileagePrefix(data.description).mileage;
   // Specifications is the canonical full reference card — every static
   // attribute the buyer might care about that isn't already shown on the
   // header strip / spec rows / dealer card / EMI tile. Stock Code, Owners,
@@ -373,7 +401,7 @@ function SpecsTable({ data }: { data: ListingDetail }) {
       'Inspection',
       data.certificationStatus === 'CPO' ? '110-Point Passed' : 'As-Is',
     ],
-    ['Mileage', '—'],
+    ['Mileage', mileage ? `${mileage} km/l` : '—'],
     ['Colour', data.colour],
     [
       'Location',
