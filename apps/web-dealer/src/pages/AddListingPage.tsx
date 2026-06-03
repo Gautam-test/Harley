@@ -108,6 +108,10 @@ interface FormState {
   price: string;
   kmsDriven: string;
   owners: string;
+  // QA: optional fuel-economy figure surfaced in Step 2. Until the API
+  // gains a dedicated column, this is round-tripped via a `Mileage: NN
+  // km/l — ` prefix on `description` (parsed back on edit).
+  mileage: string;
   description: string;
   images: string[];
   // Dealer-internal pricing — not shown to buyers.
@@ -127,6 +131,7 @@ const initial: FormState = {
   price: '',
   kmsDriven: '',
   owners: '1',
+  mileage: '',
   description: '',
   images: [],
   purchasePrice: '',
@@ -138,6 +143,28 @@ const initial: FormState = {
   certificationStatus: 'CPO',
   registrationNumber: '',
 };
+
+// Mileage round-trip helpers — until the API gets a first-class column,
+// we store the value as a `Mileage: NN km/l — ` prefix on `description`.
+// `extractMileage` peels it off when hydrating an edit; `withMileage`
+// re-attaches it on save. The pattern is restrictive enough that it
+// won't false-positive on a dealer-written description.
+const MILEAGE_PREFIX = /^Mileage:\s*(\d{1,3})\s*km\/l(?:\s*—\s*|\s*$)/;
+
+function extractMileage(description: string | null | undefined): {
+  mileage: string;
+  description: string;
+} {
+  const text = description ?? '';
+  const match = text.match(MILEAGE_PREFIX);
+  if (!match) return { mileage: '', description: text };
+  return { mileage: match[1] ?? '', description: text.slice(match[0].length) };
+}
+
+function withMileage(mileage: string, description: string): string {
+  if (!mileage) return description;
+  return description ? `Mileage: ${mileage} km/l — ${description}` : `Mileage: ${mileage} km/l`;
+}
 
 export function AddListingPage() {
   const navigate = useNavigate();
@@ -200,7 +227,12 @@ export function AddListingPage() {
       price: String(e.price),
       kmsDriven: String(e.kmsDriven),
       owners: String(e.owners ?? 1),
-      description: e.description,
+      // Split the cached Mileage prefix off the description (no-op when
+      // the listing was created before this field existed).
+      ...(() => {
+        const split = extractMileage(e.description);
+        return { mileage: split.mileage, description: split.description };
+      })(),
       images: e.images,
       purchasePrice: e.purchasePrice != null ? String(e.purchasePrice) : '',
       refurbishmentPrice: e.refurbishmentPrice != null ? String(e.refurbishmentPrice) : '',
@@ -298,7 +330,7 @@ export function AddListingPage() {
             price: Number(s.price),
             kmsDriven: Number(s.kmsDriven),
             owners: Number(s.owners),
-            description: s.description,
+            description: withMileage(s.mileage, s.description),
             images: s.images,
             certificationStatus: s.certificationStatus,
             // Null when AS_IS so the server clears any stale PDF reference.
@@ -325,7 +357,7 @@ export function AddListingPage() {
           price: Number(s.price),
           kmsDriven: Number(s.kmsDriven),
           owners: Number(s.owners),
-          description: s.description,
+          description: withMileage(s.mileage, s.description),
           images: s.images,
           inspectionReportUrl: s.inspectionUrl || null,
           certificationStatus: s.certificationStatus,
@@ -526,7 +558,11 @@ export function AddListingPage() {
 
         {/* ─── STEP 2 — DEALER INPUT ──────────────────────────────────── */}
         <Section number={2} title="Dealer Input" dim={torqueLocked}>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* QA: restructured from a single 3-col row into a balanced 2×2
+              grid so the new Mileage field fits without squeezing the
+              existing inputs. Order top-to-bottom, left-to-right:
+              Selling Price · KMs Driven / Owners · Mileage (Optional). */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Selling Price (₹)">
               <Input
                 inputMode="numeric"
@@ -560,6 +596,17 @@ export function AddListingPage() {
                 <option value="3">3</option>
                 <option value="4">4+</option>
               </Select>
+            </Field>
+            <Field label="Mileage (Optional)">
+              <Input
+                inputMode="numeric"
+                placeholder="e.g. 18 km/l"
+                value={s.mileage}
+                onChange={(e) =>
+                  update({ mileage: e.target.value.replace(/[^0-9]/g, '').slice(0, 3) })
+                }
+                disabled={torqueLocked}
+              />
             </Field>
           </div>
 
