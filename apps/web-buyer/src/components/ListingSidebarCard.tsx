@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
+import { formatLeadId } from '../lib/leadId';
 
 interface ListingSidebarCardProps {
   slug: string;
@@ -237,12 +238,12 @@ export function ListingSidebarCard({
                     Reference ID
                   </p>
                   <p className="font-mono text-xs text-hd-white break-all mt-1">
-                    {submitted.id}
+                    {formatLeadId('buyer', submitted.id)}
                   </p>
                 </div>
 
                 <Link
-                  to={`/track?id=${submitted.id}`}
+                  to={`/track?id=${formatLeadId('buyer', submitted.id)}`}
                   className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
                 >
                   Track Your Enquiry →

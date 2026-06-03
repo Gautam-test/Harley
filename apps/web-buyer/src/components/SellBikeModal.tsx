@@ -9,6 +9,7 @@ import { HD_MODEL_CATALOG } from '../lib/models';
 import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
 import { reverseGeocode } from '../lib/reverseGeocode';
 import { useSellBikeStore } from '../store/sellBike';
+import { formatLeadId } from '../lib/leadId';
 import {
   nameRules,
   phoneRules,
@@ -103,11 +104,17 @@ export function SellBikeModal() {
     null,
   );
 
+  // QA: the modal is mounted globally in App.tsx so it can be opened from
+  // any nav link. Without `enabled: open`, this query fired on every page
+  // load — including the 404 page — wasting an /dealers round-trip even
+  // when the buyer never opens the Sell Bike form. Gating on `open`
+  // defers the fetch until the modal actually surfaces.
   const dealersQuery = useQuery({
     queryKey: ['public-dealers-options', 'sell-bike'],
     queryFn: () =>
       api<DealerOption[]>('/dealers?lat=20.5937&lng=78.9629&radius=500'),
     staleTime: 5 * 60 * 1000,
+    enabled: open,
   });
 
   const selectedState = useWatch({ control, name: 'state' });
@@ -275,7 +282,7 @@ export function SellBikeModal() {
                   Reference ID
                 </p>
                 <code className="block font-mono text-sm break-all mt-1">
-                  {submitted.id}
+                  {formatLeadId('trade-in', submitted.id)}
                 </code>
               </div>
               <div className="flex justify-end gap-3 mt-5">
@@ -287,7 +294,7 @@ export function SellBikeModal() {
                   Close
                 </button>
                 <Link
-                  to={`/track?id=${submitted.id}`}
+                  to={`/track?id=${formatLeadId('trade-in', submitted.id)}`}
                   onClick={handleClose}
                   className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
                 >
