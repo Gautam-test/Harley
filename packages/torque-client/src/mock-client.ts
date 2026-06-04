@@ -25,6 +25,8 @@ interface MockProfile {
 // family + engine kept consistent per row. Selection is hash-based so
 // the same VIN always returns the same bike (edit flow re-fetches with
 // the same VIN and must show the same data).
+// MOCK_VERSION: 2 — bump this comment when the pool or hash strategy
+// changes so a stale dist on the server is obviously out of date.
 const PROFILES: MockProfile[] = [
   { modelFamily: 'Grand American Touring', modelName: 'Street Glide Special', engine: 'Milwaukee-Eight 114 · 1868 cc' },
   { modelFamily: 'Grand American Touring', modelName: 'Road Glide Special',   engine: 'Milwaukee-Eight 114 · 1868 cc' },
