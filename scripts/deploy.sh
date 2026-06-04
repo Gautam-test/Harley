@@ -39,6 +39,21 @@ pnpm --filter @hd-cpo/api prisma:generate
 # 4. Build the shared workspace packages (types, torque-client, etc).
 # API build alone fails because dist/main.js imports @hd-cpo/types
 # from .ts source files that node can't resolve directly.
+#
+# QA: wipe each package's dist + tsbuildinfo BEFORE the build so tsc's
+# incremental cache can't silently skip a source change (was the
+# "git pull happened, code unchanged in dist" symptom). Done sequentially
+# here — moving the rm into each package's build script causes pnpm -r
+# to race the cleanups against the api's symlink resolution.
+echo "→ Wiping stale build artifacts..."
+# Match both the legacy `tsconfig.tsbuildinfo` (if any old config emitted
+# it) AND the actual `tsconfig.build.tsbuildinfo` produced by our
+# tsconfig.build.json — the latter was the cache that silently skipped
+# rebuilds after a `git pull` of changed source.
+rm -rf packages/types/dist packages/types/tsconfig*.tsbuildinfo
+rm -rf packages/torque-client/dist packages/torque-client/tsconfig*.tsbuildinfo
+rm -rf apps/api/dist apps/api/tsconfig*.tsbuildinfo
+
 echo "→ Building shared packages + API..."
 pnpm -r --filter "@hd-cpo/types" --filter "@hd-cpo/torque-client" --filter "@hd-cpo/api" build
 
