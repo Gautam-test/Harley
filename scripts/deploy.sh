@@ -67,9 +67,15 @@ pnpm --filter @hd-cpo/web-dealer build
 echo "→ Building admin portal..."
 pnpm --filter @hd-cpo/web-admin build
 
-# 6. Reload API with PM2 (zero-downtime)
-echo "→ Reloading API with PM2..."
-pm2 reload ecosystem.config.cjs --update-env
+# 6. Restart API with PM2 (full kill + respawn, not graceful reload)
+# `pm2 reload` is graceful (zero-downtime) BUT in fork mode it doesn't
+# always recycle Node's module cache cleanly — observed symptom: after
+# a torque-mock rebuild, the running API kept serving the previous
+# mock output. `pm2 restart` does a hard SIGKILL + respawn which loads
+# the fresh dist files unconditionally. Brief (~1s) downtime is fine
+# for a non-cluster API.
+echo "→ Restarting API with PM2..."
+pm2 restart ecosystem.config.cjs --update-env
 
 echo ""
 echo "✅ Deploy complete!"
