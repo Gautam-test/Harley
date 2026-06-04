@@ -22,12 +22,35 @@ interface LeadDetail {
   phone: string;
   email: string;
   city: string | null;
-  pincode?: string | null;
+  pincode?: string | number | null;
   message?: string | null;
   bikeModel?: string;
   vin?: string;
   status: LeadStatus;
+  frozenStatus?: string | null;
   createdAt: string;
+  // QA: customer-submitted qualifying answers. Buyer-only fields:
+  state?: string | number | null;
+  source?: string | number | null;
+  budget?: string | number | null;
+  financingNeeded?: string | number | boolean | null;
+  tradeInInterest?: string | number | boolean | null;
+  visitPreference?: string | number | null;
+  bestTimeToCall?: string | number | null;
+  lookingFor?: string | number | null;
+  // Trade-in additional fields:
+  year?: string | number | null;
+  kmsDriven?: string | number | null;
+  owners?: string | number | null;
+  colour?: string | number | null;
+  askingPrice?: string | number | null;
+  rcAvailable?: string | number | boolean | null;
+  serviceHistoryAvailable?: string | number | boolean | null;
+  insuranceValidUntil?: string | number | null;
+  loanOutstanding?: string | number | boolean | null;
+  modifications?: string | number | null;
+  reasonForSelling?: string | number | null;
+  mileage?: string | number | null;
   listing?: {
     id: string;
     slug: string;
@@ -315,6 +338,12 @@ export function LeadDetailPage() {
               </button>
             </div>
           </header>
+
+          {/* QA: dedicated Customer Details panel — surfaces every field
+              the customer submitted on their enquiry / sell-bike form.
+              For BUYER leads: contact + location + qualifying answers.
+              For SELLER leads: also adds bike condition + commercials. */}
+          <CustomerDetailsPanel lead={lead} kind={kind} />
 
           {/* Pipeline */}
           <section className="bg-hd-white border border-gray-200 p-6">
@@ -636,8 +665,12 @@ export function LeadDetailPage() {
           </Panel>
 
           <Panel title="Assigned Dealer">
+            {/* QA: City line was rendering `lead.city` (buyer's city) on
+                this dealer-side card, which is wrong — it should be the
+                dealer's own location. Dealer name already includes the
+                city (e.g. "Capital Harley-Davidson Gurgaon") so the
+                separate City line is redundant and was misleading. */}
             <Field label="Dealership">{dealer?.name ?? '—'}</Field>
-            <Field label="City">{lead.city ?? '—'}</Field>
           </Panel>
 
           {lead.listing && (
@@ -744,5 +777,163 @@ function Icon({ path }: { path: string }) {
     >
       <path d={path} />
     </svg>
+  );
+}
+
+// ─── Customer Details panel ──────────────────────────────────────────────
+// Shows every field the customer submitted on their enquiry form so the
+// rep doesn't have to bounce between systems. Hides any field that's
+// null/empty so older leads (which may not carry all the new fields) just
+// show the data they have. Buyer and trade-in have different field sets;
+// branching keeps the markup tight without duplicating the panel chrome.
+function CustomerDetailsPanel({ lead, kind }: { lead: LeadDetail; kind: Kind }) {
+  const fmt = (v: unknown): string => {
+    if (v === null || v === undefined || v === '') return '—';
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    return String(v);
+  };
+  const has = (v: unknown) => v !== null && v !== undefined && v !== '';
+
+  return (
+    <section className="bg-hd-white border border-gray-200 p-6">
+      <h2 className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500 mb-4">
+        Customer Details
+      </h2>
+
+      {/* Contact + location — always shown */}
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+        <Field label="Full Name">{fmt(lead.name)}</Field>
+        <Field label="Phone">
+          <a
+            href={`tel:${lead.phone.replace(/\s+/g, '')}`}
+            className="font-mono text-xs hover:text-hd-orange"
+          >
+            {lead.phone}
+          </a>
+        </Field>
+        <Field label="Email">
+          <a
+            href={`mailto:${lead.email}`}
+            className="font-mono text-xs hover:text-hd-orange break-all"
+          >
+            {lead.email}
+          </a>
+        </Field>
+        <Field label="City">{fmt(lead.city)}</Field>
+        {has(lead.state) && <Field label="State">{fmt(lead.state)}</Field>}
+        {has(lead.pincode) && <Field label="Pin Code">{fmt(lead.pincode)}</Field>}
+      </div>
+
+      {kind === 'buyer' ? (
+        <>
+          {/* Buyer interest + qualification — fields are nullable; show
+              only what the buyer actually answered. */}
+          {(has(lead.lookingFor) ||
+            has(lead.source) ||
+            has(lead.budget) ||
+            has(lead.financingNeeded) ||
+            has(lead.tradeInInterest) ||
+            has(lead.visitPreference) ||
+            has(lead.bestTimeToCall)) && (
+            <>
+              <div className="mt-6 pt-4 border-t border-gray-100">
+                <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+                  Lead Qualification
+                </h3>
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                  {has(lead.lookingFor) && <Field label="Looking For">{fmt(lead.lookingFor)}</Field>}
+                  {has(lead.source) && <Field label="Source">{fmt(lead.source)}</Field>}
+                  {has(lead.budget) && (
+                    <Field label="Budget">
+                      {typeof lead.budget === 'number'
+                        ? `₹ ${Number(lead.budget).toLocaleString('en-IN')}`
+                        : fmt(lead.budget)}
+                    </Field>
+                  )}
+                  {has(lead.financingNeeded) && <Field label="Financing Needed">{fmt(lead.financingNeeded)}</Field>}
+                  {has(lead.tradeInInterest) && <Field label="Trade-In Interest">{fmt(lead.tradeInInterest)}</Field>}
+                  {has(lead.visitPreference) && <Field label="Visit Preference">{fmt(lead.visitPreference)}</Field>}
+                  {has(lead.bestTimeToCall) && <Field label="Best Time To Call">{fmt(lead.bestTimeToCall)}</Field>}
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Trade-in / seller specifics — Bike + Commercials groups. */}
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+              Motorcycle
+            </h3>
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+              <Field label="Model">{fmt(lead.bikeModel)}</Field>
+              <Field label="VIN">
+                <span className="font-mono text-xs">{fmt(lead.vin)}</span>
+              </Field>
+              {has(lead.year) && <Field label="Year">{fmt(lead.year)}</Field>}
+              {has(lead.kmsDriven) && (
+                <Field label="KMs Driven">
+                  {typeof lead.kmsDriven === 'number'
+                    ? `${Number(lead.kmsDriven).toLocaleString('en-IN')} km`
+                    : fmt(lead.kmsDriven)}
+                </Field>
+              )}
+              {has(lead.owners) && <Field label="Owner">{fmt(lead.owners)}</Field>}
+              {has(lead.colour) && <Field label="Colour">{fmt(lead.colour)}</Field>}
+              {has(lead.mileage) && <Field label="Mileage">{fmt(lead.mileage)} km/l</Field>}
+              {has(lead.rcAvailable) && <Field label="RC Available">{fmt(lead.rcAvailable)}</Field>}
+              {has(lead.serviceHistoryAvailable) && (
+                <Field label="Service History">{fmt(lead.serviceHistoryAvailable)}</Field>
+              )}
+              {has(lead.insuranceValidUntil) && (
+                <Field label="Insurance Valid Until">{fmt(lead.insuranceValidUntil)}</Field>
+              )}
+              {has(lead.modifications) && <Field label="Modifications">{fmt(lead.modifications)}</Field>}
+            </div>
+          </div>
+
+          {(has(lead.askingPrice) ||
+            has(lead.loanOutstanding) ||
+            has(lead.reasonForSelling) ||
+            has(lead.source) ||
+            has(lead.bestTimeToCall)) && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+                Commercials &amp; Context
+              </h3>
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 text-sm">
+                {has(lead.askingPrice) && (
+                  <Field label="Asking Price">
+                    {typeof lead.askingPrice === 'number'
+                      ? `₹ ${Number(lead.askingPrice).toLocaleString('en-IN')}`
+                      : fmt(lead.askingPrice)}
+                  </Field>
+                )}
+                {has(lead.loanOutstanding) && <Field label="Loan Outstanding">{fmt(lead.loanOutstanding)}</Field>}
+                {has(lead.reasonForSelling) && (
+                  <Field label="Reason For Selling">{fmt(lead.reasonForSelling)}</Field>
+                )}
+                {has(lead.source) && <Field label="Source">{fmt(lead.source)}</Field>}
+                {has(lead.bestTimeToCall) && <Field label="Best Time To Call">{fmt(lead.bestTimeToCall)}</Field>}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Free-text message — show last so it doesn't push tabular data
+          off the fold. Shown only when populated. */}
+      {has(lead.message) && (
+        <div className="mt-6 pt-4 border-t border-gray-100">
+          <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-2">
+            Customer Message
+          </h3>
+          <p className="text-sm text-text-on-light leading-relaxed whitespace-pre-line">
+            {String(lead.message)}
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

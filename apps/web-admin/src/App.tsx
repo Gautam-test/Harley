@@ -5,6 +5,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DealersPage } from './pages/DealersPage';
 import { ListingsPage } from './pages/ListingsPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
+import { EnquiryDetailPage } from './pages/EnquiryDetailPage';
 import { ContentPage } from './pages/ContentPage';
 import { AuditPage } from './pages/AuditPage';
 import { ProfilePage } from './pages/ProfilePage';
@@ -39,6 +40,7 @@ export function App() {
           <Route path="/dealers" element={<DealersPage />} />
           <Route path="/listings" element={<ListingsPage />} />
           <Route path="/enquiries" element={<EnquiriesPage />} />
+          <Route path="/enquiries/:kind/:id" element={<EnquiryDetailPage />} />
           <Route path="/content" element={<ContentPage />} />
           <Route path="/audit" element={<AuditPage />} />
           <Route path="/profile" element={<ProfilePage />} />

@@ -552,6 +552,18 @@ export async function getLeadDetail(
       },
     });
     if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+    // QA: surface the full customer-submitted payload. Most extra
+    // qualifying answers (source, state, budget, financingNeeded,
+    // tradeInInterest, visitPreference, bestTimeToCall, lookingFor)
+    // live in the `notes` JSON because the Enquiry table only has
+    // dedicated columns for the common fields. The dealer + admin
+    // detail pages render these in a "Customer Details" section so
+    // reps see the full picture without diving into raw JSON.
+    const notes = (row.notes as Record<string, unknown> | null) ?? {};
+    const pick = (k: string) =>
+      typeof notes[k] === 'string' || typeof notes[k] === 'number' || typeof notes[k] === 'boolean'
+        ? (notes[k] as string | number | boolean)
+        : null;
     return {
       id: row.id,
       kind: 'buyer' as const,
@@ -572,6 +584,16 @@ export async function getLeadDetail(
       frozenStatus:
         (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
       createdAt: row.createdAt.toISOString(),
+      // Customer-side qualifying answers from notes JSON. All nullable so
+      // older rows that don't carry them just render "—" client-side.
+      state: pick('state'),
+      source: pick('source'),
+      budget: pick('budget'),
+      financingNeeded: pick('financingNeeded'),
+      tradeInInterest: pick('tradeInInterest'),
+      visitPreference: pick('visitPreference'),
+      bestTimeToCall: pick('bestTimeToCall'),
+      lookingFor: pick('lookingFor'),
       listing: row.listing
         ? {
             ...row.listing,
@@ -583,6 +605,26 @@ export async function getLeadDetail(
 
   const row = await prisma.tradeInLead.findFirst({ where: { id, dealerId } });
   if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+  // QA: surface the full seller-side submission. Trade-in keeps
+  // bike-condition details (year, KMs, owners, colour, asking price,
+  // RC available, service history, insurance valid until, loan
+  // outstanding, modifications, reason for selling) inside the notes
+  // JSON. Mileage (km/l) is round-tripped via a "Mileage: NN km/l — "
+  // prefix on the freeform message — peel it off here so the detail
+  // page can show it as its own field.
+  const notes = (row.notes as Record<string, unknown> | null) ?? {};
+  const pick = (k: string) =>
+    typeof notes[k] === 'string' || typeof notes[k] === 'number' || typeof notes[k] === 'boolean'
+      ? (notes[k] as string | number | boolean)
+      : null;
+  const message = (pick('message') as string | null) ?? null;
+  const mileageMatch = typeof message === 'string'
+    ? message.match(/^Mileage:\s*(\d{1,3}(?:\.\d{1,2})?)\s*km\/l(?:\s*—\s*|\s*$)/)
+    : null;
+  const mileage = mileageMatch ? mileageMatch[1] : null;
+  const cleanMessage = mileageMatch && message
+    ? message.slice(mileageMatch[0].length)
+    : message;
   return {
     id: row.id,
     kind: 'trade-in' as const,
@@ -596,6 +638,24 @@ export async function getLeadDetail(
     frozenStatus:
       (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
     createdAt: row.createdAt.toISOString(),
+    // Trade-in / seller customer details from notes JSON.
+    state: pick('state'),
+    pincode: pick('pincode'),
+    source: pick('source'),
+    year: pick('year'),
+    kmsDriven: pick('kmsDriven'),
+    owners: pick('owners'),
+    colour: pick('colour'),
+    askingPrice: pick('askingPrice'),
+    bestTimeToCall: pick('bestTimeToCall'),
+    rcAvailable: pick('rcAvailable'),
+    serviceHistoryAvailable: pick('serviceHistoryAvailable'),
+    insuranceValidUntil: pick('insuranceValidUntil'),
+    loanOutstanding: pick('loanOutstanding'),
+    modifications: pick('modifications'),
+    reasonForSelling: pick('reasonForSelling'),
+    mileage,
+    message: cleanMessage,
   };
 }
 

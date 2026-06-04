@@ -219,6 +219,17 @@ adminLeadsRouter.get(
           },
         });
         if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+        // QA: surface every customer-submitted field so the admin lead
+        // detail page can render a complete "Customer Details" panel.
+        // Extra qualifying answers (state, source, budget, financing,
+        // trade-in interest, visit preference, best time to call, looking
+        // for) live in the notes JSON because the Enquiry table only has
+        // dedicated columns for the common fields.
+        const notes = (row.notes as Record<string, unknown> | null) ?? {};
+        const pick = (k: string) =>
+          typeof notes[k] === 'string' || typeof notes[k] === 'number' || typeof notes[k] === 'boolean'
+            ? (notes[k] as string | number | boolean)
+            : null;
         res.json({
           id: row.id,
           kind: 'buyer' as const,
@@ -236,6 +247,14 @@ adminLeadsRouter.get(
           listing: row.listing
             ? { ...row.listing, price: Number(row.listing.price) }
             : null,
+          state: pick('state'),
+          source: pick('source'),
+          budget: pick('budget'),
+          financingNeeded: pick('financingNeeded'),
+          tradeInInterest: pick('tradeInInterest'),
+          visitPreference: pick('visitPreference'),
+          bestTimeToCall: pick('bestTimeToCall'),
+          lookingFor: pick('lookingFor'),
         });
         return;
       }
@@ -244,6 +263,23 @@ adminLeadsRouter.get(
         include: { dealer: { select: { id: true, name: true, city: true } } },
       });
       if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+      // QA: peel the seller-submitted bike + commercials data out of the
+      // notes JSON; mileage (km/l) round-trips via a prefix on the
+      // freeform message which we strip here so the detail page shows
+      // it as a dedicated field.
+      const notes = (row.notes as Record<string, unknown> | null) ?? {};
+      const pick = (k: string) =>
+        typeof notes[k] === 'string' || typeof notes[k] === 'number' || typeof notes[k] === 'boolean'
+          ? (notes[k] as string | number | boolean)
+          : null;
+      const message = (pick('message') as string | null) ?? null;
+      const mileageMatch = typeof message === 'string'
+        ? message.match(/^Mileage:\s*(\d{1,3}(?:\.\d{1,2})?)\s*km\/l(?:\s*—\s*|\s*$)/)
+        : null;
+      const mileage = mileageMatch ? mileageMatch[1] : null;
+      const cleanMessage = mileageMatch && message
+        ? message.slice(mileageMatch[0].length)
+        : message;
       res.json({
         id: row.id,
         kind: 'trade-in' as const,
@@ -258,6 +294,23 @@ adminLeadsRouter.get(
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         dealer: row.dealer,
+        state: pick('state'),
+        pincode: pick('pincode'),
+        source: pick('source'),
+        year: pick('year'),
+        kmsDriven: pick('kmsDriven'),
+        owners: pick('owners'),
+        colour: pick('colour'),
+        askingPrice: pick('askingPrice'),
+        bestTimeToCall: pick('bestTimeToCall'),
+        rcAvailable: pick('rcAvailable'),
+        serviceHistoryAvailable: pick('serviceHistoryAvailable'),
+        insuranceValidUntil: pick('insuranceValidUntil'),
+        loanOutstanding: pick('loanOutstanding'),
+        modifications: pick('modifications'),
+        reasonForSelling: pick('reasonForSelling'),
+        mileage,
+        message: cleanMessage,
       });
     } catch (e) {
       next(e);

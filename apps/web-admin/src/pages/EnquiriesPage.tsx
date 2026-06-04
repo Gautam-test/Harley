@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, Input, Select } from '@hd-cpo/ui';
 import { api } from '../lib/api';
@@ -78,6 +79,7 @@ const STATUS_OPTIONS: ('' | LeadStatus)[] = [
 ];
 
 export function EnquiriesPage() {
+  const navigate = useNavigate();
   const [kind, setKind] = useState<'all' | Kind>('all');
   const [status, setStatus] = useState<'' | LeadStatus>('');
   const [dealerId, setDealerId] = useState('');
@@ -241,7 +243,16 @@ export function EnquiriesPage() {
             {leads.data?.results.map((l) => (
               <tr
                 key={`${l.kind}-${l.id}`}
-                className={`transition-colors ${
+                onClick={() => navigate(`/enquiries/${l.kind}/${l.id}`)}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate(`/enquiries/${l.kind}/${l.id}`);
+                  }
+                }}
+                className={`cursor-pointer transition-colors ${
                   l.stuck ? 'bg-danger/5 hover:bg-danger/10' : 'hover:bg-hd-orange/5'
                 }`}
               >
