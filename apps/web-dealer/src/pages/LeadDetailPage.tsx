@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button } from '@hd-cpo/ui';
@@ -127,6 +127,15 @@ export function LeadDetailPage() {
   // first view of a lead surfaces the full audit trail; collapse persists
   // for the lifetime of this mount only.
   const [activityExpanded, setActivityExpanded] = useState(true);
+  // QA: COPY REF used to be silent. Track whether the copy just landed
+  // so we can swap the button label to "Copied!" and surface a brief
+  // toast confirmation. Auto-clears after 2s.
+  const [copiedRef, setCopiedRef] = useState(false);
+  useEffect(() => {
+    if (!copiedRef) return;
+    const t = window.setTimeout(() => setCopiedRef(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [copiedRef]);
   const addComment = useMutation({
     mutationFn: () =>
       api(`/dealer/leads/${kind}/${id}/comments`, {
@@ -192,6 +201,19 @@ export function LeadDetailPage() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+      {/* QA: transient toast confirming COPY REF succeeded. Fixed to the
+          bottom-right so it stays out of the dealer's reading flow while
+          still giving an unmissable confirmation. */}
+      {copiedRef && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 right-6 z-50 bg-hd-black text-hd-white px-4 py-3 shadow-lg font-subhead uppercase tracking-subhead text-xs flex items-center gap-2"
+        >
+          <Icon path="M5 12l5 5L20 7" />
+          Reference ID copied
+        </div>
+      )}
       <Link
         to={`/enquiries/${kind}`}
         className="inline-flex items-center text-xs font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition border border-gray-300 px-3 py-1.5"
@@ -254,15 +276,42 @@ export function LeadDetailPage() {
               </a>
               <button
                 type="button"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(
-                    formatLeadId(kind as LeadKind, lead.id, lead.createdAt),
-                  );
+                onClick={async () => {
+                  const ref = formatLeadId(kind as LeadKind, lead.id, lead.createdAt);
+                  try {
+                    if (navigator.clipboard?.writeText) {
+                      await navigator.clipboard.writeText(ref);
+                    } else {
+                      // Legacy fallback for non-secure contexts or older
+                      // browsers — keeps the action working anywhere.
+                      const ta = document.createElement('textarea');
+                      ta.value = ref;
+                      ta.setAttribute('readonly', '');
+                      ta.style.position = 'absolute';
+                      ta.style.left = '-9999px';
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(ta);
+                    }
+                    setCopiedRef(true);
+                  } catch {
+                    /* swallow — user can still copy manually */
+                  }
                 }}
-                className="inline-flex items-center gap-1.5 border border-gray-300 text-gray-700 font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:border-hd-black hover:text-hd-black transition"
+                aria-live="polite"
+                className={`inline-flex items-center gap-1.5 border font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 transition ${
+                  copiedRef
+                    ? 'border-success text-success'
+                    : 'border-gray-300 text-gray-700 hover:border-hd-black hover:text-hd-black'
+                }`}
               >
-                <Icon path="M8 4h10a2 2 0 012 2v10M16 8H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2z" />
-                Copy Ref
+                {copiedRef ? (
+                  <Icon path="M5 12l5 5L20 7" />
+                ) : (
+                  <Icon path="M8 4h10a2 2 0 012 2v10M16 8H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V10a2 2 0 00-2-2z" />
+                )}
+                {copiedRef ? 'Copied!' : 'Copy Ref'}
               </button>
             </div>
           </header>

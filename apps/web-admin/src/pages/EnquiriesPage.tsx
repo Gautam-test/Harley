@@ -205,13 +205,22 @@ export function EnquiriesPage() {
                 Status  = badge + date below + ⚠ stuck flag inline
               Easier to scan than 8 narrow columns. Stuck rows pick up a soft
               red tint so admins can spot them without the toggle. */}
+          {/* QA: table previously left a wide empty gutter to the right
+              of the Status column because the table auto-sized to its
+              content (the badge + date are narrow). Two fixes:
+                1. Dealer column gets `w-full` so it absorbs the slack —
+                   dealer names are the most variable-width values in the
+                   row.
+                2. Status column header + cell get `text-right` so the
+                   badge + date land flush against the right edge for a
+                   balanced, professional layout. */}
           <thead className="bg-gray-50/80 text-text-on-light">
             <tr>
               <Th>Kind</Th>
               <Th>Lead</Th>
               <Th>Contact</Th>
-              <Th>Dealer</Th>
-              <Th>Status</Th>
+              <Th className="w-full">Dealer</Th>
+              <Th className="text-right">Status</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -270,10 +279,9 @@ export function EnquiriesPage() {
                     {l.email}
                   </a>
                 </Td>
-                <Td className="text-xs text-gray-700">{l.dealerName}</Td>
-                <Td>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <StatusBadge status={l.status} />
+                <Td className="text-xs text-gray-700 w-full">{l.dealerName}</Td>
+                <Td className="text-right">
+                  <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
                     {l.stuck && (
                       <span
                         title="Sat in NEW for >7 days"
@@ -282,6 +290,7 @@ export function EnquiriesPage() {
                         ⚠ Stuck
                       </span>
                     )}
+                    <StatusBadge status={l.status} />
                   </div>
                   <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">
                     {new Date(l.createdAt).toLocaleDateString('en-IN', {
@@ -300,9 +309,22 @@ export function EnquiriesPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  // Header text defaults to left-aligned; caller can override with
+  // `text-right`/`w-full` (e.g. to push the Status column to the edge
+  // and let the Dealer column absorb the remaining width).
   return (
-    <th className="px-4 py-3 text-left text-[10px] font-subhead uppercase tracking-subhead text-gray-500">
+    <th
+      className={`px-4 py-3 text-[10px] font-subhead uppercase tracking-subhead text-gray-500 ${
+        className.includes('text-right') ? '' : 'text-left'
+      } ${className}`}
+    >
       {children}
     </th>
   );

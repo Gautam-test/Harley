@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { formatLeadId } from '../lib/leadId';
+import { CopyRefButton } from './CopyRefButton';
 
 interface ListingSidebarCardProps {
   slug: string;
@@ -237,9 +238,15 @@ export function ListingSidebarCard({
                   <p className="font-subhead uppercase tracking-subhead text-[10px] text-text-secondary">
                     Reference ID
                   </p>
-                  <p className="font-mono text-xs text-hd-white break-all mt-1">
-                    {formatLeadId('buyer', submitted.id)}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
+                    <p className="font-mono text-xs text-hd-white break-all">
+                      {formatLeadId('buyer', submitted.id)}
+                    </p>
+                    <CopyRefButton
+                      value={formatLeadId('buyer', submitted.id)}
+                      tone="on-dark"
+                    />
+                  </div>
                 </div>
 
                 <Link

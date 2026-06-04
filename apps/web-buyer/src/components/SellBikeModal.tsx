@@ -10,6 +10,7 @@ import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
 import { reverseGeocode } from '../lib/reverseGeocode';
 import { useSellBikeStore } from '../store/sellBike';
 import { formatLeadId } from '../lib/leadId';
+import { CopyRefButton } from './CopyRefButton';
 import {
   nameRules,
   phoneRules,
@@ -281,9 +282,12 @@ export function SellBikeModal() {
                 <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500">
                   Reference ID
                 </p>
-                <code className="block font-mono text-sm break-all mt-1">
-                  {formatLeadId('trade-in', submitted.id)}
-                </code>
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                  <code className="font-mono text-sm break-all">
+                    {formatLeadId('trade-in', submitted.id)}
+                  </code>
+                  <CopyRefButton value={formatLeadId('trade-in', submitted.id)} />
+                </div>
               </div>
               <div className="flex justify-end gap-3 mt-5">
                 <button
