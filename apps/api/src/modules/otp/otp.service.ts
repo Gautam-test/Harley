@@ -15,13 +15,13 @@ import { smsProvider } from '../sms/sms.module.js';
 const env = getEnv();
 const TTL_SECONDS = 5 * 60;
 const RESEND_WINDOW_SECONDS = 30;
-const RESEND_MAX_PER_HOUR = 3;
+const RESEND_MAX_PER_HOUR = 1000; // effectively disabled
 // Hard daily ceiling per phone — defends against carrier-cost abuse where
 // a botnet spreads requests across IPs (defeating the per-IP limiter) but
 // hammers the same target number. 10/day is generous for any legit user
 // flow (a buyer enquiring on multiple bikes uses 1 OTP, not 10) but caps
 // the worst-case spend per number per day.
-const DAILY_MAX_PER_PHONE = 10;
+const DAILY_MAX_PER_PHONE = 1000; // effectively disabled
 const DAILY_WINDOW_SECONDS = 24 * 60 * 60;
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30 * 60;
