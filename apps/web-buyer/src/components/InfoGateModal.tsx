@@ -320,7 +320,10 @@ export function InfoGateModal({
     // step finished + we have a profile in state. Previously gated on
     // !prefilled which made Resend Code a no-op for the buyer-enquiry
     // collect→verify flow.
-    const phone = prefilled?.phone ?? profile?.phone;
+    // Defensive: strip any cosmetic "+91 " space so this single send
+    // chokepoint is safe no matter how the caller formatted the phone
+    // (the API schema requires the canonical "+91XXXXXXXXXX").
+    const phone = toApiPhone(prefilled?.phone ?? profile?.phone ?? '');
     if (!open || !phone || otpId || busy) return;
     // Strict-Mode-safe dedupe: if a /otp/send for this exact (phone, purpose)
     // pair is already in flight from a sibling effect run, skip. Cleared in
@@ -487,7 +490,8 @@ export function InfoGateModal({
     });
     if (busy || resendCooldown > 0) return;
 
-    const phone = prefilled?.phone ?? profile?.phone;
+    // Strip the cosmetic "+91 " space — /otp/send requires "+91XXXXXXXXXX".
+    const phone = toApiPhone(prefilled?.phone ?? profile?.phone ?? '');
     if (!phone) {
       setError('Phone number missing — close this dialog and try again.');
       return;

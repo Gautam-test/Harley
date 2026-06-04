@@ -22,7 +22,6 @@ import { dealerOrdersRouter, publicOrdersRouter } from './modules/orders/orders.
 import { dealersRouter } from './modules/dealers/dealers.routes.js';
 import { adminMetricsRouter } from './modules/admin/admin-metrics.routes.js';
 import { adminDealersRouter } from './modules/admin/admin-dealers.routes.js';
-import { adminBulkImportRouter } from './modules/admin/admin-bulk-import.routes.js';
 import { adminListingsRouter } from './modules/admin/admin-listings.routes.js';
 import { adminLeadsRouter } from './modules/admin/admin-leads.routes.js';
 import { adminContentRouter, publicContentRouter } from './modules/admin/admin-content.routes.js';
@@ -98,7 +97,6 @@ export function createApp() {
   app.use('/api/v1/uploads', uploadsRouter);
   app.use('/api/v1/admin/metrics', adminMetricsRouter);
   app.use('/api/v1/admin/dealers', adminDealersRouter);
-  app.use('/api/v1/admin/import', adminBulkImportRouter);
   app.use('/api/v1/admin/listings', adminListingsRouter);
   app.use('/api/v1/admin/leads', adminLeadsRouter);
   app.use('/api/v1/admin/content', adminContentRouter);

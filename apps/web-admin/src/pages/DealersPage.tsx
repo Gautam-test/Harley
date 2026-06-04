@@ -20,7 +20,6 @@ export function DealersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [q, setQ] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [showImport, setShowImport] = useState(false);
   const [generated, setGenerated] = useState<{ username: string; password: string } | null>(null);
   const qc = useQueryClient();
 
@@ -77,9 +76,6 @@ export function DealersPage() {
             <option value="INACTIVE">Inactive</option>
             <option value="SUSPENDED">Suspended</option>
           </Select>
-          <Button onClick={() => setShowImport(true)} variant="secondary">
-            Bulk Import
-          </Button>
           <Button onClick={() => setShowCreate(true)}>+ Add Dealer</Button>
         </div>
       </div>
@@ -255,12 +251,6 @@ export function DealersPage() {
             if (creds) setGenerated(creds);
             qc.invalidateQueries({ queryKey: ['admin-dealers'] });
           }}
-        />
-      )}
-      {showImport && (
-        <BulkImportModal
-          onClose={() => setShowImport(false)}
-          onDone={() => qc.invalidateQueries({ queryKey: ['admin-dealers'] })}
         />
       )}
     </div>
@@ -522,103 +512,6 @@ function CreateDealerModal({
   );
 }
 
-function BulkImportModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<{
-    summary: { total: number; created: number; skipped: number; errors: number };
-    results: Array<{
-      rowNumber: number;
-      username?: string;
-      status: 'created' | 'skipped' | 'error';
-      error?: string;
-      generatedPassword?: string;
-    }>;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const upload = useMutation({
-    mutationFn: async () => {
-      if (!file) throw new Error('Pick a file');
-      const fd = new FormData();
-      fd.append('file', file);
-      return api<{
-        summary: { total: number; created: number; skipped: number; errors: number };
-        results: Array<{
-          rowNumber: number;
-          username?: string;
-          status: 'created' | 'skipped' | 'error';
-          error?: string;
-          generatedPassword?: string;
-        }>;
-      }>('/admin/import/dealers', { method: 'POST', body: fd, formData: true });
-    },
-    onSuccess: (res) => {
-      setResult(res);
-      onDone();
-    },
-    onError: (e) => setError(e instanceof ApiError ? e.message : 'Upload failed'),
-  });
-  return (
-    <Modal onClose={onClose} title="Bulk Import Dealers">
-      {!result && (
-        <div className="space-y-3">
-          <p className="text-sm text-gray-600">
-            Upload a .xlsx with columns: <code>username, password (optional), name, legalName, email, phone, address, city, state, pincode, torqueDealerId</code>.
-          </p>
-          <input
-            type="file"
-            accept=".xlsx"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
-          />
-          {error && <div className="text-danger text-sm">{error}</div>}
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button onClick={() => upload.mutate()} disabled={!file || upload.isPending}>
-              {upload.isPending ? 'Importing…' : 'Import'}
-            </Button>
-          </div>
-        </div>
-      )}
-      {result && (
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-sm">
-            <Stat label="Total" value={result.summary.total} />
-            <Stat label="Created" value={result.summary.created} good />
-            <Stat label="Skipped" value={result.summary.skipped} />
-            <Stat label="Errors" value={result.summary.errors} bad={result.summary.errors > 0} />
-          </div>
-          <div className="border border-gray-200">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-2 py-1">Row</th>
-                  <th className="text-left px-2 py-1">Username</th>
-                  <th className="text-left px-2 py-1">Status</th>
-                  <th className="text-left px-2 py-1">Detail</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {result.results.map((r, i) => (
-                  <tr key={i}>
-                    <td className="px-2 py-1">{r.rowNumber}</td>
-                    <td className="px-2 py-1 font-mono">{r.username ?? '—'}</td>
-                    <td className="px-2 py-1">{r.status}</td>
-                    <td className="px-2 py-1">
-                      {r.error ?? (r.generatedPassword ? `password: ${r.generatedPassword}` : '')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={onClose}>Done</Button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}
 
 function Modal({
   title,
@@ -701,13 +594,5 @@ function KeyIcon() {
     <svg {...ICON_PROPS}>
       <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
     </svg>
-  );
-}
-function Stat({ label, value, good, bad }: { label: string; value: number; good?: boolean; bad?: boolean }) {
-  return (
-    <div className={`p-3 border ${good ? 'border-success' : bad ? 'border-danger' : 'border-gray-200'}`}>
-      <div className="text-[10px] font-subhead uppercase tracking-subhead text-gray-500">{label}</div>
-      <div className="font-headline text-xl">{value}</div>
-    </div>
   );
 }

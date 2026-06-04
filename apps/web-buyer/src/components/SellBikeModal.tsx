@@ -634,7 +634,11 @@ export function SellBikeModal() {
           open
           purpose="TRADE_IN"
           prefilled={{
-            phone: getValues('phone'),
+            // QA: strip the cosmetic "+91 " space before handing the phone
+            // to the OTP modal — the API phone schema is strict
+            // "+91XXXXXXXXXX" (no whitespace) and the modal posts this
+            // value straight to /otp/send.
+            phone: toApiPhone(getValues('phone')),
             name: getValues('username'),
             email: getValues('email'),
             vin: getValues('vin'),
