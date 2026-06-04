@@ -16,7 +16,13 @@
 module.exports = {
   apps: [
     {
-      name: 'hd-cpo-api',
+      // IMPORTANT: this name MUST match the live PM2 process that nginx
+      // proxies to. The server's API runs as `harley-api`; if this is
+      // named anything else, `pm2 reload ecosystem.config.cjs` in
+      // deploy.sh spawns a DUPLICATE process and never restarts the real
+      // live API — so git-pulled code never reaches the running server
+      // (the exact "stale API / 404 on new ref" bug). Keep it `harley-api`.
+      name: 'harley-api',
       cwd: './apps/api',
       script: 'pnpm',
       args: 'start:prod',
