@@ -585,7 +585,9 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         // condition is the BIKE — banner copy reflects that the rep
         // must pick a different bike (or close the existing lead).
         setDupError(
-          'Enquiry form already filled with this bike. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+          // QA spec: unified copy across customer + dealer surfaces.
+          // Same VIN/listing + same mobile + non-terminal status = block.
+          'You already have an active enquiry for this motorcycle. Our dealer team will contact you shortly.',
         );
         setError(null);
       } else {

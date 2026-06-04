@@ -82,6 +82,9 @@ export function dealerLeadEmail(opts: {
   buyerName: string;
   buyerCity?: string;
   contextLine?: string;
+  /** Human-friendly lead ref (B-YYYY-XXXX / S-YYYY-XXXX) — lets the rep
+   *  paste it straight into the dealer portal search / Track Enquiry. */
+  referenceId?: string;
 }): EmailMessage {
   const subjectMap = {
     BUYER: 'New listing enquiry — H-D Certified',
@@ -89,15 +92,18 @@ export function dealerLeadEmail(opts: {
   } as const;
   return {
     to: '', // Caller sets the dealer email (decrypted out-of-band).
-    subject: subjectMap[opts.leadType],
+    subject: opts.referenceId
+      ? `${subjectMap[opts.leadType]} · ${opts.referenceId}`
+      : subjectMap[opts.leadType],
     html: `<div style="font-family:Arial,sans-serif;background:#000;color:#fff;padding:24px">
   <h1 style="color:#FF6600;text-transform:uppercase;letter-spacing:0.04em;">H-D Certified</h1>
   <p>Hi ${opts.dealerName},</p>
   <p>You have a new ${opts.leadType.toLowerCase().replace('_', '-')} lead from <strong>${opts.buyerName}</strong>${opts.buyerCity ? ` (${opts.buyerCity})` : ''}.</p>
   ${opts.contextLine ? `<p>${opts.contextLine}</p>` : ''}
+  ${opts.referenceId ? `<p>Reference ID: <strong>${opts.referenceId}</strong></p>` : ''}
   <p>Sign in to your dealer portal to follow up.</p>
 </div>`,
-    text: `New ${opts.leadType} lead from ${opts.buyerName}${opts.buyerCity ? ` (${opts.buyerCity})` : ''}. Sign in to follow up.`,
+    text: `New ${opts.leadType} lead from ${opts.buyerName}${opts.buyerCity ? ` (${opts.buyerCity})` : ''}.${opts.referenceId ? ` Ref: ${opts.referenceId}.` : ''} Sign in to follow up.`,
   };
 }
 

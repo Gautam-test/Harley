@@ -17,6 +17,7 @@ import {
   buyerDealerUpdateEmail,
 } from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
+import { formatLeadId } from '../../utils/leadId.js';
 
 interface DealerForEmail {
   id: string;
@@ -33,6 +34,9 @@ async function notifyDealer(
   buyerName: string,
   buyerCity?: string,
   contextLine?: string,
+  /** Formatted lead ref (B-/S-YYYY-XXXX) to surface in the email so the
+   *  rep can correlate it with the row in their portal. */
+  referenceId?: string,
 ): Promise<boolean> {
   const dealer = (await prisma.dealer.findUnique({
     where: { id: dealerId },
@@ -42,7 +46,7 @@ async function notifyDealer(
     logger.error({ dealerId }, 'Dealer email notification skipped — dealer not found');
     return false;
   }
-  const msg = dealerLeadEmail({ dealerName: dealer.name, leadType, buyerName, buyerCity, contextLine });
+  const msg = dealerLeadEmail({ dealerName: dealer.name, leadType, buyerName, buyerCity, contextLine, referenceId });
   msg.to = dealer.email;
   try {
     await emailProvider().send(msg);
@@ -224,17 +228,21 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
   if (!listing || listing.status !== 'ACTIVE') {
     throw new HttpError(404, 'NOT_FOUND', 'Listing not available');
   }
-  // Duplicate-by-mobile gate: customer can't open a second enquiry on
-  // the same listing while a previous one is still open. The dealer
-  // marking the lead Not Interested (DEAD / LOST today, NOT_INTERESTED
-  // once buyer-pipeline-v2 merges) clears this gate. Mirrors the
-  // pre-check in /listings/:slug/my-status so client and server agree.
+  // Duplicate-enquiry gate per QA spec:
+  //   Duplicate = same VIN/listing + same mobile + NON-terminal status
+  // Once the dealer moves the lead to any terminal status (DEAD / LOST /
+  // CLOSED / SUCCESS / CONVERTED / TRADE_IN_FINALIZED — see
+  // TERMINAL_LEAD_STATUSES above), the gate clears and the buyer can
+  // submit a fresh enquiry on the same bike. Different bikes and
+  // different mobiles are always allowed. Notifications + audit only
+  // fire on the create path below, so a 409 here keeps SMS / email /
+  // dealer push from being triggered twice.
   const existing = await findOpenBuyerEnquiryForPhone(listing.id, input.phone);
   if (existing) {
     throw new HttpError(
       409,
       'ENQUIRY_ALREADY_OPEN',
-      'Enquiry form already filled with this bike. The dealer will be in touch — you can submit a fresh enquiry once they close this one out.',
+      'You already have an active enquiry for this motorcycle. Our dealer team will contact you shortly.',
     );
   }
   const enquiry = await prisma.enquiry.create({
@@ -255,6 +263,7 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     input.name,
     input.city,
     `Interested in: ${listing.year} ${listing.modelName}`,
+    formatLeadId('buyer', enquiry.id, enquiry.createdAt),
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
   // Buyer confirmation email (trigger: buyer enquiry submission). The
@@ -265,7 +274,10 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     buyerEnquiryConfirmationEmail({
       buyerName: input.name,
       bikeLabel: `${listing.year} ${listing.modelName}`,
-      referenceId: enquiry.id,
+      // QA: send the same formatted ref the buyer just saw on the
+      // success modal (B-YYYY-XXXX) so the email matches the on-screen
+      // confirmation. The /leads/track API accepts this format directly.
+      referenceId: formatLeadId('buyer', enquiry.id, enquiry.createdAt),
     }),
   );
   return { id: enquiry.id };
@@ -316,7 +328,14 @@ export async function createTradeInLead(input: TradeInLeadInput) {
       city: input.city,
     },
   });
-  const ok = await notifyDealer(dealerId, 'TRADE_IN', input.username, input.city, `Bike: ${input.bikeModel}, VIN ${input.vin}`);
+  const ok = await notifyDealer(
+    dealerId,
+    'TRADE_IN',
+    input.username,
+    input.city,
+    `Bike: ${input.bikeModel}, VIN ${input.vin}`,
+    formatLeadId('trade-in', lead.id, lead.createdAt),
+  );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
   // Seller confirmation email — same trigger family as the buyer enquiry
   // confirmation (customer submits an enquiry form → confirmation).
@@ -325,7 +344,9 @@ export async function createTradeInLead(input: TradeInLeadInput) {
     buyerEnquiryConfirmationEmail({
       buyerName: input.username,
       bikeLabel: input.bikeModel,
-      referenceId: lead.id,
+      // S- prefix for trade-in leads — same formatter the customer + dealer
+      // portals use everywhere a lead reference appears.
+      referenceId: formatLeadId('trade-in', lead.id, lead.createdAt),
     }),
   );
   return { id: lead.id, dealerId };
@@ -649,17 +670,21 @@ export async function dealerCreateBuyerEnquiry(
       'Listing not found for this dealer, or already sold / removed',
     );
   }
-  // Same duplicate-by-mobile gate as the customer-portal path: if a
-  // previous enquiry on this listing for the same phone is still open,
-  // surface a clear 409 so the dealer rep doesn't accidentally create
-  // a parallel ghost lead. Cleared once the previous lead is marked
-  // Not Interested.
+  // Same duplicate-enquiry gate as the customer-portal path. The dealer
+  // rep cannot create a parallel ghost lead while a non-terminal lead
+  // exists for the same listing + phone. Cleared once the previous lead
+  // is moved to a terminal status (Not Interested / Closed / Success /
+  // Converted / Lost / Trade-in finalized).
   const existing = await findOpenBuyerEnquiryForPhone(listing.id, input.phone);
   if (existing) {
     throw new HttpError(
       409,
       'ENQUIRY_ALREADY_OPEN',
-      'Enquiry form already filled with this number. Continue working the existing lead, or mark it Not Interested to log a fresh one.',
+      // QA: identical wording to the public buyer-flow gate so the buyer
+      // sees the same explanation regardless of which path (dealer
+      // logging on their behalf vs. buyer submitting themselves) hit
+      // the duplicate.
+      'You already have an active enquiry for this motorcycle. Our dealer team will contact you shortly.',
     );
   }
   const enquiry = await prisma.enquiry.create({
@@ -683,6 +708,7 @@ export async function dealerCreateBuyerEnquiry(
     input.name,
     input.city,
     `Interested in: ${listing.year} ${listing.modelName}`,
+    formatLeadId('buyer', enquiry.id, enquiry.createdAt),
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
   return { id: enquiry.id };
@@ -722,13 +748,14 @@ export async function dealerCreateTradeInLead(
       city: input.city,
       notes: tradeInNotes(input),
     },
-  })) as unknown as { id: string };
+  })) as unknown as { id: string; createdAt: Date };
   const ok = await notifyDealer(
     dealerId,
     'TRADE_IN',
     input.username,
     input.city,
     `Bike: ${input.bikeModel}, VIN ${input.vin}`,
+    formatLeadId('trade-in', lead.id, lead.createdAt),
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
   return { id: lead.id };

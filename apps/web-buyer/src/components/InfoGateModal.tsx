@@ -944,12 +944,18 @@ export function InfoGateModal({
               </div>
             )}
 
-            {isBuyerEnquiry && (
+            {/* QA: "Looking For" and "Choose Dealer" are pre-understood
+                from the listing context when the modal is opened from a
+                listing PDP — the API already routes to listing.dealerId
+                and stores the listing's model implicitly. Asking the
+                buyer to re-pick them just adds friction with zero data
+                benefit. So when `context.preselectDealerId` is set
+                (i.e. opened from a PDP), this whole row is hidden.
+                The two header entry points (Sell Bike, header
+                quick-enquiry) still show it because they lack any
+                listing context. */}
+            {isBuyerEnquiry && !context?.preselectDealerId && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* QA latest: "Looking For" is mandatory to generate
-                    an enquiry ticket — gets the red asterisk + a
-                    required validator so it counts toward isValid and
-                    blocks SEND ENQUIRY until a model is picked. */}
                 <Labelled label="Looking For" required error={errors.lookingFor?.message} show>
                   <Select
                     aria-invalid={Boolean(errors.lookingFor)}
@@ -969,11 +975,6 @@ export function InfoGateModal({
                   </Select>
                 </Labelled>
                 <Labelled label="Choose Dealer" required error={errors.dealerId?.message} show>
-                  {/* Auto-selected from the listing context, but the user can
-                      override — useful when the listing's dealer is far and
-                      the buyer would prefer a closer one. The lead is still
-                      tied to the listing's dealer for inventory ownership;
-                      the chosen dealer flows through as a routing preference. */}
                   <Select
                     {...register('dealerId', {
                       validate: (v) =>
@@ -982,7 +983,6 @@ export function InfoGateModal({
                         'Please choose a dealer',
                     })}
                     aria-label="Choose dealer"
-                    aria-describedby={context?.preselectDealerId ? 'dealer-preselect-hint' : undefined}
                     aria-invalid={Boolean(errors.dealerId)}
                     disabled={dealersQuery.isLoading}
                   >
@@ -995,10 +995,6 @@ export function InfoGateModal({
                       </option>
                     ))}
                   </Select>
-                  {/* QA latest: "Auto-selected from this listing — change
-                      if you prefer another dealer" instructional subtext
-                      removed per Figma. The dealer dropdown stays
-                      pre-populated; the buyer can still change it. */}
                 </Labelled>
               </div>
             )}

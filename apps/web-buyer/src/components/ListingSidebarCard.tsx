@@ -92,9 +92,11 @@ export function ListingSidebarCard({
       // as an inline message under the CTAs. We deliberately don't pop
       // a modal on 409: QA pushback was that a popup blocks the flow,
       // whereas the buyer should still be able to re-open the form and
-      // fill it (e.g. retry with a different mobile). The API's 409
-      // message reads "Enquiry form already filled with this number…"
-      // which is exactly the validation copy the ticket asks for.
+      // fill it (e.g. retry with a different bike). The API's 409
+      // message reads "Enquiry form already filled with this bike. The
+      // dealer will be in touch — you can submit a fresh enquiry once
+      // they close this one out." — i.e. it tells the buyer the gate
+      // is per-bike and clears once the dealer closes the lead.
       setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
     } finally {
       setSubmitting(false);
