@@ -15,37 +15,62 @@ const VIN_FORMAT = /^[A-Z0-9]{17}$/;
 interface MockProfile {
   modelFamily: string;
   modelName: string;
-  colour: string;
   engine: string;
 }
 
-const PROFILES: Array<{ match: RegExp; profile: MockProfile }> = [
-  {
-    match: /^1HD/,
-    profile: {
-      modelFamily: 'Grand American Touring',
-      modelName: 'Street Glide Special',
-      colour: 'Vivid Black',
-      engine: 'Milwaukee-Eight 114 · 1868 cc',
-    },
-  },
-  {
-    match: /^MEG/,
-    profile: {
-      modelFamily: 'Sport',
-      modelName: 'Sportster S',
-      colour: 'Vivid Black',
-      engine: 'Revolution Max 1250T · 1252 cc',
-    },
-  },
+// QA: until the real Torque DMS is live, dealers test the Add Listing
+// wizard with random VINs and need to see a *different* bike each time
+// rather than the same Fat Boy 114 on every fetch. The pool below
+// covers a representative slice of the H-D India lineup — model name,
+// family + engine kept consistent per row. Selection is hash-based so
+// the same VIN always returns the same bike (edit flow re-fetches with
+// the same VIN and must show the same data).
+const PROFILES: MockProfile[] = [
+  { modelFamily: 'Grand American Touring', modelName: 'Street Glide Special', engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Grand American Touring', modelName: 'Road Glide Special',   engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Grand American Touring', modelName: 'Road King Special',    engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Grand American Touring', modelName: 'CVO Road Glide',       engine: 'Milwaukee-Eight 121 · 1977 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Fat Boy 114',          engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Heritage Classic',     engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Low Rider S',          engine: 'Milwaukee-Eight 117 · 1923 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Breakout 117',         engine: 'Milwaukee-Eight 117 · 1923 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Street Bob 114',       engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Cruiser',                modelName: 'Fat Bob 114',          engine: 'Milwaukee-Eight 114 · 1868 cc' },
+  { modelFamily: 'Sport',                  modelName: 'Sportster S',          engine: 'Revolution Max 1250T · 1252 cc' },
+  { modelFamily: 'Sport',                  modelName: 'Nightster',            engine: 'Revolution Max 975T · 975 cc' },
+  { modelFamily: 'Sport',                  modelName: 'Iron 883',             engine: 'Evolution 883 · 883 cc' },
+  { modelFamily: 'Sport',                  modelName: 'Forty-Eight',          engine: 'Evolution 1200 · 1202 cc' },
+  { modelFamily: 'Adventure Touring',      modelName: 'Pan America 1250 Special', engine: 'Revolution Max 1250 · 1252 cc' },
+  { modelFamily: 'Street',                 modelName: 'X 440',                engine: 'Single-cylinder 440 · 440 cc' },
 ];
 
-const DEFAULT_PROFILE: MockProfile = {
-  modelFamily: 'Cruiser',
-  modelName: 'Fat Boy 114',
-  colour: 'Vivid Black',
-  engine: 'Milwaukee-Eight 114 · 1868 cc',
-};
+const COLOURS = [
+  'Vivid Black',
+  'River Rock Gray',
+  'Heirloom Red',
+  'Tobacco Fade',
+  'Snake Venom',
+  'Bright Billiard Blue',
+  'Atlas Silver Metallic',
+  'Industrial Yellow',
+  'White Sand Pearl',
+  'Baja Orange',
+];
+
+// Stable hash of the full VIN → integer. Avoids Math.random so the same
+// VIN keyed twice (e.g. edit-then-resave) yields identical data.
+function hashVin(vin: string): number {
+  let h = 0;
+  for (let i = 0; i < vin.length; i++) h = (h * 31 + vin.charCodeAt(i)) >>> 0;
+  return h;
+}
+function pickProfile(vin: string): MockProfile {
+  return PROFILES[hashVin(vin) % PROFILES.length] ?? PROFILES[0]!;
+}
+function pickColour(vin: string): string {
+  // Different seed (reverse VIN) so colour varies independently of model.
+  return COLOURS[hashVin(vin.split('').reverse().join('')) % COLOURS.length] ?? 'Vivid Black';
+}
 
 // Deterministic mock customer name + invoice date — keyed off the last 4 of
 // the VIN so reruns with the same VIN return identical data.
@@ -99,14 +124,14 @@ export class TorqueMockClient implements TorqueClient {
 
   async getVehicleByVin(vin: string): Promise<TorqueVehicle | null> {
     if (!VIN_FORMAT.test(vin)) return null;
-    const profile = PROFILES.find((p) => p.match.test(vin))?.profile ?? DEFAULT_PROFILE;
+    const profile = pickProfile(vin);
     const year = decodeVinYear(vin);
     return {
       vin,
       engine: profile.engine,
       modelName: profile.modelName,
       modelFamily: profile.modelFamily,
-      colour: profile.colour,
+      colour: pickColour(vin),
       customerName: customerFor(vin),
       dateOfInvoice: invoiceDateFor(vin, year),
       dealerId: `TQ-DEALER-${vin.slice(-4)}`,
