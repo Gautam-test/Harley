@@ -67,7 +67,15 @@ pnpm --filter @hd-cpo/web-dealer build
 echo "→ Building admin portal..."
 pnpm --filter @hd-cpo/web-admin build
 
-# 6. Restart API with PM2 (full kill + respawn, not graceful reload)
+# 6a. Kill any orphan API processes that exist outside ecosystem.config.cjs
+# (`harley-api` was started manually before the config existed and is
+# still occupying PM2 state). The `|| true` keeps deploy.sh going even
+# if the process isn't present.
+echo "→ Removing orphan API processes (if any)..."
+pm2 delete harley-api 2>/dev/null || true
+pm2 delete hd-cpo-a 2>/dev/null || true
+
+# 6b. Restart API with PM2 (full kill + respawn, not graceful reload)
 # `pm2 reload` is graceful (zero-downtime) BUT in fork mode it doesn't
 # always recycle Node's module cache cleanly — observed symptom: after
 # a torque-mock rebuild, the running API kept serving the previous
