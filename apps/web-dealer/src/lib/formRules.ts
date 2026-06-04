@@ -9,7 +9,25 @@
 // that returns Record<field, errorMessage> for inline rendering.
 
 const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
-const PHONE_REGEX = /^\+91[0-9]{10}$/;
+// QA: accept an optional single space between "+91" and the 10 digits
+// so the displayed format "+91 70156646715" passes client-side validation.
+// The space is stripped before the value goes to the API (see normalisePhone /
+// toApiPhone helpers below).
+const PHONE_REGEX = /^\+91\s?[0-9]{10}$/;
+
+/** Format raw input into the display form "+91 XXXXXXXXXX". */
+export function normalisePhone(raw: string): string {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  const without91 = digits.startsWith('91') ? digits.slice(2) : digits;
+  const ten = without91.slice(0, 10);
+  return ten ? `+91 ${ten}` : '+91 ';
+}
+
+/** Strip the cosmetic space before sending to the API (server expects
+ *  the canonical "+91XXXXXXXXXX" wire form). */
+export function toApiPhone(displayPhone: string): string {
+  return String(displayPhone ?? '').replace(/\s+/g, '');
+}
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$/;
 const PINCODE_REGEX = /^[1-9][0-9]{5}$/;
 const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/;

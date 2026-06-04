@@ -184,7 +184,7 @@ async function findOpenBuyerEnquiryForPhone(
 //      platform listed a different unit with the same VIN after a re-list).
 //
 // Returns a reason string when blocked, null when allowed.
-async function checkTradeInVinGate(
+export async function checkTradeInVinGate(
   vin: string,
 ): Promise<'OPEN_LEAD' | 'VIN_STILL_LISTED' | null> {
   // Step 1: any open (non-terminal) lead for this VIN?

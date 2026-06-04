@@ -16,7 +16,11 @@
 //   <Controller name="phone" rules={phoneRules} ... />
 
 const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
-const PHONE_REGEX = /^\+91[0-9]{10}$/;
+// QA: accept an optional single space between "+91" and the 10 digits
+// so the displayed format "+91 70156646715" passes client-side validation.
+// The space is stripped before the value goes to the API (see usages of
+// the toApiPhone helper in each modal).
+const PHONE_REGEX = /^\+91\s?[0-9]{10}$/;
 // Tighter than the trivial /^\S+@\S+\.\S+$/ — rejects spaces in the local
 // part, requires a TLD of at least 2 chars, no consecutive dots in the
 // domain. Still pragmatic enough to accept every real-world email.
@@ -47,6 +51,13 @@ export const nameRules = {
       "Use letters, spaces, hyphens, or apostrophes only (no numbers or @, #, etc.)",
   },
 } as const;
+
+/** Strip the cosmetic space between "+91" and the 10-digit subscriber
+ *  number before sending to the API. The server-side phone schemas
+ *  require the canonical "+91XXXXXXXXXX" (no whitespace) wire form. */
+export function toApiPhone(displayPhone: string): string {
+  return displayPhone.replace(/\s+/g, '');
+}
 
 export const phoneRules = {
   required: 'Mobile number is required',

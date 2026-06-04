@@ -5,7 +5,7 @@ import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
-import { validators, buildFieldErrors } from '../lib/formRules';
+import { validators, buildFieldErrors, normalisePhone, toApiPhone } from '../lib/formRules';
 
 interface LeadRow {
   id: string;
@@ -478,7 +478,9 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({
     listingId: '',
     name: '',
-    phone: '+91',
+    // QA: ship the trailing space in the default so the field opens
+    // already formatted as "+91 " rather than "+91" (matches normalisePhone).
+    phone: '+91 ',
     email: '',
     city: '',
     state: '',
@@ -553,7 +555,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
       const body: Record<string, unknown> = {
         listingId: form.listingId,
         name: form.name,
-        phone: form.phone,
+        phone: toApiPhone(form.phone),
         email: form.email,
         source: form.source,
         financingNeeded: form.financingNeeded,
@@ -666,10 +668,10 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                maxLength={13}
+                onChange={(e) => setForm((f) => ({ ...f, phone: normalisePhone(e.target.value) }))}
+                maxLength={14}
                 inputMode="tel"
-                placeholder="+919812345678"
+                placeholder="+91 9812345678"
                 aria-invalid={Boolean(errFor('phone'))}
               />
             </Field>
@@ -837,7 +839,9 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     owners: '1',
     colour: '',
     askingPrice: '',
-    phone: '+91',
+    // QA: ship the trailing space in the default so the field opens
+    // already formatted as "+91 " rather than "+91" (matches normalisePhone).
+    phone: '+91 ',
     email: '',
     city: '',
     state: '',
@@ -893,7 +897,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
         username: form.username,
         bikeModel: form.bikeModel,
         vin: form.vin,
-        phone: form.phone,
+        phone: toApiPhone(form.phone),
         email: form.email,
         city: form.city,
         source: form.source,
@@ -987,10 +991,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Phone (+91…)" required error={errFor('phone')}>
               <Input
                 value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                maxLength={13}
+                onChange={(e) => setForm((f) => ({ ...f, phone: normalisePhone(e.target.value) }))}
+                maxLength={14}
                 inputMode="tel"
-                placeholder="+919812345678"
+                placeholder="+91 9812345678"
                 aria-invalid={Boolean(errFor('phone'))}
               />
             </Field>

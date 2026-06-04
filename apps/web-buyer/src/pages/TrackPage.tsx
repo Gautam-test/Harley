@@ -275,7 +275,7 @@ export function TrackPage() {
               Order ID / Tracking Number
             </label>
             <Input
-              placeholder="9876543212345678"
+              placeholder="B-2026-XXXX or S-2026-XXXX"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
               className="font-body text-base h-12 !border-[1.5px] !border-hd-black !rounded-none focus:!ring-0"
@@ -327,8 +327,9 @@ export function TrackPage() {
             <p className="font-subhead uppercase tracking-subhead text-sm">Not found</p>
             <p className="text-sm mt-1">{errorMsg}</p>
             <p className="text-xs text-gray-600 mt-3">
-              Tip: try the demo order ID <code className="font-mono">9876543212345678</code> or paste an enquiry ID
-              from your confirmation email.
+              Tip: paste the reference ID from your confirmation email or success screen
+              (e.g. <code className="font-mono">B-2026-XXXX</code> for buyer enquiries
+              or <code className="font-mono">S-2026-XXXX</code> for sell enquiries).
             </p>
           </div>
         </div>

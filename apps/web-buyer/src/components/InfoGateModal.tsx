@@ -15,6 +15,7 @@ import {
   optionalPincodeRules,
   requiredSelect,
   messageRules,
+  toApiPhone,
 } from '../lib/formRules';
 
 interface DealerOption {
@@ -104,10 +105,13 @@ interface Step1Values {
 // cap at 10 digits and re-prefix with "+91". Keeps the field always valid as
 // the user types so the Continue button can engage.
 function normalisePhone(raw: string): string {
+  // QA: display "+91 XXXXXXXXXX" with a single visible space between
+  // the country code and the subscriber number. Strip the space before
+  // posting to the API via toApiPhone().
   const digits = raw.replace(/\D/g, '');
-  // If user pasted "+91 9876…" or "919876…" or "+919876…", strip leading 91.
   const without91 = digits.startsWith('91') ? digits.slice(2) : digits;
-  return `+91${without91.slice(0, 10)}`;
+  const ten = without91.slice(0, 10);
+  return ten ? `+91 ${ten}` : '+91 ';
 }
 
 export function InfoGateModal({
@@ -563,7 +567,9 @@ export function InfoGateModal({
     mode: 'onChange',
     defaultValues: {
       name: '',
-      phone: '+91',
+      // QA: ship the trailing space in the default so the field opens
+      // already formatted as "+91 " rather than "+91" (matches normalisePhone).
+      phone: '+91 ',
       email: '',
       city: '',
       pincode: '',
@@ -591,7 +597,9 @@ export function InfoGateModal({
     setBusy(true);
     setError(null);
     try {
-      const cleanPhone = normalisePhone(values.phone);
+      // Display value carries a cosmetic space ("+91 XXXXXXXXXX") — the
+      // API expects the canonical "+91XXXXXXXXXX" so strip it here.
+      const cleanPhone = toApiPhone(normalisePhone(values.phone));
       const res = await api<{ otpId: string }>('/otp/send', {
         method: 'POST',
         body: JSON.stringify({ phone: cleanPhone, purpose }),
@@ -618,7 +626,9 @@ export function InfoGateModal({
           // Persist the entered profile + flip to verify so the user lands
           // on the blocking-message panel rather than an unactionable red
           // band over the collect form.
-          setProfile({ ...values, phone: normalisePhone(values.phone) });
+          // Store the API form here too so the onVerified payload to
+          // callers carries the canonical no-space phone.
+          setProfile({ ...values, phone: toApiPhone(normalisePhone(values.phone)) });
           setSendBlocked(msg);
           setStep('verify');
           return;
@@ -774,7 +784,7 @@ export function InfoGateModal({
                   render={({ field }) => (
                     <Input
                       inputMode="tel"
-                      maxLength={13}
+                      maxLength={14}
                       placeholder="+91XXXXXXXXXX"
                       aria-invalid={Boolean(errors.phone)}
                       value={field.value}
@@ -820,9 +830,14 @@ export function InfoGateModal({
             {isBuyerEnquiry ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Labelled label="Location" show>
+                  <Labelled label="Location" required error={errors.location?.message} show>
                     <LocationInput
-                      register={register('location')}
+                      register={register('location', {
+                        required: 'Location is required',
+                        validate: (v: string) =>
+                          (typeof v === 'string' && v.trim().length > 0) ||
+                          'Location is required',
+                      })}
                       busy={geoBusy}
                       onUseGeolocation={() => {
                         if (!navigator.geolocation) return;

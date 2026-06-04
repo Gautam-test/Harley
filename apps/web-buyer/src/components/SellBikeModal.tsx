@@ -14,6 +14,7 @@ import { CopyRefButton } from './CopyRefButton';
 import {
   nameRules,
   phoneRules,
+  toApiPhone,
   emailRules,
   vinRules,
   optionalPincodeRules,
@@ -54,9 +55,13 @@ interface DealerOption {
 }
 
 function normalisePhone(raw: string): string {
+  // QA: format as "+91 XXXXXXXXXX" with a single visible space between
+  // the country code and the subscriber number. Strip space before
+  // sending to the API via toApiPhone() (see formRules).
   const digits = raw.replace(/\D/g, '');
   const without91 = digits.startsWith('91') ? digits.slice(2) : digits;
-  return `+91${without91.slice(0, 10)}`;
+  const ten = without91.slice(0, 10);
+  return ten ? `+91 ${ten}` : '+91 ';
 }
 
 export function SellBikeModal() {
@@ -75,7 +80,7 @@ export function SellBikeModal() {
         username: '',
         bikeModel: '',
         vin: '',
-        phone: '+91',
+        phone: '+91 ',
         email: '',
         location: '',
         state: '',
@@ -163,7 +168,41 @@ export function SellBikeModal() {
     setValue,
   ]);
 
-  const onSubmit = () => setOtpOpen(true);
+  // QA: pre-flight VIN duplicate check BEFORE the OTP modal opens, so a
+  // seller whose previous enquiry on this VIN is still in progress is
+  // blocked on this form — no SMS is sent for a request the server will
+  // 409 anyway. Reads the freshly-typed VIN from the form, hits a public
+  // GET that mirrors the same gate the create endpoint enforces, and on
+  // a `blocked: true` response surfaces the friendly message inline. The
+  // OTP modal only opens when the server says the VIN is clear.
+  const onSubmit = async () => {
+    setError(null);
+    const vin = (getValues().vin || '').trim().toUpperCase();
+    if (vin.length < 6) {
+      // Defer to the schema validators — won't reach here in practice
+      // because the form's onChange validation already blocks it.
+      setOtpOpen(true);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const status = await api<{ blocked: boolean; reason?: string; message?: string }>(
+        `/leads/trade-in/vin-status?vin=${encodeURIComponent(vin)}`,
+      );
+      if (status.blocked) {
+        setError(status.message ?? 'This bike already has an enquiry in progress.');
+        return;
+      }
+      setOtpOpen(true);
+    } catch (e) {
+      // Network/lookup hiccup — fall through to OTP rather than locking
+      // the seller out completely; the server-side gate still enforces.
+      setOtpOpen(true);
+      void e;
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleVerified = async (data: { phone: string }) => {
     setOtpOpen(false);
@@ -181,7 +220,7 @@ export function SellBikeModal() {
           username: v.username,
           bikeModel: v.bikeModel,
           vin: v.vin,
-          phone: data.phone,
+          phone: toApiPhone(data.phone),
           email: v.email,
           city: v.city || 'Unknown',
           dealerId: v.dealerId || undefined,
@@ -366,7 +405,7 @@ export function SellBikeModal() {
                 <Labelled label="Phone Number" required error={errors.phone?.message}>
                   <Input
                     inputMode="tel"
-                    maxLength={13}
+                    maxLength={14}
                     placeholder="Enter phone number"
                     aria-invalid={Boolean(errors.phone)}
                     {...register('phone', {
@@ -378,12 +417,18 @@ export function SellBikeModal() {
                     })}
                   />
                 </Labelled>
-                <Labelled label="Location">
+                <Labelled label="Location" required error={(errors as Record<string, { message?: string } | undefined>).location?.message}>
                   <div className="relative">
                     <Input
                       placeholder={geoBusy ? 'Locating…' : 'Choose location'}
                       readOnly={geoBusy}
-                      {...register('location')}
+                      aria-invalid={Boolean((errors as Record<string, unknown>).location)}
+                      {...register('location', {
+                        required: 'Location is required',
+                        validate: (v: string) =>
+                          (typeof v === 'string' && v.trim().length > 0) ||
+                          'Location is required',
+                      })}
                       className="pr-10"
                     />
                     <button

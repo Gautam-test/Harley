@@ -16,6 +16,7 @@ import { consumeVerifiedToken } from '../otp/otp.service.js';
 import { decryptPii } from '../../utils/crypto.js';
 import { prisma } from '../../config/prisma.js';
 import {
+  checkTradeInVinGate,
   createBuyerEnquiry,
   createTradeInLead,
   dealerCreateBuyerEnquiry,
@@ -62,6 +63,38 @@ publicLeadsRouter.get(
   },
 );
 
+
+// QA: pre-flight duplicate gate for the Sell Your Motorcycle form. Lets
+// the customer-portal SellBikeModal block the seller BEFORE we fire an
+// OTP/SMS (the actual create endpoint below also enforces the gate
+// post-OTP, so spoofing this check by bypassing the frontend gains the
+// seller nothing). The same VIN rules used at create-time are enforced
+// here: any open (non-terminal) trade-in lead for this VIN, or a closed
+// lead whose VIN is still listed on the platform, blocks a fresh submit.
+publicLeadsRouter.get(
+  '/trade-in/vin-status',
+  validate(
+    z.object({ vin: z.string().min(6).max(20) }),
+    'query',
+  ),
+  async (req, res, next) => {
+    try {
+      const { vin } = req.query as { vin: string };
+      const block = await checkTradeInVinGate(vin);
+      if (!block) {
+        res.json({ blocked: false });
+        return;
+      }
+      const message =
+        block === 'OPEN_LEAD'
+          ? 'An enquiry for this bike is already in progress. The dealer will be in touch — you can submit a fresh enquiry once they close this one.'
+          : 'This bike already has a closed enquiry and is still listed on the platform. A new enquiry can only be raised once the bike is marked Sold or Removed.';
+      res.json({ blocked: true, reason: block, message });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
 
 publicLeadsRouter.post(
   '/trade-in',
