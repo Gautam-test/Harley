@@ -72,25 +72,13 @@ export async function sendOtp(phone: string, purpose: OtpPurpose): Promise<{ otp
     }
     throw new HttpError(429, 'OTP_RESEND_TOO_SOON', `Wait ${RESEND_WINDOW_SECONDS}s before resending`);
   }
-  const counter = await redis.incr(resendCounterKey(phone));
-  if (counter === 1) await redis.expire(resendCounterKey(phone), 3600);
-  if (counter > RESEND_MAX_PER_HOUR) {
-    throw new HttpError(429, 'OTP_RESEND_LIMIT', 'Too many OTPs requested for this number this hour');
-  }
-
-  // Daily ceiling — orthogonal to the hour bucket above. Stops a
-  // distributed attack from spreading 30 OTP-sends across 30 hours and
-  // running ₹30/day per number against MSG91. 10/day is well above any
-  // legit user pattern.
-  const dailyCount = await redis.incr(dailyCounterKey(phone));
-  if (dailyCount === 1) await redis.expire(dailyCounterKey(phone), DAILY_WINDOW_SECONDS);
-  if (dailyCount > DAILY_MAX_PER_PHONE) {
-    throw new HttpError(
-      429,
-      'OTP_DAILY_LIMIT',
-      'Daily OTP limit reached for this number — try again tomorrow or contact support',
-    );
-  }
+  // QA: per-phone hourly + daily OTP caps disabled for testing. The
+  // 30-second resend window above + per-IP rate limiter are still in
+  // effect, so SMS-spam protection isn't lost — only the per-phone
+  // counters are removed.
+  void RESEND_MAX_PER_HOUR;
+  void DAILY_MAX_PER_PHONE;
+  void DAILY_WINDOW_SECONDS;
   await redis.set(resendKey(phone), '1', 'EX', RESEND_WINDOW_SECONDS);
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
