@@ -16,13 +16,12 @@
 module.exports = {
   apps: [
     {
-      // IMPORTANT: this name MUST match the live PM2 process that nginx
-      // proxies to. The server's API runs as `harley-api`; if this is
-      // named anything else, `pm2 reload ecosystem.config.cjs` in
-      // deploy.sh spawns a DUPLICATE process and never restarts the real
-      // live API — so git-pulled code never reaches the running server
-      // (the exact "stale API / 404 on new ref" bug). Keep it `harley-api`.
-      name: 'harley-api',
+      // This name MUST match the live PM2 process nginx proxies to.
+      // Confirmed from server logs: the live API serving
+      // harleydavidson.ciadmin.in is `hd-cpo-api` (PM2 id 0). The
+      // `harley-api` process is an orphan duplicate (crash-looping) and
+      // should be deleted on the server — do NOT rename this to it.
+      name: 'hd-cpo-api',
       cwd: './apps/api',
       script: 'pnpm',
       args: 'start:prod',
