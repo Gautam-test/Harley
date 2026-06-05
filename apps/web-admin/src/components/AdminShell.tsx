@@ -39,9 +39,6 @@ const ListingsIcon = () => (
 const EnquiriesIcon = () => (
   <svg {...iconProps}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
 );
-const AuditIcon = () => (
-  <svg {...iconProps}><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
-);
 const ProfileIcon = () => (
   <svg {...iconProps}><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></svg>
 );
@@ -54,7 +51,7 @@ const NAV: NavItem[] = [
   // QA BUG-017: Content module (About / Privacy / Terms / FAQ / Contact)
   // removed from admin scope — those pages are now content-frozen and
   // owned by the marketing team outside this app.
-  { to: '/audit', label: 'Audit', icon: <AuditIcon /> },
+  // Audit nav entry removed per QA decision.
   { to: '/profile', label: 'Profile', icon: <ProfileIcon /> },
 ];
 

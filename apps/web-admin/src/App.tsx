@@ -7,7 +7,7 @@ import { ListingsPage } from './pages/ListingsPage';
 import { EnquiriesPage } from './pages/EnquiriesPage';
 import { EnquiryDetailPage } from './pages/EnquiryDetailPage';
 // QA BUG-017: ContentPage import removed — module dropped from admin scope.
-import { AuditPage } from './pages/AuditPage';
+// AuditPage removed per QA decision — Audit section dropped from admin scope.
 import { ProfilePage } from './pages/ProfilePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminShell } from './components/AdminShell';
@@ -43,7 +43,7 @@ export function App() {
           <Route path="/enquiries" element={<EnquiriesPage />} />
           <Route path="/enquiries/:kind/:id" element={<EnquiryDetailPage />} />
           {/* QA BUG-017: /content route removed entirely. */}
-          <Route path="/audit" element={<AuditPage />} />
+          {/* /audit route removed — Audit section dropped from admin scope. */}
           <Route path="/profile" element={<ProfilePage />} />
           {/* QA BUG-014: authed catch-all renders a static 404 instead
               of silently redirecting to /dashboard (which would fire
