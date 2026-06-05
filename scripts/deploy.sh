@@ -36,6 +36,23 @@ pnpm --filter @hd-cpo/api prisma:deploy
 echo "→ Regenerating Prisma client..."
 pnpm --filter @hd-cpo/api prisma:generate
 
+# 3c. Seed the 13 extra dealers (Bengaluru … Dehradun) from
+# seed-extra.ts. The script is fully idempotent — every dealer row
+# is `prisma.dealer.upsert({where:{username:slug}, ...})` and listing
+# rows are keyed by deterministic VINs — so re-running on every
+# deploy is safe.
+#
+# Without this step the prod DB only contains the 2 dealers in the
+# main seed.ts (Gurgaon + Mumbai). Login attempts for any of the
+# other 13 emails (sales@bengaluru-hd.example.in etc.) hit the
+# generic INVALID_CREDENTIALS branch and the dealer can't sign in.
+# Setting SEED_EXTRA=0 disables the step if the QA team ever needs
+# a clean 2-dealer environment.
+if [ "${SEED_EXTRA:-1}" = "1" ]; then
+  echo "→ Seeding extra dealers + listings (idempotent upsert)..."
+  pnpm --filter @hd-cpo/api prisma:seed-extra
+fi
+
 # 4. Build the shared workspace packages (types, torque-client, etc).
 # API build alone fails because dist/main.js imports @hd-cpo/types
 # from .ts source files that node can't resolve directly.
