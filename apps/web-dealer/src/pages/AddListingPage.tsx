@@ -791,7 +791,7 @@ export function AddListingPage() {
                 value={s.registrationNumber}
                 onChange={(e) => update({ registrationNumber: e.target.value.toUpperCase() })}
                 maxLength={20}
-                disabled={torqueLocked || isEditMode}
+                disabled={torqueLocked || (isEditMode && Boolean(existing.data?.registrationNumber))}
               />
               {isEditMode && (
                 <p className="mt-1 text-[11px] text-gray-500">

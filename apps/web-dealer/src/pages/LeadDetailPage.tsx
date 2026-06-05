@@ -367,6 +367,14 @@ export function LeadDetailPage() {
               </div>
             )}
 
+            {/* BUG-4: legacy status not in current pipeline — e.g.
+                CONTACTED / IN_PROGRESS / CLOSED on old seller leads.
+                Show a hint so the rep knows to move it to a valid stage. */}
+            {currentIdx === -1 && !isTerminal && (
+              <div className="mt-4 bg-warning/15 border-l-4 border-warning px-3 py-2 text-[11px] text-hd-black font-subhead uppercase tracking-subhead">
+                ⚠ Legacy status "{LEAD_STAGE_LABELS[lead.status as keyof typeof LEAD_STAGE_LABELS] ?? lead.status}" — please move this lead to a current pipeline stage.
+              </div>
+            )}
             {/* Pipeline stage bar — buyer uses 6 stages, seller uses 7.
                 On mobile we collapse to a 2-col grid so the circles are
                 readable; wider viewports expand to match stage count.

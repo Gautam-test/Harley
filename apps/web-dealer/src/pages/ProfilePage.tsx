@@ -97,17 +97,22 @@ export function ProfilePage() {
           </h2>
           <dl className="mt-4 space-y-4 text-sm">
             <Row label="Phone" value={data.phone} mono />
-            {/* QA: dealers now log in via their registered email (e.g.
-                sales@gurgaon-hd.example.in) — that's exactly the value
-                stored on Dealer.email, so bind the Contact row to
-                `data.email` directly. Fall back to data.username only
-                for legacy rows where email is empty. (Supersedes the
-                earlier BUG-007 fix which preferred username; that
-                assumed username was the login email, which is no
-                longer the case.) */}
+            {/* Login email is whichever field they actually sign in with.
+                Priority: if username is an email (nagpal.gautam@...)
+                show that (it IS the login). Otherwise fall back to
+                data.email (sales@gurgaon-hd.example.in for slug-based
+                dealers). This ensures both dealer types see the correct
+                contact email that matches what they type on the login
+                page. */}
             <Row
-              label="Email"
-              value={isLikelyEmail(data.email) ? data.email : data.username}
+              label="Login Email"
+              value={
+                isLikelyEmail(data.username)
+                  ? data.username
+                  : isLikelyEmail(data.email)
+                  ? data.email
+                  : data.username
+              }
             />
           </dl>
         </section>

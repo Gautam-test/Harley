@@ -67,15 +67,14 @@ export function LoginPage() {
     //   • email present but no password → "Please enter your password"
     const nextErrors: { username?: string; password?: string } = {};
     const trimmedUser = values.username.trim();
-    // QA BUG-006: require a syntactically valid email before hitting the
-    // API. Standard RFC-5322-ish regex (local@domain.tld, ≥2-char TLD).
-    // Catches "vikram" / "vikram@" / "vikram@x" / "vikram@x.c" — the API
-    // would have returned a generic "Login failed" for these, leaving
-    // dealers thinking the password was wrong instead of the email typo.
+    // Accept either a valid email (new login method) OR a legacy username
+    // slug (e.g. gurgaon-hd) so dealers who only know their slug aren't
+    // locked out. Backend OR-queries both fields.
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!trimmedUser) nextErrors.username = 'Please enter your email';
-    else if (!EMAIL_RE.test(trimmedUser))
-      nextErrors.username = 'Please enter a valid email address.';
+    const SLUG_RE = /^[a-z0-9][a-z0-9.-]{2,}$/;
+    if (!trimmedUser) nextErrors.username = 'Please enter your email or username';
+    else if (!EMAIL_RE.test(trimmedUser) && !SLUG_RE.test(trimmedUser))
+      nextErrors.username = 'Please enter a valid email address or username.';
     if (!values.password) nextErrors.password = 'Please enter your password';
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -161,11 +160,11 @@ export function LoginPage() {
           >
             <div>
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
-                Registered Email
+                Email or Username
               </label>
               <Input
                 autoComplete="off"
-                placeholder="sales@capital-hd.example.in"
+                placeholder="sales@capital-hd.example.in or gurgaon-hd"
                 aria-invalid={Boolean(fieldErrors.username)}
                 {...register('username', {
                   onChange: () => setFieldErrors((p) => ({ ...p, username: undefined })),
