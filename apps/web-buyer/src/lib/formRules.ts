@@ -178,3 +178,50 @@ export const trimOnBlur = (
   const trimmed = e.target.value.trim();
   if (trimmed !== e.target.value) setValue(trimmed);
 };
+
+// ─── Real-time input sanitisers (BUG-032 family) ─────────────────────
+// Use as onChange handlers to VISUALLY reject invalid characters as
+// the user types — not just on submit. Pair with the *Rules object
+// above so submit-time validation also catches paste / autofill cases.
+
+/** Letters, spaces, hyphens, apostrophes, periods only.
+ *  Used for: name, city, state. */
+export const sanitizeAlpha = (v: string): string =>
+  v.replace(/[^A-Za-z\s\-'.]/g, '');
+
+/** Digits only, truncated to `maxLen` chars.
+ *  Used for: phone (10), pincode (6). */
+export const sanitizeDigits = (v: string, maxLen: number): string =>
+  v.replace(/\D/g, '').slice(0, maxLen);
+
+// ─── State (BUG-032: was missing — now matches city's shape) ──────────
+
+export const stateRules = {
+  required: 'State is required',
+  validate: {
+    notEmpty: (v: string) => isNonEmpty(v) || 'State is required',
+    noLeadingTrailingSpace: (v: string) =>
+      v === v.trim() || 'Remove leading/trailing spaces',
+    minChars: (v: string) =>
+      v.trim().length >= 2 || 'State must be at least 2 characters',
+    maxChars: (v: string) =>
+      v.trim().length <= 60 || 'State must be 60 characters or fewer',
+    allowedChars: (v: string) =>
+      CITY_STATE_REGEX.test(v.trim()) ||
+      'Use letters and spaces only (no numbers or special characters)',
+  },
+} as const;
+
+export const optionalStateRules = {
+  validate: {
+    shape: (v: string | undefined) => {
+      if (!v || !v.trim()) return true;
+      if (v !== v.trim()) return 'Remove leading/trailing spaces';
+      if (v.trim().length < 2) return 'State must be at least 2 characters';
+      if (v.trim().length > 60) return 'State must be 60 characters or fewer';
+      if (!CITY_STATE_REGEX.test(v.trim()))
+        return 'Use letters and spaces only';
+      return true;
+    },
+  },
+} as const;

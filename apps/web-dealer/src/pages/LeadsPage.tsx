@@ -5,7 +5,7 @@ import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
-import { validators, buildFieldErrors, normalisePhone, toApiPhone } from '../lib/formRules';
+import { validators, buildFieldErrors, normalisePhone, toApiPhone, sanitizeAlpha, sanitizeDigits } from '../lib/formRules';
 import { reverseGeocode } from '../lib/reverseGeocode';
 
 interface LeadRow {
@@ -762,7 +762,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Full Name" required error={errFor('name')}>
               <Input
                 value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, name: sanitizeAlpha(e.target.value) }))}
                 maxLength={100}
                 aria-invalid={Boolean(errFor('name'))}
               />
@@ -835,7 +835,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="City" required error={errFor('city')}>
               <Input
                 value={form.city}
-                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, city: sanitizeAlpha(e.target.value) }))}
                 maxLength={60}
                 placeholder="e.g. Gurgaon"
                 aria-invalid={Boolean(errFor('city'))}
@@ -844,7 +844,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="PIN code" error={errFor('pincode')}>
               <Input
                 value={form.pincode}
-                onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}
                 maxLength={6}
                 inputMode="numeric"
                 placeholder="122001"
@@ -1121,7 +1121,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="Full Name" required error={errFor('username')}>
               <Input
                 value={form.username}
-                onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, username: sanitizeAlpha(e.target.value) }))}
                 maxLength={100}
                 aria-invalid={Boolean(errFor('username'))}
               />
@@ -1186,7 +1186,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="City" required error={errFor('city')}>
               <Input
                 value={form.city}
-                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, city: sanitizeAlpha(e.target.value) }))}
                 maxLength={60}
                 placeholder="e.g. Gurgaon"
                 aria-invalid={Boolean(errFor('city'))}
@@ -1195,7 +1195,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             <Field label="PIN code" error={errFor('pincode')}>
               <Input
                 value={form.pincode}
-                onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value }))}
+                onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}
                 maxLength={6}
                 inputMode="numeric"
                 placeholder="122001"

@@ -79,6 +79,22 @@ export const validators = {
     return validators.city(v);
   }) as FieldValidator,
 
+  // BUG-032: state validator mirrors city — letters + spaces only.
+  state: ((v: unknown): string | null => {
+    if (typeof v !== 'string' || !v.trim()) return 'State is required';
+    if (v !== v.trim()) return 'Remove leading/trailing spaces';
+    if (v.trim().length < 2) return 'State must be at least 2 characters';
+    if (v.trim().length > 60) return 'State must be 60 characters or fewer';
+    if (!CITY_STATE_REGEX.test(v.trim()))
+      return 'Use letters and spaces only (no numbers or special characters)';
+    return null;
+  }) as FieldValidator,
+
+  optionalState: ((v: unknown): string | null => {
+    if (!trim(v)) return null;
+    return validators.state(v);
+  }) as FieldValidator,
+
   pincode: ((v: unknown): string | null => {
     if (typeof v !== 'string' || !v.trim()) return 'Pincode is required';
     if (!PINCODE_REGEX.test(v))
@@ -147,6 +163,19 @@ export const validators = {
       return validators.intInRange(min, max, label)(v);
     },
 };
+
+// ─── Real-time input sanitisers (BUG-032 family) ─────────────────────
+// Use as onChange handlers to VISUALLY reject invalid characters as
+// the user types — pairs with the validators above for submit-time
+// validation that catches paste / autofill.
+
+/** Letters, spaces, hyphens, apostrophes, periods only. */
+export const sanitizeAlpha = (v: string): string =>
+  v.replace(/[^A-Za-z\s\-'.]/g, '');
+
+/** Digits only, truncated to `maxLen` chars. */
+export const sanitizeDigits = (v: string, maxLen: number): string =>
+  v.replace(/\D/g, '').slice(0, maxLen);
 
 /** Run a schema (Record<field, validator>) over a form object and return
  *  Record<field, errorMessage> for fields that failed. Empty record =

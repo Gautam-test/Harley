@@ -9,6 +9,8 @@ import { HD_MODEL_CATALOG } from '../lib/models';
 import { reverseGeocode } from '../lib/reverseGeocode';
 import {
   nameRules,
+  sanitizeAlpha,
+  sanitizeDigits,
   phoneRules,
   emailRules,
   cityRules,
@@ -775,7 +777,18 @@ export function InfoGateModal({
                 placeholder={isBuyerEnquiry ? 'Mohit Tai' : 'Full name'}
                 aria-invalid={Boolean(errors.name)}
                 maxLength={100}
-                {...register('name', nameRules)}
+                {...(() => {
+                  const r = register('name', nameRules);
+                  // BUG-032: strip non-letter chars as user types so name
+                  // can only contain letters, spaces, hyphens, apostrophes.
+                  return {
+                    ...r,
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                      e.target.value = sanitizeAlpha(e.target.value);
+                      void r.onChange(e);
+                    },
+                  };
+                })()}
               />
             </Labelled>
 
@@ -948,7 +961,16 @@ export function InfoGateModal({
                     placeholder="Choose location"
                     aria-invalid={Boolean(errors.city)}
                     maxLength={60}
-                    {...register('city', cityRules)}
+                    {...(() => {
+                      const r = register('city', cityRules);
+                      return {
+                        ...r,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.target.value = sanitizeAlpha(e.target.value);
+                          void r.onChange(e);
+                        },
+                      };
+                    })()}
                   />
                 </Labelled>
                 <Labelled label="Pincode" error={errors.pincode?.message} show={false}>
@@ -957,7 +979,16 @@ export function InfoGateModal({
                     inputMode="numeric"
                     maxLength={6}
                     aria-invalid={Boolean(errors.pincode)}
-                    {...register('pincode', optionalPincodeRules)}
+                    {...(() => {
+                      const r = register('pincode', optionalPincodeRules);
+                      return {
+                        ...r,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.target.value = sanitizeDigits(e.target.value, 6);
+                          void r.onChange(e);
+                        },
+                      };
+                    })()}
                   />
                 </Labelled>
               </div>

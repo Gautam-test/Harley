@@ -20,6 +20,8 @@ import {
   optionalPincodeRules,
   requiredSelect,
   termsCheckboxRules,
+  sanitizeAlpha,
+  sanitizeDigits,
 } from '../lib/formRules';
 
 // "Tell Us About Your Bike" trade-in form per Figma /Customer/Frame 28.png.
@@ -358,7 +360,17 @@ export function SellBikeModal() {
                   placeholder="Mohd Tai"
                   maxLength={100}
                   aria-invalid={Boolean(errors.username)}
-                  {...register('username', nameRules)}
+                  {...(() => {
+                    const r = register('username', nameRules);
+                    // BUG-032: real-time strip non-letter chars.
+                    return {
+                      ...r,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        e.target.value = sanitizeAlpha(e.target.value);
+                        void r.onChange(e);
+                      },
+                    };
+                  })()}
                 />
               </Labelled>
 
@@ -516,7 +528,16 @@ export function SellBikeModal() {
                   <Input
                     placeholder="Enter city"
                     aria-invalid={Boolean(errors.city)}
-                    {...register('city', { required: 'City is required' })}
+                    {...(() => {
+                      const r = register('city', { required: 'City is required' });
+                      return {
+                        ...r,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.target.value = sanitizeAlpha(e.target.value);
+                          void r.onChange(e);
+                        },
+                      };
+                    })()}
                   />
                 </Labelled>
               </div>
@@ -528,7 +549,16 @@ export function SellBikeModal() {
                     maxLength={6}
                     placeholder="110053"
                     aria-invalid={Boolean(errors.pincode)}
-                    {...register('pincode', optionalPincodeRules)}
+                    {...(() => {
+                      const r = register('pincode', optionalPincodeRules);
+                      return {
+                        ...r,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.target.value = sanitizeDigits(e.target.value, 6);
+                          void r.onChange(e);
+                        },
+                      };
+                    })()}
                   />
                 </Labelled>
                 <Labelled label="Choose Dealer" required error={errors.dealerId?.message}>
