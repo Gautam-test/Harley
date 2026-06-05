@@ -42,6 +42,16 @@
   /* Strong / bold inline emphasis on body copy still picks the 700 cut of
      1903 Sans automatically thanks to Tailwind preflight's `b, strong`
      rule. No extra declaration needed. */
+
+  /* QA BUG-021: pin form-control fonts to the brand body family. Tailwind
+     preflight sets `font-family: inherit` on these — which works on
+     Chrome/Firefox — but Safari on macOS still applies its own native
+     control font for native-styled `<select>` widgets, breaking the
+     consistency we want across every form across every portal. The
+     explicit `inherit` here forces parity. */
+  button, input, optgroup, select, textarea {
+    font-family: inherit;
+  }
 }
 
 /* Component-layer additions: bundle font-weight 700 with the .font-headline

@@ -66,6 +66,14 @@ module.exports = {
         subhead: ['"1903 Sans"', '"1903 Sans Condensed"', '"Bebas Neue"', 'Inter', 'sans-serif'],
         body: ['"1903 Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ['"1903 Serif"', 'Georgia', '"Times New Roman"', 'serif'],
+        // QA BUG-021: override Tailwind's default `sans` so the preflight
+        // cascade (`html { font-family: theme('fontFamily.sans') }`) and
+        // any accidental `font-sans` utility use lands on the brand body
+        // chain — NOT the OS sans stack. Form controls inherit from this
+        // via Tailwind's `font-family: inherit` preflight on buttons/
+        // inputs/selects/textareas, so the whole UI stays on 1903 Sans
+        // without per-component declarations.
+        sans: ['"1903 Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
 
       letterSpacing: {
