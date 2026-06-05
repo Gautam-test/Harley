@@ -442,6 +442,17 @@ export function AddListingPage() {
     missing.push('Upload the 110-point inspection PDF (Step 3)');
   const formValid = missing.length === 0;
 
+  // QA BUG-022: SOLD listings render the entire wizard in strict
+  // read-only mode. The earlier fix (BUG-005) only swapped the Submit
+  // button for a badge — every input/select/textarea/checkbox/file
+  // upload below it stayed interactive. Wrapping the wizard body in
+  // a <fieldset disabled> cascades the native `disabled` attribute
+  // to every form descendant in one shot (HTML spec behaviour), so
+  // dropdowns, image-management buttons, the Discard Draft action,
+  // and even file inputs all freeze together. Cancel/Back link is
+  // an <a> tag outside the fieldset, so the dealer can still leave.
+  const isSoldReadOnly = isEditMode && existing.data?.status === 'SOLD';
+
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
       {/* Header row — title + back button */}
@@ -457,7 +468,32 @@ export function AddListingPage() {
         </Link>
       </div>
 
-      <div className="space-y-5">
+      {isSoldReadOnly && (
+        <div className="mb-5 bg-surface-2 border-l-4 border-hd-orange px-4 py-3 flex items-start gap-3">
+          <span aria-hidden className="text-hd-orange text-lg leading-none mt-0.5">●</span>
+          <div className="text-sm text-text-on-light">
+            <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+              Listing Sold — Read Only
+            </p>
+            <p className="mt-1 leading-snug">
+              This bike has been marked sold. All fields are locked to
+              preserve historical record. Contact your H-D admin if you
+              need to correct anything on this listing.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* QA BUG-022: native <fieldset disabled> cascades `disabled` to
+          every input/select/textarea/button descendant when the
+          listing is SOLD. opacity wash + cursor cue applied alongside
+          so the read-only state is visually obvious. */}
+      <fieldset
+        disabled={isSoldReadOnly}
+        className={`space-y-5 ${
+          isSoldReadOnly ? 'opacity-75 [&_*]:cursor-not-allowed' : ''
+        }`}
+      >
         {/* ─── STEP 1 — ENTER VIN ─────────────────────────────────────── */}
         <Section
           number={1}
@@ -1037,7 +1073,7 @@ export function AddListingPage() {
             </Button>
           )}
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 }
