@@ -115,28 +115,32 @@ export function HeroSearch() {
   };
 
   return (
-    // QA UPDATE: wrap hero + search band in a single relative container so
-    // (a) the flag can span BOTH sections (positioned on the wrapper, not
-    // the hero), (b) the visual seam between hero and search disappears.
-    <div className="relative">
-      {/* Brand flag — pinned on the WRAPPER so it extends through the hero
-          AND past the search band, matching the QA spec "flag should extend
-          below the search section". Heights bumped to clear hero(460px) +
-          search band(~140px). */}
-      <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
-        <img
-          src="/brand/hd-flag.svg"
-          alt="H-D Bar & Shield flag"
-          className="h-[480px] sm:h-[540px] md:h-[600px] lg:h-[680px] w-auto"
-          width={85}
-          height={627}
-          decoding="async"
-        />
-      </div>
+    <>
       <section
         className="relative bg-hd-black"
         style={{ height: '460px' }}
       >
+        {/* QA latest: brand accent flag — provided Flag.svg vector
+            (asymmetric vertical flag with H-D corporate emblem inset
+            into the top white panel). Per QA spec the flag dynamically
+            hangs LOWER than the rest of the hero, extending past the
+            hero's bottom edge into the search band area to create the
+            asymmetric design accent ("a dedicated section on the left
+            side of the filter widget must float or hang lower beneath
+            the 'Search by cash Price' container"). Achieved via a
+            larger fixed flag height than the hero canvas (560px flag
+            vs 460px hero on lg). The parent <section> intentionally
+            DROPS overflow-hidden so the flag tail can spill out. */}
+        <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
+          <img
+            src="/brand/hd-flag.svg"
+            alt="H-D Bar & Shield flag"
+            className="h-[360px] sm:h-[420px] md:h-[480px] lg:h-[560px] w-auto"
+            width={85}
+            height={627}
+            decoding="async"
+          />
+        </div>
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url("${HERO_IMG}")` }}
@@ -200,13 +204,10 @@ export function HeroSearch() {
           the 0.6-opacity dark fill + 40px blur and the glassmorphism
           effect actually paints. relative + z-10 keep the band above
           the hero's gradient overlays. */}
-      {/* QA UPDATE: removed `border-y border-surface-1` (was the unwanted
-          black divider). Overlay opacity reduced 0.6 → 0.35 for the
-          lighter, premium look QA asked for. */}
       <section
-        className="hero-search-band relative z-10 -mt-12"
+        className="hero-search-band relative z-10 -mt-12 border-y border-surface-1"
         style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.35)',
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
           backdropFilter: 'blur(40px)',
           WebkitBackdropFilter: 'blur(40px)',
         }}
@@ -334,7 +335,7 @@ export function HeroSearch() {
           </form>
         </div>
       </section>
-    </div>
+    </>
   );
 }
 
