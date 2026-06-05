@@ -163,7 +163,7 @@ export function LoginPage() {
               </label>
               <Input
                 autoComplete="off"
-                placeholder="vikram@capital-hd.in"
+                placeholder="sales@capital-hd.example.in"
                 aria-invalid={Boolean(fieldErrors.username)}
                 {...register('username', {
                   onChange: () => setFieldErrors((p) => ({ ...p, username: undefined })),

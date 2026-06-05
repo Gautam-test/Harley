@@ -38,7 +38,6 @@ interface AdminLeadRow {
   dealerName: string;
   bikeModel: string;
   context: string;
-  stuck: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -46,7 +45,6 @@ interface AdminLeadRow {
 interface AdminLeadsResponse {
   results: AdminLeadRow[];
   total: number;
-  stuckCount: number;
 }
 
 interface DealerOption {
@@ -83,7 +81,9 @@ export function EnquiriesPage() {
   const [kind, setKind] = useState<'all' | Kind>('all');
   const [status, setStatus] = useState<'' | LeadStatus>('');
   const [dealerId, setDealerId] = useState('');
-  const [stuckOnly, setStuckOnly] = useState(false);
+  // QA decision: drop the "stuck" CTA + filter from admin enquiries.
+  // Admins manage attention via the standard status filter; the stuck
+  // pill was redundant and competed visually with the page header.
   const [q, setQ] = useState('');
 
   // Pull dealers list once to populate the filter dropdown.
@@ -94,20 +94,18 @@ export function EnquiriesPage() {
   });
 
   const leads = useQuery({
-    queryKey: ['admin-leads', kind, status, dealerId, stuckOnly, q],
+    queryKey: ['admin-leads', kind, status, dealerId, q],
     queryFn: () => {
       const sp = new URLSearchParams();
       if (kind !== 'all') sp.set('kind', kind);
       if (status) sp.set('status', status);
       if (dealerId) sp.set('dealerId', dealerId);
-      if (stuckOnly) sp.set('stuckOnly', 'true');
       if (q) sp.set('q', q);
       return api<AdminLeadsResponse>(`/admin/leads?${sp.toString()}`);
     },
   });
 
   const total = leads.data?.total ?? 0;
-  const stuckCount = leads.data?.stuckCount ?? 0;
 
   return (
     <div className="max-w-container mx-auto px-4 sm:px-6 py-6 sm:py-10">
@@ -118,23 +116,9 @@ export function EnquiriesPage() {
           </h1>
           <p className="text-sm text-gray-600 mt-1">
             Cross-dealer view of every lead. Phone &amp; email are visible so
-            you can step in on stuck leads without bouncing back to the dealer.
+            you can step in without bouncing back to the dealer.
           </p>
         </div>
-        {stuckCount > 0 && (
-          <button
-            type="button"
-            onClick={() => setStuckOnly((v) => !v)}
-            className={`inline-flex items-center gap-2 border px-4 py-2 text-xs font-subhead uppercase tracking-subhead transition ${
-              stuckOnly
-                ? 'bg-danger text-hd-white border-danger'
-                : 'bg-danger/10 text-danger border-danger/40 hover:bg-danger/20'
-            }`}
-            title={`${stuckCount} lead${stuckCount === 1 ? '' : 's'} sat in NEW for over 7 days`}
-          >
-            {stuckOnly ? '✓ Showing stuck only' : `⚠ ${stuckCount} stuck`}
-          </button>
-        )}
       </div>
 
       {/* Tab nav — replaces the Kind dropdown. Three options drive the
@@ -252,9 +236,7 @@ export function EnquiriesPage() {
                     navigate(`/enquiries/${l.kind}/${l.id}`);
                   }
                 }}
-                className={`cursor-pointer transition-colors ${
-                  l.stuck ? 'bg-danger/5 hover:bg-danger/10' : 'hover:bg-hd-orange/5'
-                }`}
+                className="cursor-pointer transition-colors hover:bg-hd-orange/5"
               >
                 <Td>
                   <Badge
@@ -293,14 +275,6 @@ export function EnquiriesPage() {
                 <Td className="text-xs text-gray-700 w-full">{l.dealerName}</Td>
                 <Td className="text-right">
                   <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
-                    {l.stuck && (
-                      <span
-                        title="Sat in NEW for >7 days"
-                        className="inline-flex items-center text-[10px] font-subhead uppercase tracking-subhead text-danger"
-                      >
-                        ⚠ Stuck
-                      </span>
-                    )}
                     <StatusBadge status={l.status} />
                   </div>
                   <div className="text-[10px] text-gray-500 mt-1.5 whitespace-nowrap">

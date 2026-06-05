@@ -87,16 +87,35 @@ async function issueTokens(claims: AuthClaims, ses: number) {
   };
 }
 
-export async function dealerLogin(username: string, password: string) {
-  const dealer = await prisma.dealer.findUnique({ where: { username } });
-  // Step 1: existence + password — generic message keeps the username-
-  // enumeration surface flat (an attacker can't tell whether the username
-  // exists by comparing error text).
+export async function dealerLogin(identifier: string, password: string) {
+  // QA: dealers log in with their registered EMAIL (e.g.
+  // `sales@gurgaon-hd.example.in`). The Dealer table also carries a
+  // separate `username` slug (e.g. `gurgaon-hd`) — accept either so
+  // legacy bookmarks + automation scripts that still POST the username
+  // keep working. Normalise to lowercase before the lookup because
+  // emails are case-insensitive in practice.
+  //
+  // Note: Dealer.email is not yet @unique in Prisma — findFirst returns
+  // the first match. Seeded + admin-created dealers all have unique
+  // emails today; if two ever collide, deterministic lookup falls back
+  // to username for that pair.
+  const lookup = identifier.trim().toLowerCase();
+  const dealer = await prisma.dealer.findFirst({
+    where: {
+      OR: [
+        { email: { equals: lookup, mode: 'insensitive' } },
+        { username: lookup },
+      ],
+    },
+  });
+  // Step 1: existence + password — generic message keeps the credential-
+  // enumeration surface flat (an attacker can't tell whether the email/
+  // username exists by comparing error text).
   if (!dealer) {
-    throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid username or password');
+    throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
   }
   const ok = await bcrypt.compare(password, dealer.passwordHash);
-  if (!ok) throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid username or password');
+  if (!ok) throw new HttpError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
 
   // Step 2: status. Only reach this branch when credentials are valid,
   // so a tailored message doesn't leak any signal a username-enumerator

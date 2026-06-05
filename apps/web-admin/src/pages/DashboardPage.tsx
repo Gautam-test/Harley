@@ -133,7 +133,7 @@ export function DashboardPage() {
   const { data: enquiriesPayload } = useQuery({
     queryKey: ['admin-enquiries-all'],
     queryFn: () =>
-      api<{ results: AdminEnquiryRow[]; total: number; stuckCount: number }>(
+      api<{ results: AdminEnquiryRow[]; total: number }>(
         '/admin/leads?kind=all',
       ),
     refetchOnMount: 'always',

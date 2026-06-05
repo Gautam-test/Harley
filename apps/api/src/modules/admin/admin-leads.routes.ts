@@ -19,14 +19,15 @@ import { decryptPii } from '../../utils/crypto.js';
 export const adminLeadsRouter = Router();
 adminLeadsRouter.use(requireAuth(['ADMIN']));
 
-const STUCK_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+// QA decision: the "stuck" CTA was dropped from the admin Enquiries page
+// — admins manage attention via the standard status filter. The
+// stuckOnly query param, stuck flag on each row, and stuckCount in the
+// response are no longer returned. `isStuck` helper retired below.
 
 const listQuery = z.object({
   kind: z.enum(['buyer', 'trade-in', 'all']).default('all'),
   status: leadStatus.optional(),
   dealerId: z.string().optional(),
-  /** Filter to leads stuck in NEW for > 7 days. Useful for the "needs attention" queue. */
-  stuckOnly: z.coerce.boolean().optional(),
   /** Free-text search across buyer name, model, VIN. */
   q: z.string().max(64).optional(),
 });
@@ -43,8 +44,6 @@ interface ListRow {
   /** Bike model + year (buyer) or trade-in bike line. Empty if listing was deleted. */
   bikeModel: string;
   context: string;
-  /** Surfaced when the lead has sat in NEW longer than the stuck threshold. */
-  stuck: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -73,10 +72,6 @@ interface TradeInLeadRow {
   vin: string;
   createdAt: Date;
   updatedAt: Date;
-}
-
-function isStuck(status: LeadStatus, createdAt: Date): boolean {
-  return status === 'NEW' && Date.now() - createdAt.getTime() > STUCK_THRESHOLD_MS;
 }
 
 adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) => {
@@ -127,7 +122,6 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
           dealerName: r.dealer.name,
           bikeModel,
           context: bikeModel,
-          stuck: isStuck(r.status, r.createdAt),
           createdAt: r.createdAt.toISOString(),
           updatedAt: r.updatedAt.toISOString(),
         });
@@ -164,7 +158,6 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
           dealerName: r.dealer.name,
           bikeModel: r.bikeModel,
           context: `Trade-in · ${r.bikeModel}`,
-          stuck: isStuck(r.status, r.createdAt),
           createdAt: r.createdAt.toISOString(),
           updatedAt: r.updatedAt.toISOString(),
         });
@@ -175,11 +168,9 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
     // sorted, but merging requires a single ordering pass).
     rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-    const filtered = q.stuckOnly ? rows.filter((r) => r.stuck) : rows;
     res.json({
-      results: filtered,
-      total: filtered.length,
-      stuckCount: rows.filter((r) => r.stuck).length,
+      results: rows,
+      total: rows.length,
     });
   } catch (e) {
     next(e);
@@ -240,7 +231,6 @@ adminLeadsRouter.get(
           pincode: row.pincode,
           message: row.message,
           status: row.status,
-          stuck: isStuck(row.status, row.createdAt),
           createdAt: row.createdAt.toISOString(),
           updatedAt: row.updatedAt.toISOString(),
           dealer: row.dealer,
@@ -290,7 +280,6 @@ adminLeadsRouter.get(
         bikeModel: row.bikeModel,
         vin: row.vin,
         status: row.status,
-        stuck: isStuck(row.status, row.createdAt),
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         dealer: row.dealer,

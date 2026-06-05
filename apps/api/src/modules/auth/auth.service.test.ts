@@ -28,6 +28,7 @@ beforeAll(() => {
 const dealerRow = {
   id: 'dealer-1',
   username: 'gurgaon-hd',
+  email: 'sales@capital-hd.example.in',
   passwordHash: '', // populated in beforeAll-async via bcrypt.hash
   name: 'Capital HD',
   status: 'ACTIVE' as const,
@@ -44,6 +45,25 @@ vi.mock('../../config/prisma.js', () => ({
     dealer: {
       findUnique: vi.fn(async ({ where }: { where: { username: string } }) =>
         where.username === dealerRow.username ? dealerRow : null,
+      ),
+      // QA: dealerLogin switched from findUnique({where:{username}}) →
+      // findFirst({where:{OR:[{email},{username}]}}) so dealers can log
+      // in with either credential. Mock matches against both fields.
+      findFirst: vi.fn(
+        async ({
+          where,
+        }: {
+          where: { OR: Array<{ email?: { equals: string } | string; username?: string }> };
+        }) => {
+          const wants = where.OR.flatMap((c) => {
+            const e = typeof c.email === 'string' ? c.email : c.email?.equals;
+            return [e, c.username].filter((v): v is string => Boolean(v));
+          });
+          return wants.includes(dealerRow.username) ||
+            wants.includes(dealerRow.email.toLowerCase())
+            ? dealerRow
+            : null;
+        },
       ),
     },
     adminUser: {

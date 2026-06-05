@@ -97,16 +97,17 @@ export function ProfilePage() {
           </h2>
           <dl className="mt-4 space-y-4 text-sm">
             <Row label="Phone" value={data.phone} mono />
-            {/* QA BUG-007: previously bound to `data.email`, which is a
-                separate display field seeded with a placeholder (e.g.
-                sales@bengaluru-hd.example.in). The dealer's actual
-                registered email is their login `username` — surface that
-                so the Contact card matches the account they signed in
-                with. Fall back to data.email only if username somehow
-                isn't an email (legacy rows). */}
+            {/* QA: dealers now log in via their registered email (e.g.
+                sales@gurgaon-hd.example.in) — that's exactly the value
+                stored on Dealer.email, so bind the Contact row to
+                `data.email` directly. Fall back to data.username only
+                for legacy rows where email is empty. (Supersedes the
+                earlier BUG-007 fix which preferred username; that
+                assumed username was the login email, which is no
+                longer the case.) */}
             <Row
               label="Email"
-              value={isLikelyEmail(data.username) ? data.username : data.email}
+              value={isLikelyEmail(data.email) ? data.email : data.username}
             />
           </dl>
         </section>

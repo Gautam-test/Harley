@@ -24,7 +24,6 @@ interface AdminLeadDetail {
   bikeModel?: string;
   vin?: string;
   status: string;
-  stuck?: boolean;
   createdAt: string;
   updatedAt?: string;
   dealer?: { id: string; name: string; city: string | null } | null;
@@ -126,11 +125,6 @@ export function EnquiryDetailPage() {
               <Badge variant="status" tone={kind === 'buyer' ? 'info' : 'warning'}>
                 {lead.status.replace(/_/g, ' ')}
               </Badge>
-              {lead.stuck && (
-                <span className="text-[10px] font-subhead uppercase tracking-subhead text-danger">
-                  ⚠ Stuck
-                </span>
-              )}
               <span className="text-[11px] text-gray-500">
                 Created{' '}
                 {new Date(lead.createdAt).toLocaleDateString('en-IN', {
@@ -334,7 +328,6 @@ export function EnquiryDetailPage() {
                 </Field>
               )}
               <Field label="Status">{lead.status.replace(/_/g, ' ')}</Field>
-              {lead.stuck && <Field label="Flag"><span className="text-danger">Stuck</span></Field>}
             </div>
           </section>
         </aside>
