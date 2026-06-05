@@ -389,7 +389,11 @@ function CreateDealerModal({
   return (
     <Modal onClose={onClose} title="Add Dealer">
       <form
-        onSubmit={handleSubmit((v) => create.mutate(v))}
+        onSubmit={handleSubmit((v) => {
+          // Phone: admin types 10 digits, API requires +91XXXXXXXXXX.
+          const normalised = { ...v, phone: v.phone.startsWith('+') ? v.phone : `+91${v.phone}` };
+          create.mutate(normalised);
+        })}
         className="space-y-4"
       >
         <label className="block">
@@ -403,11 +407,16 @@ function CreateDealerModal({
               required: 'Username is required',
               pattern: {
                 value: /^[a-z0-9][a-z0-9_-]{1,62}$/,
-                message: 'Lowercase letters, numbers and hyphens only — no spaces or uppercase',
+                message: 'Lowercase letters, numbers and hyphens only — no uppercase or spaces',
               },
-              // Auto-lowercase so typing "Gurgaon-HD" → "gurgaon-hd"
-              setValueAs: (v: string) => v.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
             })}
+            // Real-time auto-lowercase + strip invalid chars so the input
+            // VISUALLY shows only allowed characters as the admin types.
+            onChange={(e) => {
+              const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+              e.target.value = cleaned;
+              void register('username').onChange(e);
+            }}
           />
           {errors.username && <p className="text-danger text-xs mt-1">{errors.username.message}</p>}
         </label>
@@ -417,6 +426,7 @@ function CreateDealerModal({
           </span>
           <Input
             placeholder="e.g. Capital Harley-Davidson Gurgaon"
+            aria-invalid={Boolean(errors.name)}
             {...register('name', { required: 'Dealer name is required' })}
           />
           {errors.name && <p className="text-danger text-xs mt-1">{errors.name.message}</p>}
@@ -428,9 +438,10 @@ function CreateDealerModal({
           <Input
             type="email"
             placeholder="dealer@example.com"
+            aria-invalid={Boolean(errors.email)}
             {...register('email', {
               required: 'Email is required',
-              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email' },
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, message: 'Enter a valid email address' },
             })}
           />
           {errors.email && <p className="text-danger text-xs mt-1">{errors.email.message}</p>}
@@ -440,17 +451,19 @@ function CreateDealerModal({
             Phone <span className="text-danger">*</span>
           </span>
           <Input
-            placeholder="+91 9876543210"
+            placeholder="10-digit mobile number"
             inputMode="tel"
+            maxLength={10}
             aria-invalid={Boolean(errors.phone)}
             {...register('phone', {
-              required: 'Phone is required',
+              required: 'Phone number is required',
               pattern: {
-                value: /^\+91[0-9]{10}$/,
-                message: 'Must be +91 followed by 10 digits (e.g. +919876543210)',
+                value: /^[0-9]{10}$/,
+                message: 'Enter a valid 10-digit mobile number (digits only)',
               },
             })}
           />
+          <p className="text-[10px] text-gray-400 mt-1">+91 will be added automatically</p>
           {errors.phone && <p className="text-danger text-xs mt-1">{errors.phone.message}</p>}
         </label>
         <div className="grid grid-cols-2 gap-3">
@@ -473,6 +486,7 @@ function CreateDealerModal({
             </span>
             <Input
               placeholder={geoBusy ? 'Locating…' : 'Gurgaon'}
+              aria-invalid={Boolean(errors.city)}
               {...register('city', { required: 'City is required' })}
             />
             {errors.city && <p className="text-danger text-xs mt-1">{errors.city.message}</p>}
@@ -485,6 +499,8 @@ function CreateDealerModal({
             <Input
               placeholder="122001"
               maxLength={6}
+              inputMode="numeric"
+              aria-invalid={Boolean(errors.pincode)}
               {...register('pincode', {
                 required: 'Pincode is required',
                 pattern: { value: /^[0-9]{6}$/, message: '6-digit pincode required' },
