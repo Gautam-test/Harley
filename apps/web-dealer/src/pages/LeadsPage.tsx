@@ -611,7 +611,12 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
         name: validators.name,
         phone: validators.phone,
         email: validators.email,
-        city: validators.optionalCity,
+        // QA BUG-020: State / City / Location are all mandatory on the
+        // buyer enquiry form (consistent with the Seller modal). The
+        // submit gate (`hasErrors`) blocks until each carries a value.
+        state: validators.requiredSelect('a state'),
+        city: validators.city,
+        location: validators.requiredSelect('a location'),
         pincode: validators.optionalPincode,
         source: validators.requiredSelect('a lead source'),
         budget: validators.intInRange(0, 100_000_000, 'Budget'),
@@ -789,7 +794,10 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 aria-invalid={Boolean(errFor('email'))}
               />
             </Field>
-            <Field label="Location">
+            {/* QA BUG-020: Location is mandatory on the buyer enquiry
+                form (consistent with the Seller modal + Customer
+                Portal enquiry forms). */}
+            <Field label="Location" required error={errFor('location')}>
               <LocationInput
                 value={form.location}
                 onChange={(v) => setForm((f) => ({ ...f, location: v }))}
@@ -805,10 +813,13 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="State">
+            {/* QA BUG-020: State is mandatory on the buyer enquiry
+                form (mirrors Seller modal BUG-019). */}
+            <Field label="State" required error={errFor('state')}>
               <Select
                 value={form.state}
                 onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                aria-invalid={Boolean(errFor('state'))}
               >
                 <option value="">— Select —</option>
                 {INDIA_STATES.map((s) => (
@@ -818,7 +829,10 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </Select>
             </Field>
-            <Field label="City" error={errFor('city')}>
+            {/* QA BUG-020: City is mandatory on the buyer enquiry form
+                (was previously validators.optionalCity → no asterisk,
+                no submit block). */}
+            <Field label="City" required error={errFor('city')}>
               <Input
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
