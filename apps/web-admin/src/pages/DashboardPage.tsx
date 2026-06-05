@@ -437,8 +437,11 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      {/* Row 3 — Audit feed + Network health */}
-      <section className="mt-8 grid lg:grid-cols-2 gap-4">
+      {/* Row 3 — Audit feed only. QA decision: Network Health card
+          dropped — the three rosters (0 listings / stale stock /
+          no enquiries 14d) duplicated information already surfaced
+          on the Dealers + Listings pages. Single-column on lg+. */}
+      <section className="mt-8 grid grid-cols-1 gap-4">
         <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
           <SectionTitle>Recent Admin Actions</SectionTitle>
           {loading ? (
@@ -462,27 +465,6 @@ export function DashboardPage() {
                   </span>
                 </li>
               ))}
-            </ul>
-          )}
-        </Card>
-        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <SectionTitle>Network Health</SectionTitle>
-          {loading ? (
-            <SkeletonRows n={4} />
-          ) : (
-            <ul className="mt-4 space-y-3 text-sm">
-              <HealthCategory
-                title="Dealers with 0 listings"
-                items={m.noListings.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
-              />
-              <HealthCategory
-                title="Dealers with stale stock (60d+)"
-                items={m.staleStock.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
-              />
-              <HealthCategory
-                title="Dealers with no enquiries in 14d"
-                items={m.noEnquiries14d.map((d) => ({ id: d.id, name: d.name, email: d.email }))}
-              />
             </ul>
           )}
         </Card>
@@ -686,45 +668,6 @@ function SkeletonRows({ n }: { n: number }) {
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-gray-500 mt-4">{children}</p>;
-}
-
-function HealthCategory({
-  title,
-  items,
-}: {
-  title: string;
-  items: { id: string; name: string; email: string }[];
-}) {
-  return (
-    <li>
-      <div className="flex items-baseline justify-between">
-        <span className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500">
-          {title}
-        </span>
-        <span className="text-xs font-headline text-text-on-light">{items.length}</span>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-xs text-gray-400 mt-1">None</p>
-      ) : (
-        <ul className="mt-1 space-y-1">
-          {items.slice(0, 4).map((d) => (
-            <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
-              <span className="truncate text-text-on-light">{d.name}</span>
-              <a
-                href={`mailto:${d.email}`}
-                className="text-xs text-hd-orange font-subhead uppercase tracking-subhead hover:underline shrink-0"
-              >
-                Contact
-              </a>
-            </li>
-          ))}
-          {items.length > 4 && (
-            <li className="text-xs text-gray-500">+{items.length - 4} more</li>
-          )}
-        </ul>
-      )}
-    </li>
-  );
 }
 
 function ChevronIcon() {
