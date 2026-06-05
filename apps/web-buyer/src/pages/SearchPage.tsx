@@ -46,6 +46,32 @@ export function SearchPage() {
   const currentPage = Number(params.get('page') ?? '1');
   const sort = params.get('sort') ?? 'newest';
 
+  // QA BUG-023: filters must NOT persist across a page refresh — buyers
+  // expect a clean stocklist when they reload. Detect the navigation
+  // type via the Performance Timeline API: if this page load came from
+  // a browser reload (F5 / Ctrl-R / pull-to-refresh), strip every
+  // query param so the URL bar AND form state reset to default.
+  // Plain navigation (link click, header search submit, back/forward)
+  // keeps its params, so deep-links + sharable URLs still work.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const nav = window.performance?.getEntriesByType?.('navigation')?.[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    const isReload =
+      nav?.type === 'reload' ||
+      // Legacy fallback for browsers that don't yet expose the
+      // PerformanceNavigationTiming.type field.
+      (typeof performance !== 'undefined' &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (performance as any).navigation?.type === 1);
+    if (isReload && window.location.search) {
+      setParams(new URLSearchParams(), { replace: true });
+    }
+    // Intentionally one-shot on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Mobile slide-over drawer state. Below lg the sidebar is hidden from
   // the inline layout and lives in this drawer instead so phone/tablet
   // users can still filter.
