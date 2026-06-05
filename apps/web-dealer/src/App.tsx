@@ -7,6 +7,7 @@ import { AddListingPage } from './pages/AddListingPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { LeadDetailPage } from './pages/LeadDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { DealerShell } from './components/DealerShell';
 import { useAuthStore } from './store/auth';
 
@@ -96,9 +97,15 @@ export function App() {
           {/* Settings page retired May 2026; replaced by view-only Profile. */}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<Navigate to="/profile" replace />} />
+          {/* QA BUG-014: authed catch-all renders a static 404 instead
+              of silently redirecting to /dashboard (which would fire
+              every dashboard query for a clearly invalid URL). */}
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       ) : null}
-      <Route path="*" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />
+      {!isAuthed && (
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      )}
     </Routes>
   );
 }

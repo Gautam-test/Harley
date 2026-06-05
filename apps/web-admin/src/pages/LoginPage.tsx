@@ -60,14 +60,26 @@ export function LoginPage() {
           H-D <span className="text-hd-orange">ADMIN</span>
         </h1>
         <p className="text-gray-600 text-sm mt-2">Network oversight for H-D Certified.</p>
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
+        {/* QA BUG-013: turn off browser autofill on this portal-specific
+            login form. Chromium/Safari otherwise fill any saved credential
+            into a field with autoComplete="email"/"current-password" — so
+            an admin can land here and see their *dealer* credentials
+            pre-populated (same eTLD+1). The form-level autoComplete="off"
+            plus per-input "off" / "new-password" tokens move the visible
+            inputs out of the generic credential-autofill pool, so they
+            load empty. */}
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="mt-8 space-y-4"
+          autoComplete="off"
+        >
           <div>
             <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
               Email
             </label>
             <Input
               type="email"
-              autoComplete="email"
+              autoComplete="off"
               {...register('email', { required: true })}
             />
           </div>
@@ -81,7 +93,7 @@ export function LoginPage() {
             <div className="relative">
               <Input
                 type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className="pr-10"
                 {...register('password', { required: true, minLength: 8 })}
               />

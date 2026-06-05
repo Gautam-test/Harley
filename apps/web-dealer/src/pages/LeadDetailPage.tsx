@@ -553,8 +553,15 @@ export function LeadDetailPage() {
                                 <span className="text-gray-500"> · by dealer</span>
                               )}
                               {entry.actorRole === 'SYSTEM' && (
+                                // QA BUG-011: previously hardcoded
+                                // "via buyer enquiry" for every SYSTEM-
+                                // created lead, including trade-in
+                                // (seller) leads. Switch on `kind` so the
+                                // copy matches the origin channel.
                                 <span className="text-gray-500">
-                                  {' '}· via buyer enquiry
+                                  {kind === 'trade-in'
+                                    ? ' · via seller enquiry'
+                                    : ' · via buyer enquiry'}
                                 </span>
                               )}
                             </>

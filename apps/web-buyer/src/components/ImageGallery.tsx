@@ -78,11 +78,12 @@ export function ImageGallery({
         )}
       </div>
       {safe.length > 1 && (
-        // QA latest: thumbnail grid is exactly 4 wide-aspect cells per
-        // Figma. Capped at 4 even when more images exist; any extra
-        // thumbs are dropped (rarely happens — dealers upload 1-6).
-        <div className="grid grid-cols-4 gap-2">
-          {safe.slice(0, 4).map((src, i) => (
+        // QA BUG-004: previously sliced to 4 thumbnails, which dropped the
+        // 5th (and any 6th) photo silently. Dealers can upload up to 6 —
+        // render all of them. Layout uses a 5-column track so the common
+        // 5-photo case fills exactly one row; a 6th wraps to row 2.
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+          {safe.map((src, i) => (
             <button
               key={src + i}
               type="button"

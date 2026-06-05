@@ -377,30 +377,37 @@ export function ListingsPage() {
                         </IconButton>
                       </>
                     )}
+                    {/* QA BUG-010: Deactivate is only valid for ACTIVE
+                        rows. DRAFTs are unpublished — they go through
+                        Publish or Return-to-Dealer, not Deactivate. The
+                        old guard (`ACTIVE || DRAFT`) exposed a no-op
+                        button on every Pending row. Remove stays
+                        available for both so the admin can purge bad
+                        DRAFTs without first publishing them. */}
+                    {l.status === 'ACTIVE' && (
+                      <IconButton
+                        label="Deactivate"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Take "${l.year} ${l.modelName}" (${l.dealerName}) offline? Buyers will no longer see it on search.`,
+                            )
+                          ) {
+                            deactivate.mutate(l.id);
+                          }
+                        }}
+                      >
+                        <PowerIcon />
+                      </IconButton>
+                    )}
                     {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
-                      <>
-                        <IconButton
-                          label="Deactivate"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Take "${l.year} ${l.modelName}" (${l.dealerName}) offline? Buyers will no longer see it on search.`,
-                              )
-                            ) {
-                              deactivate.mutate(l.id);
-                            }
-                          }}
-                        >
-                          <PowerIcon />
-                        </IconButton>
-                        <IconButton
-                          label="Remove"
-                          tone="danger"
-                          onClick={() => setRemoving(l)}
-                        >
-                          <TrashIcon />
-                        </IconButton>
-                      </>
+                      <IconButton
+                        label="Remove"
+                        tone="danger"
+                        onClick={() => setRemoving(l)}
+                      >
+                        <TrashIcon />
+                      </IconButton>
                     )}
                     {/* Off-market rows still surface an action so the column
                         isn't empty (QA blocker — admins thought the page was

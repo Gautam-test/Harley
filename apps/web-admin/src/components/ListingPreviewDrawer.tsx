@@ -113,26 +113,28 @@ export function ListingPreviewDrawer({
                     {publishing ? 'Publishing…' : 'Publish'}
                   </Button>
                 )}
+                {/* QA BUG-010: Deactivate only for ACTIVE (DRAFTs are
+                    unpublished, so there's nothing to take offline). */}
+                {data.status === 'ACTIVE' && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Take "${data.year} ${data.modelName}" offline? Buyers will no longer see it on search.`,
+                        )
+                      ) {
+                        onDeactivate(data.id);
+                      }
+                    }}
+                  >
+                    Deactivate
+                  </Button>
+                )}
                 {(data.status === 'ACTIVE' || data.status === 'DRAFT') && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Take "${data.year} ${data.modelName}" offline? Buyers will no longer see it on search.`,
-                          )
-                        ) {
-                          onDeactivate(data.id);
-                        }
-                      }}
-                    >
-                      Deactivate
-                    </Button>
-                    <Button variant="ghost" onClick={() => onRemove(data.id)}>
-                      Remove
-                    </Button>
-                  </>
+                  <Button variant="ghost" onClick={() => onRemove(data.id)}>
+                    Remove
+                  </Button>
                 )}
               </div>
             )}

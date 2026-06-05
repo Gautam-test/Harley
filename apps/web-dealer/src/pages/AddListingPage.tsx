@@ -736,7 +736,12 @@ export function AddListingPage() {
             />
           </div>
 
-          {/* Registration Number — required for CPO certificate generation */}
+          {/* Registration Number — required for CPO certificate generation.
+              QA BUG-002: once saved, this field is locked forever. The
+              certificate PDF and 110-point inspection report both bake the
+              registration number into their rendered output; allowing edits
+              after creation would silently desync those artefacts from the
+              listing record. Dealers must contact admin to correct typos. */}
           {s.certificationStatus === 'CPO' && (
             <Field label="Registration Number *">
               <Input
@@ -744,8 +749,15 @@ export function AddListingPage() {
                 value={s.registrationNumber}
                 onChange={(e) => update({ registrationNumber: e.target.value.toUpperCase() })}
                 maxLength={20}
-                disabled={torqueLocked}
+                disabled={torqueLocked || isEditMode}
               />
+              {isEditMode && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  Registration number is locked after listing creation to keep
+                  the certificate and inspection report in sync. Contact admin
+                  to request a correction.
+                </p>
+              )}
             </Field>
           )}
 
@@ -1004,17 +1016,26 @@ export function AddListingPage() {
               {discard.isPending ? 'Discarding…' : 'Discard Draft'}
             </button>
           )}
-          <Button
-            onClick={() => create.mutate()}
-            disabled={!formValid || create.isPending}
-            title={formValid ? undefined : missing.join(' · ')}
-          >
-            {create.isPending
-              ? 'Saving…'
-              : formValid
-              ? 'Submit for Approval'
-              : `Submit for Approval (${missing.length} item${missing.length === 1 ? '' : 's'} left)`}
-          </Button>
+          {/* QA BUG-005: SOLD is terminal. No Submit/Resubmit affordance —
+              page acts as read-only record. A small inline notice replaces
+              the button so the dealer understands why the action is gone. */}
+          {isEditMode && existing.data?.status === 'SOLD' ? (
+            <span className="inline-flex items-center px-4 py-2.5 border border-gray-300 bg-surface-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-600">
+              Listing sold — locked from edits
+            </span>
+          ) : (
+            <Button
+              onClick={() => create.mutate()}
+              disabled={!formValid || create.isPending}
+              title={formValid ? undefined : missing.join(' · ')}
+            >
+              {create.isPending
+                ? 'Saving…'
+                : formValid
+                ? 'Submit for Approval'
+                : `Submit for Approval (${missing.length} item${missing.length === 1 ? '' : 's'} left)`}
+            </Button>
+          )}
         </div>
       </div>
     </div>
@@ -1481,6 +1502,11 @@ function ListingImagePicker({
 }) {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  // QA BUG-001: clicking a filled thumbnail used to do nothing useful
+  // (and dealers feared it would delete the image). Now it opens a
+  // lightbox preview with click-to-zoom. Delete is restricted to the
+  // red REMOVE button only.
+  const [lightbox, setLightbox] = useState<string | null>(null);
   // Local blob-URL preview cache. The server URL goes into FormState
   // (it's what /dealer/listings POST will store), but rendering relies
   // on the local blob — the upload route's serve-side gate would 404
@@ -1644,33 +1670,55 @@ function ListingImagePicker({
             uploading={uploading && slot.index === images.length}
             disabled={disabled}
             onRemove={() => removeAt(slot.index)}
+            onPreview={(url) => setLightbox(url)}
           />
         ))}
       </div>
 
       {extras.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {extras.map((src, i) => (
-            <div
-              key={src}
-              className="relative aspect-[4/3] overflow-hidden border border-gray-200 rounded group"
-            >
-              <img
-                src={blobByUrl[src] ?? src}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => removeAt(PHOTO_SLOTS.length + i)}
-                className="absolute top-1 right-1 bg-danger text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded"
+          {extras.map((src, i) => {
+            const display = blobByUrl[src] ?? src;
+            return (
+              <div
+                key={src}
+                className="relative aspect-[4/3] overflow-hidden border border-gray-200 rounded group"
               >
-                Remove
-              </button>
-            </div>
-          ))}
+                {/* QA BUG-001: thumbnail is a button that opens the
+                    lightbox; the only delete affordance is the red
+                    REMOVE button (stopPropagation so its click never
+                    bubbles up to the preview-open button). */}
+                <button
+                  type="button"
+                  onClick={() => setLightbox(display)}
+                  aria-label="Preview photo"
+                  className="block w-full h-full"
+                >
+                  <img
+                    src={display}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeAt(PHOTO_SLOTS.length + i);
+                  }}
+                  className="absolute top-1 right-1 bg-danger text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded"
+                >
+                  Remove
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
+
+      {/* Lightbox preview — opens on thumbnail click. Click backdrop or
+          press Escape to close; click the image to toggle zoom. */}
+      {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
 
       <div className="flex items-center justify-between text-[11px] text-gray-500">
         <span>
@@ -1692,6 +1740,7 @@ function PhotoSlot({
   uploading,
   disabled,
   onRemove,
+  onPreview,
 }: {
   slot: { url: string | null; def: PhotoSlotDef; index: number };
   /** What goes into <img src=>. Usually blob URL for fresh uploads or
@@ -1700,6 +1749,10 @@ function PhotoSlot({
   uploading: boolean;
   disabled: boolean;
   onRemove: () => void;
+  /** QA BUG-001: thumbnail click opens a lightbox preview (not delete).
+      Passed only the resolved display URL so the parent can render the
+      lightbox without re-resolving blob URLs. */
+  onPreview: (url: string) => void;
 }) {
   const empty = !slot.url;
   const isCoverSlot = !!slot.def.cover;
@@ -1752,13 +1805,28 @@ function PhotoSlot({
         </>
       ) : (
         <>
-          <img
-            src={displayUrl ?? slot.url ?? ''}
-            alt=""
-            className="w-full h-full object-cover"
-          />
+          {/* QA BUG-001: image is a button → click opens lightbox.
+              preventDefault stops the parent <label> from also focusing
+              the file input (defence in depth). The red REMOVE button
+              below stopPropagations so its click never bubbles up here. */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              const url = displayUrl ?? slot.url;
+              if (url) onPreview(url);
+            }}
+            aria-label={`Preview ${slot.def.label} photo`}
+            className="block w-full h-full"
+          >
+            <img
+              src={displayUrl ?? slot.url ?? ''}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          </button>
           {isCoverSlot && (
-            <span className="absolute top-1 left-1 bg-hd-orange text-hd-black text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded">
+            <span className="absolute top-1 left-1 bg-hd-orange text-hd-black text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded pointer-events-none">
               Cover
             </span>
           )}
@@ -1767,6 +1835,7 @@ function PhotoSlot({
               type="button"
               onClick={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 onRemove();
               }}
               className="absolute top-1 right-1 bg-danger text-hd-white text-[10px] font-subhead uppercase tracking-subhead px-1.5 py-0.5 rounded"
@@ -1777,5 +1846,61 @@ function PhotoSlot({
         </>
       )}
     </label>
+  );
+}
+
+// QA BUG-001: lightbox modal for previewing uploaded photos. Mounted by
+// ListingImagePicker when a thumbnail is clicked. Backdrop + ESC close;
+// clicking the image toggles a 2× zoom. Body scroll is locked while open
+// so the wizard underneath doesn't drift when the user pans on mobile.
+function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
+  const [zoomed, setZoomed] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo preview"
+      onClick={onClose}
+      className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 overflow-auto"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close preview"
+        className="absolute top-4 right-4 bg-hd-white text-hd-black text-xs font-subhead uppercase tracking-subhead px-3 py-1.5 rounded"
+      >
+        Close ✕
+      </button>
+      <img
+        src={src}
+        alt="Listing photo preview"
+        onClick={(e) => {
+          e.stopPropagation();
+          setZoomed((z) => !z);
+        }}
+        className={
+          zoomed
+            ? 'transition-transform duration-200 cursor-zoom-out scale-150'
+            : 'transition-transform duration-200 cursor-zoom-in max-h-[90vh] max-w-[90vw] object-contain'
+        }
+      />
+    </div>
   );
 }

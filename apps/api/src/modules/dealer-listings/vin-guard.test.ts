@@ -43,24 +43,23 @@ beforeEach(() => {
 });
 
 describe('dealer updateListing — VIN restore guard (QA #3)', () => {
-  it('rejects restoring a SOLD listing whose root VIN is now on an ACTIVE one', async () => {
+  // QA BUG-005: SOLD is now terminal — updateListing throws LISTING_SOLD
+  // before the VIN guard even runs. The VIN-conflict-on-restore semantics
+  // only apply to REMOVED listings now (see the "REMOVED colliding with
+  // another DRAFT" case below). Kept this case to lock in the new
+  // SOLD-blocking behaviour.
+  it('rejects any write to a SOLD listing (BUG-005, terminal state)', async () => {
     const { updateListing } = await import('./dealer-listings.service.js');
-    // The SOLD bike's stored VIN carries the retire-prefix.
     findUnique.mockResolvedValueOnce({
       id: 'sold-bike-id',
       dealerId: 'dealer-1',
       vin: 'sold:cmold123:1HD1KHM18MB678901',
       status: 'SOLD',
     });
-    // findFirst returns the conflicting ACTIVE listing.
-    findFirst.mockResolvedValueOnce({
-      id: 'active-bike-id',
-      status: 'ACTIVE',
-      vin: '1HD1KHM18MB678901',
-    });
     await expect(
       updateListing('dealer-1', 'sold-bike-id', { price: 1500000 }),
-    ).rejects.toMatchObject({ status: 409, code: 'VIN_IN_USE' });
+    ).rejects.toMatchObject({ status: 409, code: 'LISTING_SOLD' });
+    expect(findFirst).not.toHaveBeenCalled();
     expect(update).not.toHaveBeenCalled();
   });
 
@@ -82,19 +81,21 @@ describe('dealer updateListing — VIN restore guard (QA #3)', () => {
     ).rejects.toMatchObject({ status: 409, code: 'VIN_IN_USE' });
   });
 
-  it('ALLOWS restore when no other listing has the root VIN', async () => {
+  it('ALLOWS restore from REMOVED when no other listing has the root VIN', async () => {
+    // QA BUG-005: rewritten from SOLD → REMOVED because SOLD is now
+    // permanently locked. REMOVED still supports Restore + Resubmit.
     const { updateListing } = await import('./dealer-listings.service.js');
     findUnique.mockResolvedValueOnce({
-      id: 'sold-bike-id',
+      id: 'removed-bike-id',
       dealerId: 'dealer-1',
-      vin: 'sold:cmold123:1HD1KHM18MB678901',
-      status: 'SOLD',
+      vin: 'removed:cmold123:1HD1KHM18MB678901',
+      status: 'REMOVED',
     });
     findFirst.mockResolvedValueOnce(null); // no conflict
-    update.mockResolvedValueOnce({ id: 'sold-bike-id', status: 'DRAFT' });
+    update.mockResolvedValueOnce({ id: 'removed-bike-id', status: 'DRAFT' });
     await expect(
-      updateListing('dealer-1', 'sold-bike-id', { price: 1500000 }),
-    ).resolves.toMatchObject({ id: 'sold-bike-id', status: 'DRAFT' });
+      updateListing('dealer-1', 'removed-bike-id', { price: 1500000 }),
+    ).resolves.toMatchObject({ id: 'removed-bike-id', status: 'DRAFT' });
     expect(update).toHaveBeenCalledOnce();
   });
 
@@ -114,14 +115,16 @@ describe('dealer updateListing — VIN restore guard (QA #3)', () => {
 
   it('rejects edit when listing belongs to a different dealer (existing guard)', async () => {
     const { updateListing } = await import('./dealer-listings.service.js');
+    // Use a REMOVED row here so the dealer-mismatch guard fires before the
+    // BUG-005 SOLD short-circuit would.
     findUnique.mockResolvedValueOnce({
-      id: 'sold-bike-id',
+      id: 'removed-bike-id',
       dealerId: 'OTHER-dealer',
-      vin: 'sold:cmold:1HD1KHM18MB678901',
-      status: 'SOLD',
+      vin: 'removed:cmold:1HD1KHM18MB678901',
+      status: 'REMOVED',
     });
     await expect(
-      updateListing('dealer-1', 'sold-bike-id', { price: 1500000 }),
+      updateListing('dealer-1', 'removed-bike-id', { price: 1500000 }),
     ).rejects.toMatchObject({ status: 404, code: 'LISTING_NOT_FOUND' });
     expect(findFirst).not.toHaveBeenCalled();
   });
@@ -139,11 +142,14 @@ describe('rootVin prefix stripping', () => {
       { stored: '1HD1KEM13PB445566', root: '1HD1KEM13PB445566' },
     ];
     for (const c of cases) {
+      // QA BUG-005: SOLD no longer reaches the rootVin path (it throws
+      // LISTING_SOLD upfront). REMOVED still triggers the restore branch
+      // where rootVin is computed, so use REMOVED for these assertions.
       findUnique.mockResolvedValueOnce({
         id: 'x',
         dealerId: 'd1',
         vin: c.stored,
-        status: 'SOLD',
+        status: 'REMOVED',
       });
       // We capture the OR clause that updateListing built — the second
       // arm (vin: rootVin) is what's interesting.

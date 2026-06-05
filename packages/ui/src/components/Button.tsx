@@ -30,7 +30,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       className={cn(
-        'font-subhead uppercase tracking-subhead transition disabled:opacity-50 disabled:cursor-not-allowed',
+        // QA BUG-015: `whitespace-nowrap` so multi-word labels
+        // ("REVIEW LISTING", "MARK AS SOLD") never wrap or clip
+        // mid-word when the button sits in a narrow flex / grid cell.
+        // The button grows to fit the full label; parents that
+        // constrain width should set overflow handling on themselves.
+        'font-subhead uppercase tracking-subhead transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap',
         variantStyles[variant],
         sizeStyles[size],
         className,

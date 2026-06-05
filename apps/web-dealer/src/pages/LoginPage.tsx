@@ -64,7 +64,16 @@ export function LoginPage() {
     //   • empty email/username → "Please enter your email"
     //   • email present but no password → "Please enter your password"
     const nextErrors: { username?: string; password?: string } = {};
-    if (!values.username.trim()) nextErrors.username = 'Please enter your email';
+    const trimmedUser = values.username.trim();
+    // QA BUG-006: require a syntactically valid email before hitting the
+    // API. Standard RFC-5322-ish regex (local@domain.tld, ≥2-char TLD).
+    // Catches "vikram" / "vikram@" / "vikram@x" / "vikram@x.c" — the API
+    // would have returned a generic "Login failed" for these, leaving
+    // dealers thinking the password was wrong instead of the email typo.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!trimmedUser) nextErrors.username = 'Please enter your email';
+    else if (!EMAIL_RE.test(trimmedUser))
+      nextErrors.username = 'Please enter a valid email address.';
     if (!values.password) nextErrors.password = 'Please enter your password';
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -134,13 +143,26 @@ export function LoginPage() {
             Authorized dealer access only. Contact H-D Admin if your credentials are not active.
           </p>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
+          {/* QA BUG-013: disable browser autofill — dealers were seeing
+              their admin credentials pre-populated (and vice-versa) on
+              shared machines because Chromium/Safari fill any saved cred
+              into autoComplete="username"/"current-password" inputs on
+              the same eTLD+1. Form-level autoComplete="off" plus per-
+              input "off" / "new-password" tokens move the visible inputs
+              out of the generic credential-autofill pool, so they load
+              empty. */}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="mt-6 space-y-4"
+            noValidate
+            autoComplete="off"
+          >
             <div>
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
                 Registered Email
               </label>
               <Input
-                autoComplete="username"
+                autoComplete="off"
                 placeholder="vikram@capital-hd.in"
                 aria-invalid={Boolean(fieldErrors.username)}
                 {...register('username', {
@@ -162,7 +184,7 @@ export function LoginPage() {
               <div className="relative">
                 <Input
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   aria-invalid={Boolean(fieldErrors.password)}
                   className="pr-10"

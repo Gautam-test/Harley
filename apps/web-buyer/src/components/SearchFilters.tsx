@@ -251,6 +251,22 @@ export function SearchFilters() {
       style={{ backgroundColor: '#F6F6F6' }}
     >
       <div className="px-5 pt-5">
+        {/* QA BUG-008: persistent top-of-sidebar Reset link so the buyer
+            doesn't have to scroll past 8+ filter blocks to find the Clear
+            Filters button at the bottom. Only renders when at least one
+            filter is actually set, so it doesn't add visual noise on the
+            default unfiltered view. */}
+        {Array.from(params.keys()).length > 0 && (
+          <div className="flex justify-end mb-2 -mt-1">
+            <button
+              type="button"
+              onClick={onReset}
+              className="font-subhead uppercase tracking-subhead text-[10px] text-hd-orange hover:underline"
+            >
+              Reset Filters
+            </button>
+          </div>
+        )}
         {/* QA BUG_UI_028: Title Case "Search By:" header, muted grey,
             1903 Sans Regular. Not uppercase. */}
         <p className="font-body text-[13px] text-gray-500">Search By:</p>
@@ -422,8 +438,11 @@ export function SearchFilters() {
           <Button type="submit" className="w-full">
             Apply Filters
           </Button>
+          {/* QA BUG-008: renamed "Clear All" → "Clear Filters" to match
+              the QA spec wording exactly, so the affordance reads as a
+              true reset instead of an ambiguous "clear the form" hint. */}
           <Button type="button" variant="secondary" onClick={onReset} className="w-full">
-            Clear All
+            Clear Filters
           </Button>
         </div>
 

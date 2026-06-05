@@ -97,7 +97,17 @@ export function ProfilePage() {
           </h2>
           <dl className="mt-4 space-y-4 text-sm">
             <Row label="Phone" value={data.phone} mono />
-            <Row label="Email" value={data.email} />
+            {/* QA BUG-007: previously bound to `data.email`, which is a
+                separate display field seeded with a placeholder (e.g.
+                sales@bengaluru-hd.example.in). The dealer's actual
+                registered email is their login `username` — surface that
+                so the Contact card matches the account they signed in
+                with. Fall back to data.email only if username somehow
+                isn't an email (legacy rows). */}
+            <Row
+              label="Email"
+              value={isLikelyEmail(data.username) ? data.username : data.email}
+            />
           </dl>
         </section>
 
@@ -144,6 +154,10 @@ function Row({
       </dd>
     </div>
   );
+}
+
+function isLikelyEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
 }
 
 function fmtDate(iso: string): string {

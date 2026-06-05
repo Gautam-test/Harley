@@ -111,11 +111,17 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
           .sort((a, b) => a.distance - b.distance);
 
         if (dealersWithCoords.length === 0) {
-          // No dealers have been geocoded yet — degrade gracefully: show all
-          // listings (dealerIdFilter stays undefined = no restriction) so the
-          // buyer sees stock rather than an empty page. The distance filter
-          // effectively becomes a no-op until lat/lng are populated.
-          // NOTE: dealerIdFilter is intentionally left undefined here.
+          // QA BUG-009: previously degraded to "show all" here, which
+          // meant the radius filter silently returned every active bike
+          // whenever the dealer table lacked lat/lng (e.g. dealers
+          // created via admin without coords). That made the filter look
+          // broken — buyer picks "Within 50 km" and gets bikes from
+          // every city. New rule: when the buyer explicitly supplied a
+          // pincode + distance, ALWAYS honour the geo constraint. If no
+          // dealer has coords, the radius cannot be satisfied → return
+          // zero results. Ops must geocode dealers (admin form already
+          // accepts lat/lng) for the filter to surface anything.
+          dealerIdFilter = { in: ['__none__'] };
         } else if (withinRange.length === 0) {
           dealerIdFilter = { in: ['__none__'] };
         } else {

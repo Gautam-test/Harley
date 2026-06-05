@@ -13,9 +13,14 @@ export class HttpError extends Error {
   }
 }
 
-export const notFoundHandler: RequestHandler = (req, res) => {
+// QA BUG-014: previously echoed `req.method ${req.originalUrl}` back in
+// the error message, which surfaces the attempted path (and any query
+// params the caller appended) in browser network logs and proxy access
+// logs. Tightened to a fixed, opaque body — the HTTP 404 status alone
+// tells the caller the route doesn't exist; no need to reflect the path.
+export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({
-    error: { code: 'NOT_FOUND', message: `Route not found: ${req.method} ${req.originalUrl}` },
+    error: { code: 'NOT_FOUND', message: 'Not Found' },
   });
 };
 

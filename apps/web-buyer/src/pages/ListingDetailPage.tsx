@@ -80,7 +80,6 @@ export function ListingDetailPage() {
   if (!data) return null;
 
   const heading = `${data.year} ${data.modelName}`;
-  const stockCode = data.vin.slice(-5).toUpperCase();
   // Peel the dealer-keyed Mileage off the description so it can be
   // surfaced in the spec grid + Specification tab, and the Overview
   // copy below shows only the dealer's prose (no metadata prefix).
@@ -224,7 +223,11 @@ export function ListingDetailPage() {
                     label: 'Location',
                     value: [data.city, data.pincode].filter(Boolean).join(' · '),
                   },
-                  { label: 'Vehicle Registration', value: stockCode || '—' },
+                  // QA BUG-003: previously displayed `stockCode` (last 5
+                  // chars of VIN, e.g. "8Y8Y8") which is a stock identifier,
+                  // not a registration plate. Real registration comes from
+                  // the dealer-entered Listing.registrationNumber field.
+                  { label: 'Vehicle Registration', value: data.registrationNumber || '—' },
                 ]}
                 full
               />
@@ -407,7 +410,9 @@ function SpecsTable({ data }: { data: ListingDetail }) {
       'Location',
       [data.city, data.pincode, data.state].filter(Boolean).join(' · '),
     ],
-    ['Vehicle Registration', data.vin?.slice(-5).toUpperCase() || '—'],
+    // QA BUG-003: same fix as the top SpecRow — the truncated VIN tail is
+    // not a registration plate; surface the real Listing.registrationNumber.
+    ['Vehicle Registration', data.registrationNumber || '—'],
     ['VIN', data.vin],
     [
       'Certification',

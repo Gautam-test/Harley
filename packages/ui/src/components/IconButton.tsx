@@ -70,7 +70,11 @@ const toneClasses: Record<IconButtonTone, string> = {
  *  current Vite BASE_URL (e.g. /dealer/, /admin/). Collapses any
  *  duplicate slashes so the result is always a clean single-slash path. */
 function resolveInternalHref(to: string): string {
-  const base = (import.meta.env.BASE_URL ?? '/').replace(/\/+$/, '/');
+  // Vite injects BASE_URL on import.meta.env at build time. Cast through
+  // unknown so the @hd-cpo/ui package typechecks without depending on
+  // vite/client types (consumers bring their own ImportMeta augmentation).
+  const env = ((import.meta as unknown as { env?: { BASE_URL?: string } }).env) ?? {};
+  const base = (env.BASE_URL ?? '/').replace(/\/+$/, '/');
   const path = to.replace(/^\/+/, '');
   return `${base}${path}`.replace(/\/+/g, '/');
 }

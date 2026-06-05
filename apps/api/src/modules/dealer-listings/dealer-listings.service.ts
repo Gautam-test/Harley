@@ -275,6 +275,20 @@ export async function updateListing(
   if (!listing || listing.dealerId !== dealerId) {
     throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
   }
+  // QA BUG-005: SOLD is a terminal state. The bike has changed hands —
+  // editing the listing would let a dealer silently re-list the same VIN
+  // under a different price, or push a sold bike back into the Pending
+  // queue for re-approval (the old Restore+Resubmit flow allowed both
+  // REMOVED and SOLD to flip back to DRAFT). Block every write on a SOLD
+  // row at the service layer; admins can revert via a separate undo path
+  // (not exposed in dealer UI) if a bike was marked sold by mistake.
+  if (listing.status === 'SOLD') {
+    throw new HttpError(
+      409,
+      'LISTING_SOLD',
+      'This listing is marked sold and can no longer be edited or resubmitted.',
+    );
+  }
   // PRD §6.2.4 — only price/description/KMs/images editable; VIN + spec locked.
   // Clear adminFeedback on any dealer edit so the red banner disappears once
   // the dealer has acted on it; the next admin review starts from a clean slate.
@@ -288,13 +302,14 @@ export async function updateListing(
   // inspectionReportUrl is plain nullable text and accepts raw null, so
   // it stays in `rest`.
   //
-  // Restore + Resubmit (QA: My Listings → Removed/Sold → View → Submit):
-  // when the dealer edits a REMOVED or SOLD listing they own, treat the
-  // submit as "re-queuing for admin review", so flip status back to DRAFT
+  // Restore + Resubmit (QA: My Listings → Removed → View → Submit):
+  // when the dealer edits a REMOVED listing they own, treat the submit
+  // as "re-queuing for admin review", so flip status back to DRAFT
   // (renders as Pending on the dealer's tab) and clear soldAt. Without
-  // this, the row stays REMOVED/SOLD and silently disappears from Pending.
+  // this, the row stays REMOVED and silently disappears from Pending.
+  // SOLD is no longer eligible — that branch is blocked above (BUG-005).
   const { cpoDocs, registrationNumber, inspectedBy: _inputInspectedBy, certifiedOn: _inputCertifiedOn, ...rest } = input;
-  const restoreToDraft = listing.status === 'REMOVED' || listing.status === 'SOLD';
+  const restoreToDraft = listing.status === 'REMOVED';
 
   // VIN-collision guard for restore: if the dealer is restoring a SOLD/
   // REMOVED listing and the original VIN is now owned by another active/
@@ -354,14 +369,24 @@ export async function updateListing(
     dealerNameForCert = dealerRow?.name;
   }
 
+  // QA BUG-002: registration number is write-once. Once a listing has it
+  // set, the certificate PDF + 110-point inspection report bake the value
+  // into their rendered output — letting a dealer overwrite it post-create
+  // would silently desync those artefacts. So at the service layer we
+  // ignore any registrationNumber sent on update if the listing already
+  // has one (UI also disables the field; this is the server-side backstop).
+  const existingReg = (listing as { registrationNumber?: string | null }).registrationNumber;
+  const regWriteable = existingReg == null;
+  const regToWrite = regWriteable ? registrationNumber : undefined;
+
   const certAutoFields = isCpoWithNewPdf
     ? ({
-        registrationNumber: registrationNumber ?? undefined,
+        registrationNumber: regToWrite ?? undefined,
         inspectedBy: dealerNameForCert ?? null,
         certifiedOn: new Date(),
       } as Record<string, unknown>)
     : ({
-        ...(registrationNumber !== undefined ? { registrationNumber } : {}),
+        ...(regToWrite !== undefined ? { registrationNumber: regToWrite } : {}),
       } as Record<string, unknown>);
 
   return prisma.listing.update({
