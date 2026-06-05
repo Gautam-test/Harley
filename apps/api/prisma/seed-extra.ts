@@ -451,9 +451,12 @@ async function main() {
       where: { username: d.username },
       update: {
         // Refresh fields in case the seed evolved between runs.
+        // passwordHash is also refreshed so re-running the seed
+        // always resets passwords to Dealer@123! (predictable test env).
         name: d.name,
         legalName: d.legalName,
         email: d.email,
+        passwordHash: dealerPasswordHash,
         phone: d.phone,
         address: d.address,
         city: d.city,
