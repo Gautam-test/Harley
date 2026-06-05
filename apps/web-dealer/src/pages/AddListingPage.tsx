@@ -469,13 +469,19 @@ export function AddListingPage() {
       </div>
 
       {isSoldReadOnly && (
-        <div className="mb-5 bg-surface-2 border-l-4 border-hd-orange px-4 py-3 flex items-start gap-3">
+        // QA BUG-025: the previous banner used bg-surface-2 (#1A1A1A
+        // near-black) with text-text-on-light (#000000 pure black) —
+        // black-on-near-black, completely unreadable. Swap to the
+        // amber attention pattern used elsewhere (matches the "stuck
+        // lead" + "Awaiting Review" treatments): warning-tinted wash,
+        // pure black body copy, hd-black header — WCAG AA on both.
+        <div className="mb-5 bg-warning/15 border-l-4 border-hd-orange px-4 py-3 flex items-start gap-3">
           <span aria-hidden className="text-hd-orange text-lg leading-none mt-0.5">●</span>
-          <div className="text-sm text-text-on-light">
+          <div className="text-sm text-hd-black">
             <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
               Listing Sold — Read Only
             </p>
-            <p className="mt-1 leading-snug">
+            <p className="mt-1 leading-snug text-hd-black">
               This bike has been marked sold. All fields are locked to
               preserve historical record. Contact your H-D admin if you
               need to correct anything on this listing.
