@@ -991,6 +991,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       username: validators.name,
       phone: validators.phone,
       email: validators.email,
+      // QA BUG-019: State is mandatory on seller enquiries (consistent
+      // with City, which is already required). Surfaces as a red
+      // asterisk on the label + blocks submit until a value is picked.
+      state: validators.requiredSelect('a state'),
       city: validators.city,
       pincode: validators.optionalPincode,
       bikeModel: validators.requiredSelect('the motorcycle model'),
@@ -1149,10 +1153,13 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
             </Field>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Field label="State">
+            {/* QA BUG-019: State is mandatory (mirrors City). Asterisk
+                via required prop; inline error via errFor('state'). */}
+            <Field label="State" required error={errFor('state')}>
               <Select
                 value={form.state}
                 onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                aria-invalid={Boolean(errFor('state'))}
               >
                 <option value="">— Select —</option>
                 {INDIA_STATES.map((s) => (
