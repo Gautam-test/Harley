@@ -427,7 +427,20 @@ function CreateDealerModal({
           <Input
             placeholder="e.g. Capital Harley-Davidson Gurgaon"
             aria-invalid={Boolean(errors.name)}
-            {...register('name', { required: 'Dealer name is required' })}
+            {...register('name', {
+              required: 'Dealer name is required',
+              pattern: {
+                value: /^[A-Za-z\s\-'.]+$/,
+                message: 'Dealer name must contain letters and spaces only — no numbers or special characters',
+              },
+            })}
+            // Strip digits + invalid chars in real time so typing
+            // "Capital123" → "Capital", "Test@HD" → "TestHD".
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/[^A-Za-z\s\-'.]/g, '');
+              e.target.value = cleaned;
+              void register('name').onChange(e);
+            }}
           />
           {errors.name && <p className="text-danger text-xs mt-1">{errors.name.message}</p>}
         </label>
@@ -450,20 +463,35 @@ function CreateDealerModal({
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             Phone <span className="text-danger">*</span>
           </span>
-          <Input
-            placeholder="10-digit mobile number"
-            inputMode="tel"
-            maxLength={10}
-            aria-invalid={Boolean(errors.phone)}
-            {...register('phone', {
-              required: 'Phone number is required',
-              pattern: {
-                value: /^[0-9]{10}$/,
-                message: 'Enter a valid 10-digit mobile number (digits only)',
-              },
-            })}
-          />
-          <p className="text-[10px] text-gray-400 mt-1">+91 will be added automatically</p>
+          {/* BUG-032: fixed "+91 " prefix displayed inside the input
+              (non-editable). Admin types 10 digits; non-numeric keys
+              are stripped real-time. Submit prepends +91 before API. */}
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-text-on-light text-sm pointer-events-none select-none">
+              +91
+            </span>
+            <Input
+              placeholder="9876543210"
+              inputMode="numeric"
+              maxLength={10}
+              aria-invalid={Boolean(errors.phone)}
+              className="pl-12"
+              {...register('phone', {
+                required: 'Phone number is required',
+                pattern: {
+                  value: /^[0-9]{10}$/,
+                  message: 'Phone must be exactly 10 digits',
+                },
+              })}
+              // Real-time strip non-numeric so the input visually
+              // rejects letters/spaces/special chars as they're typed.
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
+                e.target.value = cleaned;
+                void register('phone').onChange(e);
+              }}
+            />
+          </div>
           {errors.phone && <p className="text-danger text-xs mt-1">{errors.phone.message}</p>}
         </label>
         <div className="grid grid-cols-2 gap-3">
@@ -487,7 +515,20 @@ function CreateDealerModal({
             <Input
               placeholder={geoBusy ? 'Locating…' : 'Gurgaon'}
               aria-invalid={Boolean(errors.city)}
-              {...register('city', { required: 'City is required' })}
+              {...register('city', {
+                required: 'City is required',
+                pattern: {
+                  value: /^[A-Za-z\s\-'.]+$/,
+                  message: 'City must contain letters and spaces only',
+                },
+              })}
+              // Strip digits + special chars in real time so the input
+              // only ever shows letters, spaces, hyphens and apostrophes.
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/[^A-Za-z\s\-'.]/g, '');
+                e.target.value = cleaned;
+                void register('city').onChange(e);
+              }}
             />
             {errors.city && <p className="text-danger text-xs mt-1">{errors.city.message}</p>}
             {geoError && <p className="text-warning text-xs mt-1">{geoError}</p>}
@@ -503,8 +544,14 @@ function CreateDealerModal({
               aria-invalid={Boolean(errors.pincode)}
               {...register('pincode', {
                 required: 'Pincode is required',
-                pattern: { value: /^[0-9]{6}$/, message: '6-digit pincode required' },
+                pattern: { value: /^[0-9]{6}$/, message: 'Pincode must be exactly 6 digits' },
               })}
+              // Strip non-digits in real time so only numbers can be typed.
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, '').slice(0, 6);
+                e.target.value = cleaned;
+                void register('pincode').onChange(e);
+              }}
             />
             {errors.pincode && <p className="text-danger text-xs mt-1">{errors.pincode.message}</p>}
             {pincodeLookup === 'loading' && <p className="text-xs text-gray-500 mt-1">Looking up city…</p>}
@@ -516,7 +563,23 @@ function CreateDealerModal({
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
             State <span className="text-gray-400 normal-case">(optional)</span>
           </span>
-          <Input placeholder="Haryana" {...register('state')} />
+          <Input
+            placeholder="Haryana"
+            aria-invalid={Boolean(errors.state)}
+            {...register('state', {
+              pattern: {
+                value: /^[A-Za-z\s\-'.]*$/,
+                message: 'State must contain letters and spaces only',
+              },
+            })}
+            // Strip digits + special chars in real time.
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/[^A-Za-z\s\-'.]/g, '');
+              e.target.value = cleaned;
+              void register('state').onChange(e);
+            }}
+          />
+          {errors.state && <p className="text-danger text-xs mt-1">{errors.state.message}</p>}
         </label>
         <label className="block">
           <span className="block font-subhead uppercase tracking-subhead text-[11px] text-gray-600 mb-1">
