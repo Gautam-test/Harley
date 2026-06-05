@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@hd-cpo/ui';
 import { useAuthStore } from '../store/auth';
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 interface FormValues {
   username: string;
@@ -24,6 +25,7 @@ export function LoginPage() {
   // OR when the dealer dismisses it. Read once on mount so navigating
   // back to /login from a fresh action doesn't re-fire the toast.
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   useEffect(() => {
     try {
       if (window.sessionStorage.getItem('hd-cpo:session-expired') === '1') {
@@ -233,12 +235,7 @@ export function LoginPage() {
               </label>
               <button
                 type="button"
-                onClick={() => {
-                  const ok = window.confirm(
-                    'Self-serve password reset is coming soon.\n\nFor now, contact H-D Certified support to reset your password:\n  · Phone: +91 98188 00000\n  · Email: support@hd-certified.in\n\nClick OK to call now.',
-                  );
-                  if (ok) window.location.href = 'tel:+919818800000';
-                }}
+                onClick={() => setForgotOpen(true)}
                 className="font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:underline"
               >
                 Forgot password?
@@ -271,6 +268,12 @@ export function LoginPage() {
               environment now — matches the admin sign-in treatment. */}
         </div>
       </section>
+      <ForgotPasswordModal
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        apiPathPrefix="/auth/dealer"
+        apiBase={((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1'}
+      />
     </div>
   );
 }

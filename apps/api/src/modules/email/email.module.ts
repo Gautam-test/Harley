@@ -244,3 +244,32 @@ export function adminNewDealerRequestEmail(opts: {
     text: `New dealer access request: ${opts.dealershipName} — ${opts.contactName} (${opts.contactEmail}).`,
   };
 }
+
+// Password-reset OTP email — used by both /auth/dealer/forgot-password
+// and /auth/admin/forgot-password. 6-digit code, 10-minute TTL. Caller
+// supplies `recipient` + `name`; the role label personalises the copy.
+export function passwordResetOtpEmail(opts: {
+  to: string;
+  name: string;
+  code: string;
+  role: 'DEALER' | 'ADMIN';
+  expiresInMinutes: number;
+}): EmailMessage {
+  const portalLabel = opts.role === 'ADMIN' ? 'H-D Admin' : 'H-D Dealer';
+  return {
+    to: opts.to,
+    subject: `Your ${portalLabel} password reset code`,
+    html: shell(
+      'Password Reset Code',
+      para(`Hi ${opts.name},`) +
+        para(
+          `You requested a password reset for your ${portalLabel} account. Use the code below to set a new password — it expires in ${opts.expiresInMinutes} minutes.`,
+        ) +
+        `<div style="font-family:Arial,sans-serif;font-size:32px;font-weight:bold;letter-spacing:6px;background:#FF6600;color:#000;padding:18px 28px;text-align:center;margin:18px 0">${opts.code}</div>` +
+        para(
+          `If you didn't request this, ignore this email — your password will stay the same.`,
+        ),
+    ),
+    text: `Your ${portalLabel} password reset code: ${opts.code} (valid ${opts.expiresInMinutes} minutes). If you didn't request this, ignore this email.`,
+  };
+}

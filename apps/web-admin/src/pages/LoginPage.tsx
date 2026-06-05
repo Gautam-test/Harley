@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button, Input } from '@hd-cpo/ui';
 import { useAuthStore } from '../store/auth';
+import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
 
 interface FormValues {
   email: string;
@@ -20,6 +21,7 @@ export function LoginPage() {
   // and the silent-refresh fails. Cleared on first read so navigating back
   // to /login from a fresh action doesn't re-show the toast.
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   useEffect(() => {
     try {
       if (window.sessionStorage.getItem('hd-cpo:session-expired') === '1') {
@@ -129,10 +131,25 @@ export function LoginPage() {
           <Button type="submit" className="w-full" disabled={formState.isSubmitting}>
             {formState.isSubmitting ? 'Signing in…' : 'Sign In'}
           </Button>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:underline"
+            >
+              Forgot password?
+            </button>
+          </div>
         </form>
         {/* QA latest: plaintext demo credentials removed from the admin
             sign-in page entirely — an unauthorised credential leak. */}
       </div>
+      <ForgotPasswordModal
+        open={forgotOpen}
+        onClose={() => setForgotOpen(false)}
+        apiPathPrefix="/auth/admin"
+        apiBase={((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1'}
+      />
     </div>
   );
 }

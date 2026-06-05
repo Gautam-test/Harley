@@ -8,6 +8,12 @@ import { requireAuth } from '../../middleware/auth.js';
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { adminLogin, dealerLogin, refreshAccessToken } from './auth.service.js';
+import {
+  requestReset,
+  verifyResetCode,
+  resetPassword,
+  type ResetRole,
+} from './password-reset.service.js';
 
 // QA decision: per-IP login rate limit removed. Dealers and admins were
 // tripping the 10/15min cap during routine QA + multi-tab workflows
@@ -106,3 +112,54 @@ authRouter.get('/me', requireAuth(['DEALER', 'ADMIN']), async (req, res, next) =
     next(e);
   }
 });
+
+// ─── Password reset (email OTP, 3-step) ────────────────────────────────
+// Shared by /dealer/forgot-password/* and /admin/forgot-password/* — same
+// service under the hood; the role is encoded into the OTP payload and
+// the reset token so step 3 knows which table to update.
+
+const forgotSendInput = z.object({ email: z.string().email() });
+const forgotVerifyInput = z.object({
+  otpId: z.string().min(1),
+  code: z.string().regex(/^\d{6}$/, 'OTP must be 6 digits'),
+});
+const forgotResetInput = z.object({
+  resetToken: z.string().min(10),
+  newPassword: z.string().min(8).max(128),
+});
+
+function mountForgot(prefix: '/dealer' | '/admin', role: ResetRole) {
+  // Step 1 — send the 6-digit code to the registered email.
+  authRouter.post(`${prefix}/forgot-password/send`, validate(forgotSendInput), async (req, res, next) => {
+    try {
+      const { email } = req.body as { email: string };
+      res.json(await requestReset(role, email));
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Step 2 — verify the code; returns a short-lived resetToken.
+  authRouter.post(`${prefix}/forgot-password/verify`, validate(forgotVerifyInput), async (req, res, next) => {
+    try {
+      const { otpId, code } = req.body as { otpId: string; code: string };
+      res.json(await verifyResetCode(otpId, code));
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Step 3 — set new password; consumes the resetToken (one-shot).
+  authRouter.post(`${prefix}/forgot-password/reset`, validate(forgotResetInput), async (req, res, next) => {
+    try {
+      const { resetToken, newPassword } = req.body as { resetToken: string; newPassword: string };
+      await resetPassword(resetToken, newPassword);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+}
+
+mountForgot('/dealer', 'DEALER');
+mountForgot('/admin', 'ADMIN');
