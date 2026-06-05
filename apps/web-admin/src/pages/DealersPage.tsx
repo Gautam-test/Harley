@@ -264,7 +264,10 @@ function CreateDealerModal({
   onClose: () => void;
   onCreated: (creds: { username: string; password: string } | null) => void;
 }) {
-  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isValid, isSubmitted }, setError: setFieldError } = useForm<{
+  // BUG-029: mode:'onSubmit' + reValidateMode:'onChange' — errors shown
+  // only after first submit attempt, then update live as the admin
+  // corrects each field. Prevents false red on first open.
+  const { register, handleSubmit, watch, setValue, getValues, formState: { errors, isValid, isSubmitting, isSubmitted }, setError: setFieldError } = useForm<{
     username: string;
     name: string;
     email: string;
@@ -274,7 +277,7 @@ function CreateDealerModal({
     state?: string;
     address?: string;
     torqueDealerId?: string;
-  }>({ mode: 'onTouched' });
+  }>({ mode: 'onSubmit', reValidateMode: 'onChange' });
   const [error, setError] = useState<string | null>(null);
   const [pincodeLookup, setPincodeLookup] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [geoBusy, setGeoBusy] = useState(false);
@@ -394,10 +397,16 @@ function CreateDealerModal({
             Username <span className="text-danger">*</span>
           </span>
           <Input
-            placeholder="lowercase, no spaces"
+            placeholder="e.g. gurgaon-hd"
+            aria-invalid={Boolean(errors.username)}
             {...register('username', {
               required: 'Username is required',
-              pattern: { value: /^[a-z0-9_-]+$/, message: 'Lowercase letters, numbers, hyphens only' },
+              pattern: {
+                value: /^[a-z0-9][a-z0-9_-]{1,62}$/,
+                message: 'Lowercase letters, numbers and hyphens only — no spaces or uppercase',
+              },
+              // Auto-lowercase so typing "Gurgaon-HD" → "gurgaon-hd"
+              setValueAs: (v: string) => v.toLowerCase().replace(/[^a-z0-9_-]/g, ''),
             })}
           />
           {errors.username && <p className="text-danger text-xs mt-1">{errors.username.message}</p>}
@@ -431,10 +440,15 @@ function CreateDealerModal({
             Phone <span className="text-danger">*</span>
           </span>
           <Input
-            placeholder="+91XXXXXXXXXX"
+            placeholder="+91 9876543210"
+            inputMode="tel"
+            aria-invalid={Boolean(errors.phone)}
             {...register('phone', {
               required: 'Phone is required',
-              pattern: { value: /^\+91[0-9]{10}$/, message: 'Format: +91XXXXXXXXXX' },
+              pattern: {
+                value: /^\+91[0-9]{10}$/,
+                message: 'Must be +91 followed by 10 digits (e.g. +919876543210)',
+              },
             })}
           />
           {errors.phone && <p className="text-danger text-xs mt-1">{errors.phone.message}</p>}
@@ -503,7 +517,11 @@ function CreateDealerModal({
         {error && <div className="text-danger text-sm">{error}</div>}
         <div className="flex justify-end gap-2 pt-1">
           <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button type="submit" disabled={(!isValid && isSubmitted) || create.isPending}>
+          {/* BUG-029: button always enabled; handleSubmit blocks the API
+              call and surfaces inline errors when validation fails.
+              Disabling on !isValid before submit hides the form is
+              invalid from the admin — let them try + see the errors. */}
+          <Button type="submit" disabled={create.isPending || (isSubmitted && !isValid)}>
             {create.isPending ? 'Creating…' : 'Create'}
           </Button>
         </div>

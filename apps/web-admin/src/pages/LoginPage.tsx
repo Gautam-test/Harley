@@ -30,7 +30,10 @@ export function LoginPage() {
       }
     } catch { /* ignore */ }
   }, []);
-  const { register, handleSubmit, formState } = useForm<FormValues>();
+  const { register, handleSubmit, formState, formState: { errors } } = useForm<FormValues>({
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+  });
 
   const onSubmit = async (values: FormValues) => {
     setError(null);
@@ -75,6 +78,8 @@ export function LoginPage() {
           className="mt-8 space-y-4"
           autoComplete="off"
         >
+          {/* BUG-028: inline validation — errors surface immediately on
+              submit attempt and clear as the field is corrected. */}
           <div>
             <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
               Email
@@ -82,8 +87,20 @@ export function LoginPage() {
             <Input
               type="email"
               autoComplete="off"
-              {...register('email', { required: true })}
+              aria-invalid={Boolean(errors.email)}
+              {...register('email', {
+                required: 'Email is required',
+                pattern: {
+                  value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+                  message: 'Please enter a valid email address',
+                },
+              })}
             />
+            {errors.email && (
+              <p className="mt-1 text-[11px] text-danger" role="alert">
+                {errors.email.message}
+              </p>
+            )}
           </div>
           <div>
             <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
@@ -97,7 +114,11 @@ export function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="new-password"
                 className="pr-10"
-                {...register('password', { required: true, minLength: 8 })}
+                aria-invalid={Boolean(errors.password)}
+                {...register('password', {
+                  required: 'Password is required',
+                  minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                })}
               />
               <button
                 type="button"
@@ -121,6 +142,11 @@ export function LoginPage() {
                 )}
               </button>
             </div>
+            {errors.password && (
+              <p className="mt-1 text-[11px] text-danger" role="alert">
+                {errors.password.message}
+              </p>
+            )}
           </div>
           {sessionExpired && !error && (
             <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 font-subhead uppercase tracking-subhead text-xs">
