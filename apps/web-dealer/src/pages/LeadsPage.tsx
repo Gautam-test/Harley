@@ -6,6 +6,7 @@ import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
 import { validators, buildFieldErrors, normalisePhone, toApiPhone } from '../lib/formRules';
+import { reverseGeocode } from '../lib/reverseGeocode';
 
 interface LeadRow {
   id: string;
@@ -463,6 +464,101 @@ function FormSection({ kicker, label, children }: { kicker: string; label: strin
   );
 }
 
+// ─── Location input — free-text neighbourhood field with a locator
+// button. Tap the icon → ask the browser for coords → reverse-geocode
+// via BigDataCloud → fill the `location` text AND auto-populate
+// state / city / pincode below. Mirrors apps/web-buyer InfoGateModal
+// LocationInput so dealer + buyer flows feel identical (QA spec). */
+function LocationInput({
+  value,
+  onChange,
+  onResolved,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  /** Called after a successful geolocation + reverse-geocode pass so
+   *  the parent form can auto-fill State / City / Pincode below. */
+  onResolved: (r: { state: string; city: string; pincode: string }) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const useGeolocation = () => {
+    if (!navigator.geolocation) {
+      setError('Location services unavailable in this browser');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const r = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+          onChange(
+            r.locality ||
+              [r.city, r.state].filter(Boolean).join(', ') ||
+              `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`,
+          );
+          onResolved({ state: r.state, city: r.city, pincode: r.pincode });
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Could not resolve location');
+        } finally {
+          setBusy(false);
+        }
+      },
+      (err) => {
+        setBusy(false);
+        if (err.code === 1) setError('Permission denied');
+        else setError('Could not get your location');
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
+  };
+
+  return (
+    <div>
+      <div className="relative">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={busy ? 'Locating…' : 'e.g. MG Road, Sector 14'}
+          className="pr-10"
+          readOnly={busy}
+        />
+        <button
+          type="button"
+          onClick={useGeolocation}
+          disabled={busy}
+          aria-label="Use my current location"
+          title="Use my current location"
+          className={`absolute right-2 top-1/2 -translate-y-1/2 text-hd-orange hover:brightness-110 ${
+            busy ? 'animate-pulse' : ''
+          }`}
+        >
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <circle cx="12" cy="12" r="3" />
+            <circle cx="12" cy="12" r="9" />
+            <line x1="12" y1="1" x2="12" y2="4" />
+            <line x1="12" y1="20" x2="12" y2="23" />
+            <line x1="1" y1="12" x2="4" y2="12" />
+            <line x1="20" y1="12" x2="23" y2="12" />
+          </svg>
+        </button>
+      </div>
+      {error && <p className="mt-1 text-[11px] text-danger">{error}</p>}
+    </div>
+  );
+}
+
 // ─── Add Buyer Enquiry — manual (phone-call / walk-in) ─────────────────────
 
 interface DealerListingOption {
@@ -482,6 +578,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
     // already formatted as "+91 " rather than "+91" (matches normalisePhone).
     phone: '+91 ',
     email: '',
+    location: '', // QA: neighbourhood free-text; locator icon fills city/state/pincode
     city: '',
     state: '',
     pincode: '',
@@ -676,15 +773,37 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <Field label="Email" required error={errFor('email')}>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              maxLength={254}
-              aria-invalid={Boolean(errFor('email'))}
-            />
-          </Field>
+          {/* QA: Email + Location share a single row (50/50 on sm+,
+              stacked on mobile) — matches the Customer Portal enquiry
+              forms. Location uses the same geolocation autocomplete
+              pattern (BigDataCloud reverse-geocode); a successful
+              resolve auto-fills the State / City / PIN code row below
+              so the rep doesn't have to re-type. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Email" required error={errFor('email')}>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                maxLength={254}
+                aria-invalid={Boolean(errFor('email'))}
+              />
+            </Field>
+            <Field label="Location">
+              <LocationInput
+                value={form.location}
+                onChange={(v) => setForm((f) => ({ ...f, location: v }))}
+                onResolved={({ state, city, pincode }) =>
+                  setForm((f) => ({
+                    ...f,
+                    state: state || f.state,
+                    city: city || f.city,
+                    pincode: pincode || f.pincode,
+                  }))
+                }
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="State">
               <Select
@@ -843,6 +962,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     // already formatted as "+91 " rather than "+91" (matches normalisePhone).
     phone: '+91 ',
     email: '',
+    location: '', // QA: neighbourhood free-text; locator icon fills city/state/pincode
     city: '',
     state: '',
     pincode: '',
@@ -999,15 +1119,35 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               />
             </Field>
           </div>
-          <Field label="Email" required error={errFor('email')}>
-            <Input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              maxLength={254}
-              aria-invalid={Boolean(errFor('email'))}
-            />
-          </Field>
+          {/* QA: Email + Location share a single row (50/50 on sm+,
+              stacked on mobile) — matches the Customer Portal enquiry
+              forms. Locator icon → auto-fills State / City / PIN
+              code below. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Email" required error={errFor('email')}>
+              <Input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                maxLength={254}
+                aria-invalid={Boolean(errFor('email'))}
+              />
+            </Field>
+            <Field label="Location">
+              <LocationInput
+                value={form.location}
+                onChange={(v) => setForm((f) => ({ ...f, location: v }))}
+                onResolved={({ state, city, pincode }) =>
+                  setForm((f) => ({
+                    ...f,
+                    state: state || f.state,
+                    city: city || f.city,
+                    pincode: pincode || f.pincode,
+                  }))
+                }
+              />
+            </Field>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="State">
               <Select
