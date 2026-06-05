@@ -9,16 +9,15 @@ import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { adminLogin, dealerLogin, refreshAccessToken } from './auth.service.js';
 
-// Login attempt limit per IP. Production uses a tight cap (brute-force defence);
-// dev / CI raises it so e2e suites + repeated dev logins don't trip the gate.
+// QA decision: per-IP login rate limit removed. Dealers and admins were
+// tripping the 10/15min cap during routine QA + multi-tab workflows
+// (shared office IPs put all 15 dealers behind one origin). The other
+// safeguards stay in place — bcrypt password compare is the real brake
+// on credential-stuffing speed, refresh-token reuse detection revokes
+// sibling sessions, and the generic INVALID_CREDENTIALS error keeps the
+// enumeration surface flat. If brute-force telemetry shows abuse later,
+// re-attach the limiter below to the login routes.
 const isProd = getEnv().NODE_ENV === 'production';
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: isProd ? 10 : 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: { code: 'RATE_LIMITED', message: 'Too many attempts, try again later' } },
-});
 
 // Refresh has its own (looser) limiter — a real client only refreshes once
 // every ~14 minutes (access TTL is 15 min) but we allow a generous burst so
@@ -39,7 +38,6 @@ export const authRouter = Router();
 
 authRouter.post(
   '/dealer/login',
-  loginLimiter,
   validate(dealerLoginInput),
   async (req, res, next) => {
     try {
@@ -51,7 +49,7 @@ authRouter.post(
   },
 );
 
-authRouter.post('/admin/login', loginLimiter, validate(adminLoginInput), async (req, res, next) => {
+authRouter.post('/admin/login', validate(adminLoginInput), async (req, res, next) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
     res.json(await adminLogin(email, password));
