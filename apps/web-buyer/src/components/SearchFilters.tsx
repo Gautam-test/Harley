@@ -435,18 +435,13 @@ export function SearchFilters() {
           rangeLabels={[`${KMS_MIN} KM`, `${KMS_LABEL_MAX.toLocaleString('en-IN')} KM`]}
         />
 
-        {/* Figma /Customer/Bike Listing.png shows APPLY FILTERS (orange) + CLEAR ALL
-            (outlined) stacked. Filters still auto-apply on change for fast feedback;
-            the Apply button is now a no-op visual confirmation that mirrors the
-            design and gives a clear "I'm done" affordance for keyboard / screen-
-            reader users. */}
-        <div className="pt-2 space-y-2">
-          <Button type="submit" className="w-full">
-            Apply Filters
-          </Button>
-          {/* QA BUG-008: renamed "Clear All" → "Clear Filters" to match
-              the QA spec wording exactly, so the affordance reads as a
-              true reset instead of an ambiguous "clear the form" hint. */}
+        {/* QA: "Apply Filters" CTA removed — every filter (price, year,
+            engine, KMs, model, fuel, transmission, owner, distance,
+            pincode) already auto-applies via the debounced effect above,
+            so the button was a no-op that confused buyers into thinking
+            nothing happened until they clicked it. Clear Filters stays —
+            it's an intentional reset, not a re-trigger. */}
+        <div className="pt-2">
           <Button type="button" variant="secondary" onClick={onReset} className="w-full">
             Clear Filters
           </Button>
