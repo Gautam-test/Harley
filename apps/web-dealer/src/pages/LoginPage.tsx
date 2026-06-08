@@ -143,6 +143,20 @@ export function LoginPage() {
           <p className="text-gray-600 text-sm mt-2 leading-relaxed">
             Authorized dealer access only. Contact H-D Admin if your credentials are not active.
           </p>
+          {/* Buyer-bounce link — a customer who typed /dealer by
+              accident can return to the public site in one click
+              instead of being stuck staring at a login they can't
+              use. Sits above the form so it's the first thing a
+              non-dealer notices. */}
+          <p className="text-[11px] text-gray-500 mt-3">
+            Not a dealer?{' '}
+            <a
+              href="/"
+              className="text-hd-orange font-subhead uppercase tracking-subhead hover:underline"
+            >
+              Return to H-D Certified →
+            </a>
+          </p>
 
           {/* QA BUG-013: disable browser autofill — dealers were seeing
               their admin credentials pre-populated (and vice-versa) on

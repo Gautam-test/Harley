@@ -65,6 +65,17 @@ export function LoginPage() {
           H-D <span className="text-hd-orange">ADMIN</span>
         </h1>
         <p className="text-gray-600 text-sm mt-2">Network oversight for H-D Certified.</p>
+        {/* Buyer-bounce link — a customer who typed /admin by accident
+            can return to the public site in one click. */}
+        <p className="text-[11px] text-gray-500 mt-2">
+          Not an admin?{' '}
+          <a
+            href="/"
+            className="text-hd-orange font-subhead uppercase tracking-subhead hover:underline"
+          >
+            Return to H-D Certified →
+          </a>
+        </p>
         {/* QA BUG-013: turn off browser autofill on this portal-specific
             login form. Chromium/Safari otherwise fill any saved credential
             into a field with autoComplete="email"/"current-password" — so
