@@ -284,7 +284,10 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       where: { slug: req.params.slug },
       include: {
         dealer: {
-          select: { id: true, name: true, city: true, pincode: true, state: true },
+          // BUG-039: also surface address + phone so the PDP's
+          // "View Dealer Details" modal can show the actual selling
+          // dealer's contact card (not just name + city).
+          select: { id: true, name: true, city: true, pincode: true, state: true, address: true, phone: true },
         },
       },
     });
@@ -336,6 +339,10 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       // the location for distance / pincode-based search refinement.
       pincode: (listing.dealer as { pincode?: string }).pincode ?? null,
       state: (listing.dealer as { state?: string }).state ?? null,
+      // BUG-039: address + phone so the "View Dealer Details" modal
+      // can render the actual selling dealer's contact card.
+      dealerAddress: (listing.dealer as { address?: string | null }).address ?? null,
+      dealerPhone: (listing.dealer as { phone?: string | null }).phone ?? null,
     });
   } catch (e) {
     next(e);

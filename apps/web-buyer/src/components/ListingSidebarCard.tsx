@@ -13,6 +13,12 @@ interface ListingSidebarCardProps {
   dealerId: string;
   dealerName: string;
   dealerCity: string;
+  // BUG-039: full dealer contact card opens in a modal when the
+  // buyer clicks "View Dealer Details" — these fields feed it.
+  dealerState?: string | null;
+  dealerPincode?: string | null;
+  dealerAddress?: string | null;
+  dealerPhone?: string | null;
 }
 
 // Mirrors the frozen Figma listing-detail right rail exactly:
@@ -28,6 +34,10 @@ export function ListingSidebarCard({
   dealerId,
   dealerName,
   dealerCity,
+  dealerState,
+  dealerPincode,
+  dealerAddress,
+  dealerPhone,
 }: ListingSidebarCardProps) {
   // No localStorage-driven hints, no my-status pre-check, no popup. The
   // duplicate-by-mobile rule lives entirely on the API: if the buyer
@@ -38,19 +48,14 @@ export function ListingSidebarCard({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
-
+  // BUG-039: "View Dealer Details" opens a modal with the LISTING'S
+  // actual dealer card — not a scroll to the nearest-3 locator (which
+  // shows recommendations, not the bike's selling dealer).
+  const [dealerDetailsOpen, setDealerDetailsOpen] = useState(false);
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
   )}&output=embed`;
-  // QA: "View Dealer Details" must NOT navigate. The DealerLocator
-  // section ("Find your dealer") already renders further down the same
-  // ListingDetailPage — anchor-scroll to its heading instead so the
-  // buyer stays on the VDP.
-  const scrollToDealerLocator = () => {
-    const el = document.getElementById('dealer-locator-heading');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
 
   const handleVerified = async (data: {
     phone: string;
@@ -206,7 +211,7 @@ export function ListingSidebarCard({
                   with a real phone and has full context. */}
               <button
                 type="button"
-                onClick={scrollToDealerLocator}
+                onClick={() => setDealerDetailsOpen(true)}
                 className="block text-center w-full border border-hd-black text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:bg-hd-black hover:text-hd-white transition"
               >
                 View Dealer Details
@@ -287,6 +292,119 @@ export function ListingSidebarCard({
           {error && ...} block above), so the buyer can re-open the
           form, edit the mobile, and try again without dismissing
           a modal. */}
+
+      {/* BUG-039: actual selling dealer modal. Always shows THIS
+          listing's dealer regardless of the buyer's location — the
+          "Find Your Dealer" / nearest-3 section below is just a
+          recommendation block and does not replace the selling
+          dealer's contact card. ESC + backdrop click close. */}
+      {dealerDetailsOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Dealer details"
+          className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center px-4"
+          onClick={() => setDealerDetailsOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg bg-hd-white border border-gray-200 max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-start justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <p className="font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
+                  Selling Dealer
+                </p>
+                <h2 className="font-headline text-2xl tracking-headline uppercase text-text-on-light mt-1 leading-tight">
+                  {dealerName}
+                </h2>
+                <p className="text-xs text-gray-600 mt-1">
+                  Authorised Harley-Davidson® Dealer
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDealerDetailsOpen(false)}
+                aria-label="Close"
+                className="text-gray-400 hover:text-text-on-light text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="px-6 py-4 space-y-3 text-sm">
+              {dealerAddress && (
+                <div>
+                  <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                    Address
+                  </p>
+                  <p className="text-text-on-light leading-relaxed">{dealerAddress}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                    City
+                  </p>
+                  <p className="text-text-on-light">{dealerCity}</p>
+                </div>
+                {dealerState && (
+                  <div>
+                    <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                      State
+                    </p>
+                    <p className="text-text-on-light">{dealerState}</p>
+                  </div>
+                )}
+                {dealerPincode && (
+                  <div>
+                    <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                      Pincode
+                    </p>
+                    <p className="text-text-on-light font-mono">{dealerPincode}</p>
+                  </div>
+                )}
+              </div>
+              {dealerPhone && (
+                <div>
+                  <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                    Phone
+                  </p>
+                  <a
+                    href={`tel:${dealerPhone.replace(/\s+/g, '')}`}
+                    className="text-hd-orange font-mono text-base hover:underline"
+                  >
+                    {dealerPhone}
+                  </a>
+                </div>
+              )}
+
+              <div className="aspect-[16/9] border border-gray-200 overflow-hidden bg-surface-light mt-4">
+                <iframe
+                  title={`Map for ${dealerName}`}
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(
+                    `${dealerName} ${dealerAddress ?? ''} ${dealerCity} ${dealerPincode ?? ''}`,
+                  )}&output=embed`}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDealerDetailsOpen(false)}
+                className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

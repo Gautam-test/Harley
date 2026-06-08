@@ -37,6 +37,10 @@ interface ListingDetail {
   city: string;
   pincode?: string | null;
   state?: string | null;
+  // BUG-039: dealer address + phone surface the actual selling
+  // dealer's contact card on the "View Dealer Details" modal.
+  dealerAddress?: string | null;
+  dealerPhone?: string | null;
   registrationNumber?: string | null;
 }
 
@@ -161,6 +165,10 @@ export function ListingDetailPage() {
                 dealerId={data.dealerId}
                 dealerName={data.dealerName}
                 dealerCity={data.city}
+                dealerState={data.state ?? null}
+                dealerPincode={data.pincode ?? null}
+                dealerAddress={data.dealerAddress ?? null}
+                dealerPhone={data.dealerPhone ?? null}
               />
             </aside>
           </div>
