@@ -4,6 +4,7 @@ import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { formatLeadId } from '../lib/leadId';
 import { CopyRefButton } from './CopyRefButton';
+import { EMI_DEFAULTS } from '../lib/emi';
 
 interface ListingSidebarCardProps {
   slug: string;
@@ -124,12 +125,20 @@ export function ListingSidebarCard({
               clutter wasn't in the design spec. The disclosure now
               lives only on the EMI calculator footer + listing detail
               spec table. */}
+          {/* QA: tenure label was hardcoded "48 Months" but the
+              underlying approxEmi() math uses EMI_DEFAULTS.months
+              (= 60). So the displayed monthly EMI was a 60-month
+              figure shown under a 48-month label — buyer would expect
+              ~₹29k/Mo at 48m but see ₹24k/Mo, then notice the gap when
+              they opened the calculator below. Pulled the label from
+              the same EMI_DEFAULTS constant so it stays in sync with
+              the math and with the calculator widget on this page. */}
           <p className="text-xs text-gray-500 mt-2">
             EMI From{' '}
             <span className="text-hd-orange font-subhead">
               ₹ {emiFrom.toLocaleString('en-IN')}/Mo
             </span>{' '}
-            · 48 Months
+            · {EMI_DEFAULTS.months} Months
           </p>
         </div>
 
