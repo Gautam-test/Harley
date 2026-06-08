@@ -21,6 +21,29 @@ import {
 } from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
 import { formatLeadId } from '../../utils/leadId.js';
+import { validatePincodeMapping } from '../../utils/pincodeValidator.js';
+
+// BUG-053: shared helper — validates the State/City/Pincode trio
+// against postalpincode.in and throws the spec-mandated 400 with
+// fieldErrors envelope so the frontend lights up the right input.
+// Used by every lead-create path (public + dealer-logged, buyer +
+// seller) so the rule is enforced uniformly. requireAll=false because
+// some lead forms (e.g. buyer enquiry public path) have optional
+// pincode — validation only runs when pincode is supplied.
+async function assertPincodeMapping(opts: {
+  state?: string;
+  city?: string;
+  pincode?: string;
+}): Promise<void> {
+  const r = await validatePincodeMapping({ ...opts, requireAll: false });
+  if (!r.valid) {
+    throw new HttpError(
+      400,
+      'PINCODE_MISMATCH',
+      JSON.stringify({ fieldErrors: { pincode: [r.reason ?? 'Invalid pincode.'] } }),
+    );
+  }
+}
 
 interface DealerForEmail {
   id: string;
@@ -270,6 +293,8 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
   if (!listing || listing.status !== 'ACTIVE') {
     throw new HttpError(404, 'NOT_FOUND', 'Listing not available');
   }
+  // BUG-053: validate that city + pincode (when supplied) belong together.
+  await assertPincodeMapping({ city: input.city, pincode: input.pincode });
   // Duplicate-enquiry gate per QA spec:
   //   Duplicate = same VIN/listing + same mobile + NON-terminal status
   // Once the dealer moves the lead to any terminal status (DEAD / LOST /
@@ -328,6 +353,10 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
 // ─── Trade-in lead from /sell-bike form (PRD §6.1.6) ──────────────────────
 
 export async function createTradeInLead(input: TradeInLeadInput) {
+  // BUG-053: validate city against the pincode dataset. TradeInLeadInput
+  // has no state field, so we check city+pincode only. Fails open on
+  // postalpincode.in network errors.
+  await assertPincodeMapping({ city: input.city });
   // Honour an explicit dealer pick from the buyer; fall back to nearest-active
   // routing if none provided or the chosen dealer is suspended/missing.
   let dealerId: string | null = null;
@@ -754,6 +783,13 @@ export async function dealerCreateBuyerEnquiry(
   dealerId: string,
   input: DealerBuyerEnquiryInput,
 ) {
+  // BUG-053: validate State/City/Pincode trio when supplied. Dealer form
+  // has state + city + optional pincode, so all three are checked together.
+  await assertPincodeMapping({
+    state: input.state,
+    city: input.city,
+    pincode: input.pincode,
+  });
   // Verify the listing belongs to this dealer AND is in a state where logging
   // a buyer enquiry makes sense — prevents fake leads against SOLD/REMOVED
   // bikes (which would pollute funnel metrics) and another dealer's stock.
@@ -841,6 +877,13 @@ export async function dealerCreateTradeInLead(
   dealerId: string,
   input: DealerTradeInLeadInput,
 ) {
+  // BUG-053: validate State/City/Pincode trio when supplied. Same shape
+  // as the buyer dealer-create path.
+  await assertPincodeMapping({
+    state: input.state,
+    city: input.city,
+    pincode: input.pincode,
+  });
   // VIN-based duplicate gate — same rules as the customer-portal path.
   // Dealer logging on behalf of seller cannot create a second lead for
   // the same bike until: (a) previous lead is closed AND (b) bike is

@@ -24,8 +24,14 @@ import { adminMetricsRouter } from './modules/admin/admin-metrics.routes.js';
 import { adminDealersRouter } from './modules/admin/admin-dealers.routes.js';
 import { adminListingsRouter } from './modules/admin/admin-listings.routes.js';
 import { adminLeadsRouter } from './modules/admin/admin-leads.routes.js';
-import { adminContentRouter, publicContentRouter } from './modules/admin/admin-content.routes.js';
-import { adminAuditRouter } from './modules/admin/admin-audit.routes.js';
+// BUG-054: adminContentRouter + adminAuditRouter intentionally NOT
+// imported — both modules were removed from the Admin UI and the
+// matching API endpoints are now deprecated. Replaced below by a
+// "410 Gone" handler so any direct curl/Postman call returns a
+// clean deprecation response instead of serving stale functionality.
+// publicContentRouter stays — it's the public-facing /api/v1/static
+// endpoint the buyer SPA's privacy/terms/cookies pages still hit.
+import { publicContentRouter } from './modules/admin/admin-content.routes.js';
 import { seoRouter } from './modules/seo/seo.routes.js';
 import { inspectionRouter } from './modules/inspection/inspection.routes.js';
 import { uploadsRouter } from './modules/uploads/uploads.routes.js';
@@ -99,8 +105,23 @@ export function createApp() {
   app.use('/api/v1/admin/dealers', adminDealersRouter);
   app.use('/api/v1/admin/listings', adminListingsRouter);
   app.use('/api/v1/admin/leads', adminLeadsRouter);
-  app.use('/api/v1/admin/content', adminContentRouter);
-  app.use('/api/v1/admin/audit', adminAuditRouter);
+  // BUG-054: Deprecated. Both modules removed from the Admin UI.
+  // Any direct API call (curl / Postman / scripts) now gets a
+  // structured 410 Gone — no controller code path is reachable, so
+  // there is no risk of stale data leak or unintended writes.
+  const goneHandler = (_req: import('express').Request, res: import('express').Response) => {
+    res.status(410).json({
+      error: {
+        code: 'ENDPOINT_DEPRECATED',
+        message:
+          'This endpoint has been retired. The Audit and Content modules are no longer part of the H-D Certified admin scope.',
+      },
+    });
+  };
+  app.all('/api/v1/admin/content', goneHandler);
+  app.all('/api/v1/admin/content/*', goneHandler);
+  app.all('/api/v1/admin/audit', goneHandler);
+  app.all('/api/v1/admin/audit/*', goneHandler);
 
   // SEO endpoints — buyer site reverse-proxies /sitemap.xml + /robots.txt → here.
   app.use('/', seoRouter);

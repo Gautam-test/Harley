@@ -5,6 +5,7 @@ import type { AdminCreateDealerInput, AdminUpdateDealerInput, DealerStatus } fro
 import { prisma } from '../../config/prisma.js';
 import { HttpError } from '../../middleware/error-handler.js';
 import { audit } from '../audit/audit.service.js';
+import { validatePincodeMapping } from '../../utils/pincodeValidator.js';
 
 interface AuditCtx {
   actorId: string;
@@ -46,18 +47,26 @@ export async function adminCreateDealer(input: AdminCreateDealerInput, ctx: Audi
   // BUG-051: surface the username clash as an inline field error too,
   // matching the email + phone pattern below. Was previously a generic
   // banner; now the admin sees the red asterisk under the Username
-  // input and knows exactly which field to change.
-  const usernameClash = await prisma.dealer.findUnique({ where: { username: input.username } });
+  // input and knows exactly which field to change. Using findFirst for
+  // client-regen independence (see email check below).
+  const usernameClash = await prisma.dealer.findFirst({ where: { username: input.username } });
   if (usernameClash) throwUsernameTaken();
 
   // BUG-051: pre-check duplicates so we can return the spec-mandated
   // friendly inline error instead of relying on the Prisma P2002
   // fallback below (which races: a parallel admin could beat us to
-  // the DB constraint). Email is normalised to lowercase first
-  // because the DB constraint operates on the stored value, and we
-  // normalise on every write to keep comparisons case-insensitive.
+  // the DB constraint). Email is normalised to lowercase first.
+  //
+  // Using findFirst (not findUnique) so the check works even when
+  // the deploy skipped `prisma:generate` after the schema change —
+  // findFirst doesn't require email to be in WhereUniqueInput, so
+  // the pre-check runs correctly against any Prisma client version.
+  // Same pattern as the phone check below. Demo proved this matters:
+  // even with the @unique annotation in schema.prisma, if the
+  // generated client is stale, findUnique({where:{email}}) silently
+  // returns null and duplicates slip through.
   const normalisedEmail = input.email.trim().toLowerCase();
-  const emailTaken = await prisma.dealer.findUnique({ where: { email: normalisedEmail } });
+  const emailTaken = await prisma.dealer.findFirst({ where: { email: normalisedEmail } });
   if (emailTaken) throwEmailTaken();
 
   // Phone is already stored in canonical "+91XXXXXXXXXX" form by the
@@ -67,6 +76,25 @@ export async function adminCreateDealer(input: AdminCreateDealerInput, ctx: Audi
   // post-migration one — the index makes the query O(1) either way.
   const phoneTaken = await prisma.dealer.findFirst({ where: { phone: input.phone } });
   if (phoneTaken) throwPhoneTaken();
+
+  // BUG-053: server-side State/City/Pincode mapping check. Frontend
+  // already autofills via postalpincode.in and warns on mismatch, but
+  // an API caller (curl, script) can bypass that — this is the
+  // authoritative gate. Fails open if the lookup network call fails
+  // so a momentary blip doesn't stop dealer onboarding.
+  const pin = await validatePincodeMapping({
+    state: input.state,
+    city: input.city,
+    pincode: input.pincode,
+    requireAll: true,
+  });
+  if (!pin.valid) {
+    throw new HttpError(
+      400,
+      'PINCODE_MISMATCH',
+      JSON.stringify({ fieldErrors: { pincode: [pin.reason ?? 'Invalid pincode.'] } }),
+    );
+  }
 
   const password = input.password ?? generatePassword();
   const passwordHash = await bcrypt.hash(password, 12);
@@ -131,7 +159,8 @@ export async function adminUpdateDealer(id: string, input: AdminUpdateDealerInpu
   const data: Record<string, unknown> = { ...input };
   if (typeof input.email === 'string') {
     const normalisedEmail = input.email.trim().toLowerCase();
-    const clash = await prisma.dealer.findUnique({ where: { email: normalisedEmail } });
+    // findFirst (not findUnique) — see adminCreateDealer for rationale.
+    const clash = await prisma.dealer.findFirst({ where: { email: normalisedEmail } });
     if (clash && clash.id !== id) throwEmailTaken();
     data.email = normalisedEmail;
   }

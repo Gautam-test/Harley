@@ -125,11 +125,14 @@ export function DashboardPage() {
     queryFn: () => api<DealerRow[]>('/admin/dealers'),
     refetchOnMount: 'always',
   });
-  const { data: audit, isLoading: aLoading } = useQuery({
-    queryKey: ['admin-audit-recent'],
-    queryFn: () => api<AuditRow[]>('/admin/audit?limit=10'),
-    refetchOnMount: 'always',
-  });
+  // BUG-054: Audit module retired from admin scope. The "Recent Admin
+  // Actions" dashboard widget that consumed /admin/audit is removed
+  // below; this stub keeps the variable bindings (aLoading + audit) in
+  // place so the existing `loading` aggregate and conditional renders
+  // don't need a wider refactor. Both values are constant and never
+  // trigger a network call.
+  const audit: AuditRow[] | undefined = undefined;
+  const aLoading = false;
   const { data: enquiriesPayload } = useQuery({
     queryKey: ['admin-enquiries-all'],
     queryFn: () =>
@@ -437,38 +440,9 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      {/* Row 3 — Audit feed only. QA decision: Network Health card
-          dropped — the three rosters (0 listings / stale stock /
-          no enquiries 14d) duplicated information already surfaced
-          on the Dealers + Listings pages. Single-column on lg+. */}
-      <section className="mt-8 grid grid-cols-1 gap-4">
-        <Card className="bg-hd-white border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <SectionTitle>Recent Admin Actions</SectionTitle>
-          {loading ? (
-            <SkeletonRows n={6} />
-          ) : !audit || audit.length === 0 ? (
-            <Empty>No recent admin actions logged.</Empty>
-          ) : (
-            <ul className="mt-4 space-y-2.5">
-              {audit.map((a) => (
-                <li key={a.id} className="flex items-start gap-3 text-sm">
-                  <span className="mt-1.5 w-1.5 h-1.5 bg-info shrink-0 rounded-full" />
-                  <span className="flex-1 text-text-on-light leading-snug">
-                    <span className="font-headline">{a.actorName ?? a.actorRole}</span>{' '}
-                    <span className="text-gray-600">{humanAction(a.action)}</span>
-                    {a.entityType && (
-                      <span className="text-gray-500"> · {a.entityType}</span>
-                    )}
-                  </span>
-                  <span className="text-xs text-gray-500 whitespace-nowrap">
-                    {relativeTime(a.createdAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </section>
+      {/* BUG-054: Recent Admin Actions widget removed — Audit module
+          retired from admin scope and the /admin/audit endpoint is
+          now 410 Gone. */}
 
       {/* Row 4 — System Notifications */}
       <section className="mt-8">
