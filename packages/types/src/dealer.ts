@@ -42,12 +42,15 @@ export const dealerPublic = z.object({
 export type DealerPublic = z.infer<typeof dealerPublic>;
 
 export const nearestDealersQuery = z.object({
-  lat: z.coerce.number(),
-  lng: z.coerce.number(),
+  // BUG-035: accept either explicit lat/lng OR a 6-digit pincode. The
+  // server resolves pincode → coords via the pincode-coords map so
+  // the buyer doesn't have to know the lat/lng of their location.
+  lat: z.coerce.number().optional(),
+  lng: z.coerce.number().optional(),
+  pincode: z.string().regex(/^[0-9]{6}$/).optional(),
   // Cap at 5000 km so the home-page locator (centred at the India
   // centroid, lat 20.5937 lng 78.9629) can include every dealer in
-  // the country. The 500 km cap missed Delhi / Mumbai / Bengaluru /
-  // Chennai in a single sweep (QA bug 1).
+  // the country.
   radius: z.coerce.number().min(1).max(5000).default(50),
 });
 export type NearestDealersQuery = z.infer<typeof nearestDealersQuery>;

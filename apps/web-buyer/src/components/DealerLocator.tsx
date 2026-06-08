@@ -31,10 +31,46 @@ interface DealerLocation {
 //     selection change so the pin always matches the active card.
 const VISIBLE_DEALERS = 3;
 
-export function DealerLocator() {
+interface Props {
+  /** When set (e.g. on the PDP), nearest-dealer distances are
+   *  computed from this pincode — typically the listing's dealer
+   *  pincode so the buyer sees stock close to the bike. */
+  referencePincode?: string | null;
+}
+
+// India centroid — used as the reference point when no geolocation
+// permission AND no referencePincode prop is supplied. Keeps the
+// distance column populated rather than rendering empty.
+const INDIA_CENTROID = { lat: 20.5937, lng: 78.9629 };
+
+export function DealerLocator({ referencePincode }: Props = {}) {
+  // BUG-035: nearest dealers are computed against the buyer's location
+  // in priority order — geolocation → referencePincode prop → centroid.
+  // Geolocation kicks off on mount; while we wait, fall back to the
+  // pincode (or centroid). Once coords arrive, the query key changes
+  // and React Query re-fetches with the precise reference.
+  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {
+        /* permission denied / unavailable — silently fall back */
+      },
+      { timeout: 6000, maximumAge: 5 * 60 * 1000 },
+    );
+  }, []);
+
+  const queryParams = (() => {
+    if (geo) return `lat=${geo.lat}&lng=${geo.lng}&radius=5000`;
+    if (referencePincode && /^\d{6}$/.test(referencePincode))
+      return `pincode=${referencePincode}&radius=5000`;
+    return `lat=${INDIA_CENTROID.lat}&lng=${INDIA_CENTROID.lng}&radius=5000`;
+  })();
+
   const { data, isLoading } = useQuery({
-    queryKey: ['public-dealers'],
-    queryFn: () => api<DealerLocation[]>('/dealers?lat=20.5937&lng=78.9629&radius=5000'),
+    queryKey: ['public-dealers', queryParams],
+    queryFn: () => api<DealerLocation[]>(`/dealers?${queryParams}`),
   });
   // QA: enforce ascending-distance ordering on the CLIENT as well.
   // The API already sorts by distance but a regression there (or a

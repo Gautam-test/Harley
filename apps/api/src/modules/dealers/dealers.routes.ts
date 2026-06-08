@@ -43,7 +43,7 @@ function haversineKm(
 // dealer card after submitting an enquiry, so no fresh privacy concern.
 dealersRouter.get('/', validate(nearestDealersQuery, 'query'), async (req, res, next) => {
   try {
-    const q = req.query as { lat?: number; lng?: number; radius?: number };
+    const q = req.query as { lat?: number; lng?: number; pincode?: string; radius?: number };
     const dealers = (await prisma.dealer.findMany({
       where: { status: 'ACTIVE' },
       select: {
@@ -59,13 +59,18 @@ dealersRouter.get('/', validate(nearestDealersQuery, 'query'), async (req, res, 
       take: 50,
     })) as unknown as DealerLocatorRow[];
 
-    // Decorate each row with distanceKm when the caller supplied a
-    // reference point AND the dealer has coordinates. Rows without
-    // coords (legacy seed) skip the field rather than returning NaN.
-    const ref =
-      typeof q.lat === 'number' && typeof q.lng === 'number'
-        ? { lat: q.lat, lng: q.lng }
-        : null;
+    // BUG-035: resolve reference point in priority order —
+    //   1. explicit lat/lng (geolocation API result)
+    //   2. pincode (buyer typed in / listing pincode prop)
+    //   3. no reference (legacy / fallback) — rows return in seed order
+    let ref: { lat: number; lng: number } | null = null;
+    if (typeof q.lat === 'number' && typeof q.lng === 'number') {
+      ref = { lat: q.lat, lng: q.lng };
+    } else if (typeof q.pincode === 'string') {
+      const { pincodeCoord } = await import('../listings/pincode-coords.js');
+      const resolved = pincodeCoord(q.pincode);
+      if (resolved) ref = resolved;
+    }
 
     const decorated = dealers.map((d) => ({
       ...d,

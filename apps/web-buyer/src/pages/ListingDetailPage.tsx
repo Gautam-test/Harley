@@ -332,7 +332,11 @@ export function ListingDetailPage() {
         </Link>
       </div>
 
-      <DealerLocator />
+      {/* BUG-035: pass the listing's pincode so the locator shows
+          dealers near THIS bike when the buyer hasn't granted
+          geolocation permission. Geolocation (if granted on the
+          client) still takes priority over the pincode. */}
+      <DealerLocator referencePincode={data.pincode} />
     </>
   );
 }
