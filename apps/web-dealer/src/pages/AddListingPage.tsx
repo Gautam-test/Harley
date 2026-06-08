@@ -1300,6 +1300,18 @@ function InspectionUploader(props: {
   // Certificate preview modal — shows the H-D Certified certificate image
   // when the dealer clicks "Preview / replace file" after upload.
   const [certPreviewOpen, setCertPreviewOpen] = useState(false);
+  // QA BUG-044: transient warning toast shown when the dealer tries to
+  // preview the certificate on a non-LIVE listing. Auto-clears after
+  // 4 s so it doesn't linger. The modal is suppressed in this case —
+  // toast is the sole feedback so the dealer immediately understands
+  // why the action didn't open the certificate.
+  const [previewBlockedToast, setPreviewBlockedToast] = useState(false);
+  useEffect(() => {
+    if (!previewBlockedToast) return;
+    const t = window.setTimeout(() => setPreviewBlockedToast(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [previewBlockedToast]);
+  const isLive = props.listingStatus === 'ACTIVE';
 
   const onFile = async (file: File) => {
     setUploading(true);
@@ -1359,11 +1371,39 @@ function InspectionUploader(props: {
           )}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); setCertPreviewOpen(true); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              // QA BUG-044: pre-LIVE listings can't expose the certificate —
+              // surface a warning toast instead of opening the modal.
+              if (!isLive) {
+                setPreviewBlockedToast(true);
+                return;
+              }
+              setCertPreviewOpen(true);
+            }}
             className="text-xs text-hd-orange hover:underline mt-2"
           >
             Preview / replace file
           </button>
+          {/* QA BUG-044: warning toast — fixed bottom-right, amber palette,
+              role="alert" so AT users hear it. Auto-clears after 4 s via
+              the effect above. Copy is verbatim from the QA spec so the
+              QA test script can string-match cleanly. */}
+          {previewBlockedToast && (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="fixed bottom-6 right-6 z-[60] max-w-sm bg-warning text-hd-black border border-warning/60 shadow-lg px-4 py-3 text-sm font-subhead"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="uppercase tracking-subhead text-[11px] mb-1">
+                Certificate Locked
+              </p>
+              <p className="normal-case tracking-normal text-[13px] leading-snug">
+                The motorcycle listing is not live yet. You can view the certificate once it goes live.
+              </p>
+            </div>
+          )}
           {/* Certificate preview modal */}
           {certPreviewOpen && (
             <div
