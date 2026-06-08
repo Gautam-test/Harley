@@ -7,6 +7,7 @@ import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
 import { validators, buildFieldErrors, normalisePhone, toApiPhone, sanitizeAlpha, sanitizeDigits } from '../lib/formRules';
 import { reverseGeocode } from '../lib/reverseGeocode';
+import { HD_MODELS_FLAT } from '../lib/models';
 
 interface LeadRow {
   id: string;
@@ -1216,14 +1217,38 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
 
         <FormSection kicker="2" label="Motorcycle Details">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Model / Year line" required error={errFor('bikeModel')}>
+            {/* QA BUG-048: free-text "Model / Year line" replaced with
+                a searchable dropdown anchored to the approved H-D model
+                master list (apps/web-dealer/src/lib/models.ts). Native
+                <input list>+<datalist> gives type-to-filter behaviour
+                with zero extra deps. Label renamed "Select Model" per
+                spec; on blur we also normalise + reject any free-text
+                that doesn't match the catalog so data quality is locked
+                regardless of how the rep typed. */}
+            <Field label="Select Model" required error={errFor('bikeModel')}>
               <Input
+                list="hd-model-list"
                 value={form.bikeModel}
                 onChange={(e) => setForm((f) => ({ ...f, bikeModel: e.target.value }))}
-                maxLength={100}
-                placeholder="e.g. Street Glide Special"
+                onBlur={(e) => {
+                  const typed = e.target.value.trim();
+                  // Allow empty (the required validator handles that).
+                  // Reject anything not in the catalog by clearing the
+                  // field — the validator then surfaces the required
+                  // error so the rep is forced to pick from the list.
+                  if (typed && !HD_MODELS_FLAT.includes(typed)) {
+                    setForm((f) => ({ ...f, bikeModel: '' }));
+                  }
+                }}
+                placeholder="Start typing — e.g. Street Glide"
                 aria-invalid={Boolean(errFor('bikeModel'))}
+                autoComplete="off"
               />
+              <datalist id="hd-model-list">
+                {HD_MODELS_FLAT.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
             </Field>
             <Field label="VIN" required error={errFor('vin')}>
               <Input

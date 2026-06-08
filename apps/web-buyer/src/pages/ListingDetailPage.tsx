@@ -309,17 +309,35 @@ export function ListingDetailPage() {
                   guarantee, roadside assistance, and HOG membership.
                 </p>
               </div>
-              {/* QA: the large H-D Certified Certificate image preview was
-                  removed per spec. Only the PDF download remains, sitting
-                  flush-right directly below the 110 PT inspection banner. */}
+              {/* QA BUG-047: Download Certificate PDF — promoted from a
+                  subtle text link to a clearly-visible orange button
+                  directly below the 110 PT descriptive section per the
+                  QA spec ("clearly visible button/link"). Gated on
+                  registrationNumber because the certificate API needs
+                  reg-number + inspected-by + certified-on to render; if
+                  any are absent the API returns 404 anyway. */}
               {data.registrationNumber && (
                 <div className="mt-3 flex justify-end">
                   <a
                     href={`/api/v1/listings/${data.slug}/certificate.pdf`}
                     download
-                    className="inline-flex items-center gap-2 text-sm text-hd-orange hover:underline"
+                    className="inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition border border-hd-orange"
                   >
-                    Download Certificate PDF ↓
+                    <svg
+                      className="w-4 h-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download Certificate PDF
                   </a>
                 </div>
               )}
