@@ -36,7 +36,10 @@ model Dealer {
   // case-insensitive in practice (matches the password-reset
   // findFirst lookup which already used insensitive mode).
   email          String       @unique
-  phone          String
+  // BUG-051 extended: phone is also @unique. Same pattern as email —
+  // service layer pre-checks; migration auto-dedupes existing rows
+  // by suffixing "-dup-<id8>" to non-oldest collisions.
+  phone          String       @unique
   address        String?
   city           String
   state          String?

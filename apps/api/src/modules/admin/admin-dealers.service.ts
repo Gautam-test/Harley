@@ -17,38 +17,56 @@ function generatePassword(): string {
   return randomBytes(12).toString('base64url').slice(0, 16);
 }
 
-// BUG-051: dealer email is unique at DB + service layer. Spec-mandated
-// copy for the duplicate-email error — kept in one constant so the
-// frontend can string-match if it ever wants to, and so the wording is
-// trivially editable in one place.
+// BUG-051: dealer email + phone are unique at DB + service layer.
+// Spec-mandated copy kept in constants — single source of truth, easy
+// to tweak wording without hunting through service code.
 const DUPLICATE_EMAIL_MESSAGE =
   'This email address is already registered to another dealer.';
+const DUPLICATE_PHONE_MESSAGE =
+  'This phone number is already registered to another dealer.';
+const DUPLICATE_USERNAME_MESSAGE =
+  'This username is already taken — please pick another.';
 
-/** Helper: throw a structured 409 the admin Add Dealer modal renders as
- *  an inline field error under the Email input. Existing DealersPage
- *  onError handler parses `fieldErrors` out of the message JSON, so
- *  wrapping the message in that envelope lights up the right field. */
-function throwEmailTaken(): never {
+/** Throw a structured 409 the admin Add/Edit Dealer modal renders as
+ *  an inline field error. Existing DealersPage onError handler parses
+ *  `fieldErrors` out of the message JSON, so wrapping the message in
+ *  that envelope lights up the right field automatically. */
+function throwFieldTaken(field: 'email' | 'phone' | 'username', message: string): never {
   throw new HttpError(
     409,
-    'DEALER_EMAIL_TAKEN',
-    JSON.stringify({ fieldErrors: { email: [DUPLICATE_EMAIL_MESSAGE] } }),
+    `DEALER_${field.toUpperCase()}_TAKEN`,
+    JSON.stringify({ fieldErrors: { [field]: [message] } }),
   );
 }
+const throwEmailTaken = () => throwFieldTaken('email', DUPLICATE_EMAIL_MESSAGE);
+const throwPhoneTaken = () => throwFieldTaken('phone', DUPLICATE_PHONE_MESSAGE);
+const throwUsernameTaken = () => throwFieldTaken('username', DUPLICATE_USERNAME_MESSAGE);
 
 export async function adminCreateDealer(input: AdminCreateDealerInput, ctx: AuditCtx) {
-  const existing = await prisma.dealer.findUnique({ where: { username: input.username } });
-  if (existing) throw new HttpError(409, 'USERNAME_TAKEN', 'Username already in use');
+  // BUG-051: surface the username clash as an inline field error too,
+  // matching the email + phone pattern below. Was previously a generic
+  // banner; now the admin sees the red asterisk under the Username
+  // input and knows exactly which field to change.
+  const usernameClash = await prisma.dealer.findUnique({ where: { username: input.username } });
+  if (usernameClash) throwUsernameTaken();
 
-  // BUG-051: pre-check for duplicate email so we can return the
-  // spec-mandated friendly inline error instead of relying on the
-  // Prisma P2002 fallback below (which races: a parallel admin could
-  // beat us to the constraint). Normalise to lowercase first because
-  // the DB constraint operates on the stored value, and we normalise
-  // on every write to keep that comparison case-insensitive in practice.
+  // BUG-051: pre-check duplicates so we can return the spec-mandated
+  // friendly inline error instead of relying on the Prisma P2002
+  // fallback below (which races: a parallel admin could beat us to
+  // the DB constraint). Email is normalised to lowercase first
+  // because the DB constraint operates on the stored value, and we
+  // normalise on every write to keep comparisons case-insensitive.
   const normalisedEmail = input.email.trim().toLowerCase();
   const emailTaken = await prisma.dealer.findUnique({ where: { email: normalisedEmail } });
   if (emailTaken) throwEmailTaken();
+
+  // Phone is already stored in canonical "+91XXXXXXXXXX" form by the
+  // zod schema (packages/types/src/common.ts phoneIN). Using findFirst
+  // rather than findUnique here so the code compiles against either
+  // the pre-migration Prisma client (no phone @unique) or the
+  // post-migration one — the index makes the query O(1) either way.
+  const phoneTaken = await prisma.dealer.findFirst({ where: { phone: input.phone } });
+  if (phoneTaken) throwPhoneTaken();
 
   const password = input.password ?? generatePassword();
   const passwordHash = await bcrypt.hash(password, 12);
@@ -74,13 +92,15 @@ export async function adminCreateDealer(input: AdminCreateDealerInput, ctx: Audi
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-      // Unique constraint violation — possible fields: torqueDealerId,
-      // username (caught above but kept here defensively), or email
-      // (race with another admin between our pre-check and the insert).
+      // Unique constraint violation — possible fields: username, email,
+      // phone, or torqueDealerId. All four are caught by the pre-checks
+      // above, but the P2002 branch handles parallel-admin races where
+      // a second admin claims the same field between our findUnique
+      // and the insert.
       const field = (e.meta?.target as string[] | undefined)?.join(', ') ?? 'field';
-      if (field.includes('email')) {
-        throwEmailTaken();
-      }
+      if (field.includes('email')) throwEmailTaken();
+      if (field.includes('phone')) throwPhoneTaken();
+      if (field.includes('username')) throwUsernameTaken();
       if (field.includes('torqueDealerId')) {
         throw new HttpError(409, 'TORQUE_ID_TAKEN', `Torque Dealer ID "${input.torqueDealerId}" is already assigned to another dealer.`);
       }
@@ -115,15 +135,19 @@ export async function adminUpdateDealer(id: string, input: AdminUpdateDealerInpu
     if (clash && clash.id !== id) throwEmailTaken();
     data.email = normalisedEmail;
   }
+  if (typeof input.phone === 'string') {
+    // findFirst (not findUnique) for client-regen-independence — see
+    // adminCreateDealer for full rationale.
+    const clash = await prisma.dealer.findFirst({ where: { phone: input.phone } });
+    if (clash && clash.id !== id) throwPhoneTaken();
+  }
   try {
     await prisma.dealer.update({ where: { id }, data });
   } catch (e) {
-    if (
-      e instanceof Prisma.PrismaClientKnownRequestError &&
-      e.code === 'P2002' &&
-      ((e.meta?.target as string[] | undefined) ?? []).join(',').includes('email')
-    ) {
-      throwEmailTaken();
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      const target = ((e.meta?.target as string[] | undefined) ?? []).join(',');
+      if (target.includes('email')) throwEmailTaken();
+      if (target.includes('phone')) throwPhoneTaken();
     }
     throw e;
   }
