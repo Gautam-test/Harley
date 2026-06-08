@@ -852,6 +852,11 @@ export function AddListingPage() {
                 <InspectionUploader
                   vin={s.vin}
                   slug={isEditMode ? existing.data?.slug ?? null : null}
+                  /* QA BUG-043: certificate preview inside the uploader's
+                     modal is gated on the listing being ACTIVE. Pass
+                     status through so the modal can show the lock-out
+                     message for DRAFT / DEACTIVATED / SOLD / create-mode. */
+                  listingStatus={isEditMode ? existing.data?.status ?? null : null}
                   currentUrl={s.inspectionUrl}
                   meta={s.inspectionMeta}
                   disabled={torqueLocked}
@@ -861,15 +866,20 @@ export function AddListingPage() {
                 />
               </div>
 
-              {/* QA: certificate actions only — no inline preview render.
-                  Earlier this section embedded the certificate PNG inline
-                  which made Step 3 visually cluttered (large image taking
-                  up the full step). Replaced with two compact CTA
-                  buttons: View opens the PNG in a new tab; Download
-                  pulls the PDF. Create-mode (no slug yet) still shows
-                  the explanatory placeholder. */}
+              {/* QA BUG-043: H-D Certified Certificate widget is strictly
+                  gated on listing status. The certificate is a buyer-
+                  facing artifact that pulls from the *published* listing
+                  row — surfacing View / Download actions on DRAFT (or
+                  any pre-ACTIVE) state risks the dealer handing out a
+                  certificate against data that's still being edited,
+                  not yet admin-approved, or has since been deactivated.
+                  Render rules:
+                    • status === 'ACTIVE' → View + Download CTAs
+                    • everything else (DRAFT, DEACTIVATED, SOLD, REMOVED,
+                      or create-mode where no row exists yet) → the
+                      lock-out message verbatim from the QA spec. */}
               {s.inspectionUrl && s.registrationNumber && (
-                isEditMode && existing.data?.slug ? (
+                isEditMode && existing.data?.slug && existing.data?.status === 'ACTIVE' ? (
                   <div className="mt-4 border border-hd-orange/40 p-4">
                     <p className="font-subhead uppercase text-[11px] text-hd-orange mb-3">
                       H-D Certified Certificate
@@ -907,12 +917,16 @@ export function AddListingPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-4 border border-hd-orange/40 p-4 bg-orange-50/20 text-sm text-gray-700">
+                  <div
+                    className="mt-4 border border-hd-orange/40 p-4 bg-orange-50/20 text-sm text-gray-700"
+                    role="status"
+                    aria-live="polite"
+                  >
                     <p className="font-subhead uppercase text-[11px] text-hd-orange mb-1">
                       Certificate
                     </p>
                     <p className="text-xs text-gray-600">
-                      Certificate will be generated after the listing is submitted and approved.
+                      Certificate viewing will be available once the motorcycle listing is live.
                     </p>
                   </div>
                 )
@@ -1272,6 +1286,10 @@ function KitDoc({
 function InspectionUploader(props: {
   vin: string;
   slug?: string | null;
+  /** Current listing status (null in create-mode). Used to gate the
+   *  certificate preview modal — only ACTIVE listings expose the real
+   *  certificate; everything else shows the QA lock-out message. */
+  listingStatus?: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED' | null;
   currentUrl: string;
   meta: { originalName: string; size: number } | null;
   disabled?: boolean;
@@ -1371,10 +1389,12 @@ function InspectionUploader(props: {
                   </button>
                 </div>
                 {/* Certificate image rendered via the API certificate PNG endpoint.
-                    In create mode (no slug yet) show a friendly placeholder
-                    since the listing doesn't exist in the DB yet. */}
+                    QA BUG-043: only ACTIVE listings expose the certificate;
+                    in create mode (no slug) OR any pre-/post-active status
+                    (DRAFT / DEACTIVATED / SOLD / REMOVED) the modal shows
+                    the lock-out copy verbatim from the QA spec. */}
                 <div className="p-4">
-                  {props.slug ? (
+                  {props.slug && props.listingStatus === 'ACTIVE' ? (
                     <>
                       <img
                         src={`/api/v1/listings/${props.slug}/certificate.png`}
@@ -1405,12 +1425,18 @@ function InspectionUploader(props: {
                       </div>
                     </>
                   ) : (
-                    <div className="border border-gray-200 bg-gray-50 p-6 text-center">
+                    <div
+                      className="border border-gray-200 bg-gray-50 p-6 text-center"
+                      role="status"
+                      aria-live="polite"
+                    >
                       <p className="font-subhead uppercase tracking-subhead text-sm text-text-on-light mb-2">
                         Certificate Not Yet Available
                       </p>
+                      {/* QA BUG-043: verbatim copy required by the spec
+                          so QA's test script string-matches cleanly. */}
                       <p className="text-xs text-gray-600">
-                        The H-D Certified certificate will be available once you submit this listing.
+                        Certificate viewing will be available once the motorcycle listing is live.
                       </p>
                       <div className="flex gap-3 mt-4 justify-center">
                         <a
