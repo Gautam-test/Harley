@@ -131,8 +131,6 @@ export async function requestReset(
     );
   }
 
-  await redis.set(resendCooldownKey(emailHash), '1', 'EX', RESEND_COOLDOWN_SECONDS);
-
   const user = await lookupUser(role, email);
   const otpId = randomUUID();
 
@@ -140,6 +138,12 @@ export async function requestReset(
     // QA flip: surface the not-found error directly so the user can
     // correct their typo instead of waiting for an email that never
     // arrives. Closed user base = enumeration risk is acceptable.
+    //
+    // Post-audit: do NOT set the 30s resend cooldown here. We only
+    // want the cooldown to fire when a real email actually went out,
+    // otherwise a typo on the first attempt locks the user out of
+    // their corrected retry for half a minute. The hourly send-count
+    // (above) still increments unconditionally to defeat probing.
     logger.info({ emailHash, role }, 'pwreset: email not registered');
     throw new HttpError(
       404,
@@ -147,6 +151,10 @@ export async function requestReset(
       'User not found. Please enter a registered email address or contact H-D Admin.',
     );
   }
+
+  // Cooldown set only after the user is confirmed to exist — see the
+  // 404 branch above for why this moved below the lookup.
+  await redis.set(resendCooldownKey(emailHash), '1', 'EX', RESEND_COOLDOWN_SECONDS);
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
   const codeHash = await bcrypt.hash(code, 10);

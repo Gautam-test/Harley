@@ -53,10 +53,20 @@ async function resolveListing(slug: string) {
   if (row.certificationStatus !== 'CPO') {
     throw new HttpError(404, 'NOT_CPO', 'Certificate only available for CPO listings');
   }
-  // Allow DRAFT/ACTIVE/DEACTIVATED — dealer can preview their own draft.
-  // Block SOLD/REMOVED so retired listings don't surface stale certs.
-  if (row.status === 'SOLD' || row.status === 'REMOVED') {
-    throw new HttpError(404, 'NOT_ACTIVE', 'Certificate not available for sold/removed listings');
+  // QA BUG-043/044 hardening: only ACTIVE (LIVE) listings expose the
+  // certificate. Previously DRAFT + DEACTIVATED were allowed so the
+  // dealer could preview their own draft, but that left the endpoint
+  // open — a guessed slug returned a real cert even though the wizard
+  // UI hid the View / Download CTAs. Frontend now also blocks the
+  // Preview action with a toast, so this is the matching backend gate.
+  // Defence-in-depth: even if a future UI bug re-exposes the button,
+  // the API will still reject.
+  if (row.status !== 'ACTIVE') {
+    throw new HttpError(
+      404,
+      'NOT_ACTIVE',
+      'Certificate viewing will be available once the motorcycle listing is live.',
+    );
   }
   // Surface a clear message when the required cert metadata is missing
   // so the dealer can see exactly what to fill in to get the cert.

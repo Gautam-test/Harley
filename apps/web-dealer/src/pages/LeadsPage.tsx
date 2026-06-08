@@ -1008,8 +1008,15 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       // QA BUG-019: State is mandatory on seller enquiries (consistent
       // with City, which is already required). Surfaces as a red
       // asterisk on the label + blocks submit until a value is picked.
+      //
+      // POST-AUDIT (re-verify pass): Location was missing from the
+      // validator block — visual + validator drift vs. the Buyer modal
+      // (which gates all three: state / city / location). Added below
+      // so the Seller form enforces the same trio and the * on the
+      // Location label below isn't a lie.
       state: validators.requiredSelect('a state'),
       city: validators.city,
+      location: validators.requiredSelect('a location'),
       pincode: validators.optionalPincode,
       bikeModel: validators.requiredSelect('the motorcycle model'),
       vin: validators.vin,
@@ -1151,7 +1158,9 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 aria-invalid={Boolean(errFor('email'))}
               />
             </Field>
-            <Field label="Location">
+            {/* Post-audit: Location is now required on the Seller form
+                to match the Buyer modal — same validator wired above. */}
+            <Field label="Location" required error={errFor('location')}>
               <LocationInput
                 value={form.location}
                 onChange={(v) => setForm((f) => ({ ...f, location: v }))}
