@@ -149,6 +149,26 @@ export function buyerEnquiryConfirmationEmail(opts: {
   };
 }
 
+/** Seller: trade-in enquiry submission confirmation. Mirrors the buyer
+ *  template — same structure, seller-specific copy. */
+export function sellerTradeInConfirmationEmail(opts: {
+  sellerName: string;
+  bikeLabel: string;
+  referenceId: string;
+}): EmailMessage {
+  return {
+    to: '',
+    subject: 'We received your trade-in enquiry — H-D Certified',
+    html: shell(
+      'We received your trade-in enquiry',
+      para(`Hi ${opts.sellerName},`) +
+        para(`Thanks for letting us know about your <strong>${opts.bikeLabel}</strong>. Your trade-in enquiry has been routed to an authorised Harley-Davidson&reg; dealer who will reach out shortly to schedule a valuation.`) +
+        para(`Reference ID: <strong>${opts.referenceId}</strong>`),
+    ),
+    text: `Hi ${opts.sellerName}, thanks for your trade-in enquiry on your ${opts.bikeLabel}. A dealer will reach out shortly. Reference ID: ${opts.referenceId}`,
+  };
+}
+
 /** Buyer: dealer action / response notification (status change or comment). */
 export function buyerDealerUpdateEmail(opts: {
   buyerName: string;

@@ -14,6 +14,7 @@ import {
   dealerLeadEmail,
   emailProvider,
   buyerEnquiryConfirmationEmail,
+  sellerTradeInConfirmationEmail,
   buyerDealerUpdateEmail,
 } from '../email/email.module.js';
 import { nearestActiveDealer } from '../dealers/dealer-routing.js';
@@ -760,17 +761,33 @@ export async function dealerCreateBuyerEnquiry(
       notes: buyerEnquiryNotes(input),
     },
   });
-  // Email confirmation — dealer rep already has the lead in front of them,
-  // but the email mirrors the buyer-side flow and provides an audit trail.
+  // BUG-034: notify BOTH parties on dealer-logged enquiry —
+  //   (1) the dealer rep (audit trail + same email customer-portal flow
+  //       already sends, so reps see a uniform inbox)
+  //   (2) the buyer email captured on the form — so the buyer has a
+  //       reference ID + knows the dealer will reach out, even though
+  //       they didn't fill the form themselves on the public site.
+  const refId = formatLeadId('buyer', enquiry.id, enquiry.createdAt);
+  const bikeLabel = `${listing.year} ${listing.modelName}`;
   const ok = await notifyDealer(
     dealerId,
     'BUYER',
     input.name,
     input.city,
-    `Interested in: ${listing.year} ${listing.modelName}`,
-    formatLeadId('buyer', enquiry.id, enquiry.createdAt),
+    `Interested in: ${bikeLabel}`,
+    refId,
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
+  // Buyer-confirmation email — fire-and-forget so SMTP latency doesn't
+  // block the response. sendBuyerEmail swallows + logs send failures.
+  void sendBuyerEmail(
+    input.email,
+    buyerEnquiryConfirmationEmail({
+      buyerName: input.name,
+      bikeLabel,
+      referenceId: refId,
+    }),
+  );
   return { id: enquiry.id };
 }
 
@@ -809,14 +826,25 @@ export async function dealerCreateTradeInLead(
       notes: tradeInNotes(input),
     },
   })) as unknown as { id: string; createdAt: Date };
+  // BUG-034: notify BOTH parties on dealer-logged trade-in lead.
+  // Seller gets a reference ID + reassurance that a dealer is on it.
+  const refId = formatLeadId('trade-in', lead.id, lead.createdAt);
   const ok = await notifyDealer(
     dealerId,
     'TRADE_IN',
     input.username,
     input.city,
     `Bike: ${input.bikeModel}, VIN ${input.vin}`,
-    formatLeadId('trade-in', lead.id, lead.createdAt),
+    refId,
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
+  void sendBuyerEmail(
+    input.email,
+    sellerTradeInConfirmationEmail({
+      sellerName: input.username,
+      bikeLabel: input.bikeModel,
+      referenceId: refId,
+    }),
+  );
   return { id: lead.id };
 }
