@@ -28,18 +28,20 @@ export function App() {
   const isAuthed = useAuthStore((s) => Boolean(s.accessToken));
   const sessionExpiresAt = useAuthStore((s) => s.sessionExpiresAt);
 
-  // Proactive 24h auto-logout (ENH-001: "after 24h the session should
-  // expire"). Server enforces the cap on /auth/refresh, but an idle
-  // user who never makes a request would otherwise sit with a stale
-  // UI past the cap. We schedule a single timeout for the exact
-  // session-expiry moment driven by sessionExpiresAt from the login
-  // response — so whatever value the server config sets, the SPA
-  // mirrors it without hardcoding the duration. On fire, clear auth
-  // + raise the session-expired flag. The accessToken turning null
-  // re-renders the route tree, which routes the user to /login,
-  // where the LoginPage reads the flag and shows the
-  //   "Your session has expired. Please sign in again."
-  // banner.
+  // Proactive auto-logout (ENH-001 sliding mode: "24h since last
+  // activity"). Server slides the ceiling on every successful refresh,
+  // and returns the new sessionExpiresAt with each token rotation.
+  // The Zustand store updates sessionExpiresAt whenever a refresh
+  // response lands, which re-runs this effect and reschedules the
+  // timeout to the new "expire-at" instant. So:
+  //   - Active user → refreshes every ~15min → sessionExpiresAt keeps
+  //     getting pushed forward → this effect keeps rescheduling →
+  //     user is never auto-logged out while they're using the portal.
+  //   - Idle user → no refresh fires → sessionExpiresAt stays fixed →
+  //     this timeout fires exactly 24h after their last refresh and
+  //     bounces them to /login with the
+  //       "Your session has expired. Please sign in again."
+  //     banner.
   useEffect(() => {
     if (!isAuthed || !sessionExpiresAt) return;
     const ms = sessionExpiresAt - Date.now();

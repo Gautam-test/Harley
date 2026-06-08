@@ -144,36 +144,41 @@ describe('refresh-token rotation', () => {
     expect(newJti).not.toBe(oldJti);
   });
 
-  it('preserves sessionExpiresAt across refresh (does NOT slide forward)', async () => {
+  it('slides sessionExpiresAt forward on each refresh (24h-since-activity mode)', async () => {
+    // ENH-001 sliding override: client switched from hard 24h cap to
+    // "24h since last activity". Each refresh resets the ceiling to
+    // now + JWT_REFRESH_TTL_SECONDS so an active user never gets a
+    // mid-shift logout.
     const { dealerLogin, refreshAccessToken } = await import('./auth.service.js');
     const login = await dealerLogin('gurgaon-hd', 'Dealer@123!');
-    // Brief delay so wall-clock advances at least 1ms.
-    await new Promise((r) => setTimeout(r, 50));
+    // Long enough wall-clock advance to be visible in epoch-seconds.
+    await new Promise((r) => setTimeout(r, 1100));
     const refreshed = await refreshAccessToken(login.refreshToken);
-    // The wall-clock cap should be the same instant — refresh must NOT slide
-    // it forward, otherwise an active user could stay logged in indefinitely.
-    expect(refreshed.sessionExpiresAt).toBe(login.sessionExpiresAt);
+    expect(refreshed.sessionExpiresAt).toBeGreaterThan(login.sessionExpiresAt);
   });
 
-  it('preserves ses across refresh', async () => {
+  it('slides ses forward on each refresh', async () => {
     const { dealerLogin, refreshAccessToken } = await import('./auth.service.js');
     const login = await dealerLogin('gurgaon-hd', 'Dealer@123!');
     const loginSes = (jwt.decode(login.refreshToken) as { ses: number }).ses;
+    await new Promise((r) => setTimeout(r, 1100));
     const refreshed = await refreshAccessToken(login.refreshToken);
     const newSes = (jwt.decode(refreshed.refreshToken) as { ses: number }).ses;
-    expect(newSes).toBe(loginSes);
+    expect(newSes).toBeGreaterThan(loginSes);
   });
 
-  it('caps refresh-token TTL at session-remaining (never beyond ceiling)', async () => {
+  it('refresh-token TTL resets to the full window on each rotation (sliding mode)', async () => {
     const { dealerLogin, refreshAccessToken } = await import('./auth.service.js');
     const login = await dealerLogin('gurgaon-hd', 'Dealer@123!');
     await new Promise((r) => setTimeout(r, 1100)); // advance clock ~1s
     const refreshed = await refreshAccessToken(login.refreshToken);
     const rt = jwt.decode(refreshed.refreshToken) as { iat: number; exp: number };
-    // Remaining session should be just under 12h, never exceed it.
+    // ENH-001 sliding mode: after the rotation, ses is now → the new
+    // refresh-token TTL equals the full configured window (12h here, set
+    // via env at top of file). Allow ±2 s wiggle for issued-at jitter.
     const remaining = rt.exp - rt.iat;
-    expect(remaining).toBeLessThan(12 * 60 * 60);
-    expect(remaining).toBeGreaterThan(12 * 60 * 60 - 5);
+    expect(remaining).toBeGreaterThanOrEqual(12 * 60 * 60 - 2);
+    expect(remaining).toBeLessThanOrEqual(12 * 60 * 60 + 2);
   });
 });
 

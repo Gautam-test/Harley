@@ -20,8 +20,14 @@ interface AuthState {
     sessionExpiresAt: number;
   }) => void;
   setAccessToken: (token: string) => void;
-  /** Replace tokens after rotation; sessionExpiresAt is unchanged. */
-  setRefreshedTokens: (s: { accessToken: string; refreshToken: string }) => void;
+  /** Replace tokens + the sliding-window expiry after rotation. ENH-001
+   *  sliding mode: server returns a fresh sessionExpiresAt on every
+   *  successful refresh; the App.tsx auto-logout effect reschedules. */
+  setRefreshedTokens: (s: {
+    accessToken: string;
+    refreshToken: string;
+    sessionExpiresAt?: number;
+  }) => void;
   clear: () => void;
 }
 
@@ -41,7 +47,14 @@ export const useAuthStore = create<AuthState>()(
         }),
       setAccessToken: (token) => set({ accessToken: token }),
       setRefreshedTokens: (s) =>
-        set({ accessToken: s.accessToken, refreshToken: s.refreshToken }),
+        set((prev) => ({
+          accessToken: s.accessToken,
+          refreshToken: s.refreshToken,
+          sessionExpiresAt:
+            typeof s.sessionExpiresAt === 'number'
+              ? s.sessionExpiresAt
+              : prev.sessionExpiresAt,
+        })),
       clear: () =>
         set({ accessToken: null, refreshToken: null, user: null, sessionExpiresAt: null }),
     }),

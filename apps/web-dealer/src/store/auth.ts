@@ -11,11 +11,11 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   user: AuthUser | null;
-  /** Absolute session expiry in epoch ms — reported by the API at login.
-   *  Persisted so a page reload still knows when to auto-logout, and
-   *  consumed by App.tsx to schedule a single setTimeout. Independent of
-   *  individual JWT TTLs; this is the wall-clock ceiling regardless of
-   *  refresh activity. */
+  /** Absolute session expiry in epoch ms — reported by the API at login
+   *  AND on every silent refresh. ENH-001 sliding mode: each successful
+   *  refresh pushes this value forward, the App.tsx useEffect re-runs
+   *  and reschedules the auto-logout timer. Persisted so a page reload
+   *  still knows when to auto-logout. */
   sessionExpiresAt: number | null;
   setSession: (s: {
     accessToken: string;
@@ -25,9 +25,12 @@ interface AuthState {
   }) => void;
   /** Replace just the access token after a silent refresh. */
   setAccessToken: (token: string) => void;
-  /** Replace tokens after a silent refresh. sessionExpiresAt is unchanged
-   *  by rotation — the server keeps the original session-start. */
-  setRefreshedTokens: (s: { accessToken: string; refreshToken: string }) => void;
+  /** Replace tokens + the sliding-window expiry after a silent refresh. */
+  setRefreshedTokens: (s: {
+    accessToken: string;
+    refreshToken: string;
+    sessionExpiresAt?: number;
+  }) => void;
   clear: () => void;
 }
 
@@ -47,7 +50,16 @@ export const useAuthStore = create<AuthState>()(
         }),
       setAccessToken: (token) => set({ accessToken: token }),
       setRefreshedTokens: (s) =>
-        set({ accessToken: s.accessToken, refreshToken: s.refreshToken }),
+        set((prev) => ({
+          accessToken: s.accessToken,
+          refreshToken: s.refreshToken,
+          // Only update if the server actually sent one — keeps the
+          // store backwards-compatible if a future API version drops it.
+          sessionExpiresAt:
+            typeof s.sessionExpiresAt === 'number'
+              ? s.sessionExpiresAt
+              : prev.sessionExpiresAt,
+        })),
       clear: () =>
         set({ accessToken: null, refreshToken: null, user: null, sessionExpiresAt: null }),
     }),

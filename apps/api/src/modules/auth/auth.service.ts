@@ -246,8 +246,23 @@ export async function refreshAccessToken(refreshToken: string) {
   }
 
   const next: AuthClaims = { sub: claims.sub, role: claims.role, name: claims.name };
-  // Carry the original session-start through so the wall-clock ceiling
-  // is preserved. New access + refresh tokens are auto-capped by
-  // issueTokens to whatever's left of the session.
-  return await issueTokens(next, ses);
+  // ENH-001 sliding-window mode (client-requested override of the
+  // original hard-cap spec): every successful refresh resets `ses` to
+  // NOW, so the 24h ceiling slides forward with each token rotation.
+  //
+  // Behavioural contract:
+  //   - Active user (SPA silent-refreshes every ~15 min) → ses keeps
+  //     advancing, session never expires while they're using the
+  //     portal. Same effect as "logged out 24h after last activity".
+  //   - Idle user (no API calls for ≥24h) → access token expires after
+  //     15 min, no refresh fires, ses stops advancing. Next time they
+  //     return and the SPA tries to refresh, the ceiling check above
+  //     rejects with SESSION_EXPIRED.
+  //
+  // Trade-off vs hard cap: a stolen / shared device can keep extending
+  // indefinitely as long as the attacker keeps clicking. Client
+  // explicitly accepted this in exchange for the better UX (no
+  // mid-shift logouts for dealers in a long active session).
+  const slidingSes = nowSeconds();
+  return await issueTokens(next, slidingSes);
 }

@@ -78,14 +78,19 @@ async function refreshAccessTokenOnce(): Promise<string | null> {
       const body = (await res.json()) as {
         accessToken?: string;
         refreshToken?: string;
+        sessionExpiresAt?: number;
       };
       if (!body.accessToken || !body.refreshToken) return null;
       // Store both — the server rotates the refresh token on every call,
       // so re-using the old one would trigger reuse-detect on the next
       // refresh and revoke every session for this account.
+      // ENH-001 sliding mode: server sends a fresh sessionExpiresAt on
+      // each refresh (= now + 24h). Forward it to the store so the
+      // App.tsx auto-logout effect reschedules to the new instant.
       useAuthStore.getState().setRefreshedTokens({
         accessToken: body.accessToken,
         refreshToken: body.refreshToken,
+        sessionExpiresAt: body.sessionExpiresAt,
       });
       return body.accessToken;
     } catch {
