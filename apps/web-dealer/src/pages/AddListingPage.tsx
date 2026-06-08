@@ -29,6 +29,10 @@ interface ExistingListing {
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
   adminFeedback: string | null;
   registrationNumber: string | null;
+  /** Post-audit: used as a cache-buster on certificate URLs so a dealer
+   *  who edits inspectedBy / registrationNumber / certifiedOn sees the
+   *  fresh PNG + PDF immediately instead of the 1-hour-cached one. */
+  updatedAt: string;
 }
 
 // Maps the `cause` field-name in a backend Zod field-error payload to the
@@ -857,6 +861,11 @@ export function AddListingPage() {
                      status through so the modal can show the lock-out
                      message for DRAFT / DEACTIVATED / SOLD / create-mode. */
                   listingStatus={isEditMode ? existing.data?.status ?? null : null}
+                  /* Post-audit cache-buster: certificate PNG/PDF are
+                     cached for 1h server-side; appending updatedAt
+                     forces a fresh fetch the moment a dealer saves an
+                     edit so they see the new metadata in the preview. */
+                  listingUpdatedAt={isEditMode ? existing.data?.updatedAt ?? null : null}
                   currentUrl={s.inspectionUrl}
                   meta={s.inspectionMeta}
                   disabled={torqueLocked}
@@ -891,7 +900,7 @@ export function AddListingPage() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <a
-                        href={`/api/v1/listings/${existing.data.slug}/certificate.png`}
+                        href={`/api/v1/listings/${existing.data.slug}/certificate.png?v=${encodeURIComponent(existing.data.updatedAt)}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 border border-hd-orange text-hd-orange font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:bg-hd-orange hover:text-hd-black transition"
@@ -903,7 +912,7 @@ export function AddListingPage() {
                         View Certificate
                       </a>
                       <a
-                        href={`/api/v1/listings/${existing.data.slug}/certificate.pdf`}
+                        href={`/api/v1/listings/${existing.data.slug}/certificate.pdf?v=${encodeURIComponent(existing.data.updatedAt)}`}
                         download
                         className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
                       >
@@ -1290,6 +1299,9 @@ function InspectionUploader(props: {
    *  certificate preview modal — only ACTIVE listings expose the real
    *  certificate; everything else shows the QA lock-out message. */
   listingStatus?: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED' | null;
+  /** Listing.updatedAt — appended as `?v=` to the cert PNG/PDF URLs so
+   *  the 1h server-side cache is busted the moment the dealer saves. */
+  listingUpdatedAt?: string | null;
   currentUrl: string;
   meta: { originalName: string; size: number } | null;
   disabled?: boolean;
@@ -1437,7 +1449,7 @@ function InspectionUploader(props: {
                   {props.slug && props.listingStatus === 'ACTIVE' ? (
                     <>
                       <img
-                        src={`/api/v1/listings/${props.slug}/certificate.png`}
+                        src={`/api/v1/listings/${props.slug}/certificate.png${props.listingUpdatedAt ? `?v=${encodeURIComponent(props.listingUpdatedAt)}` : ''}`}
                         alt="H-D Certified Certificate"
                         className="w-full border border-gray-200"
                         onError={(e) => {
@@ -1454,7 +1466,7 @@ function InspectionUploader(props: {
                           Open uploaded PDF ↗
                         </a>
                         <a
-                          href={`/api/v1/listings/${props.slug}/certificate.pdf`}
+                          href={`/api/v1/listings/${props.slug}/certificate.pdf${props.listingUpdatedAt ? `?v=${encodeURIComponent(props.listingUpdatedAt)}` : ''}`}
                           download
                           target="_blank"
                           rel="noreferrer"

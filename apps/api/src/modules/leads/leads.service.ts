@@ -6,7 +6,9 @@ import type {
   LeadStatus,
 } from '@hd-cpo/types';
 import { canTransitionLead } from '@hd-cpo/types';
+import { createHash } from 'node:crypto';
 import { prisma } from '../../config/prisma.js';
+import { redis } from '../../config/redis.js';
 import { logger } from '../../config/logger.js';
 import { encryptPii, decryptPii } from '../../utils/crypto.js';
 import { HttpError } from '../../middleware/error-handler.js';
@@ -24,6 +26,38 @@ interface DealerForEmail {
   id: string;
   name: string;
   email: string;
+}
+
+// ── Buyer/seller confirmation email idempotency ───────────────────────
+// Audit-pass fix: dealer-create paths can fire the buyer confirmation
+// email twice if the dealer accidentally double-submits or logs two
+// near-identical enquiries (same email + same listing / VIN). The
+// public submit paths are guarded by VIN gates, but the dealer side
+// doesn't share that protection — so we cap it at the email layer
+// using a short-TTL Redis key. First send wins; duplicates within
+// the window drop silently. Hashed to keep PII out of Redis keys.
+const CONFIRMATION_DEDUPE_TTL_SECONDS = 5 * 60;
+function confirmationDedupeKey(scope: 'buyer' | 'seller', email: string, ref: string) {
+  const norm = `${email.trim().toLowerCase()}|${ref.trim().toLowerCase()}`;
+  const h = createHash('sha256').update(norm).digest('hex').slice(0, 24);
+  return `lead:confirm-sent:${scope}:${h}`;
+}
+async function shouldSendConfirmation(
+  scope: 'buyer' | 'seller',
+  email: string,
+  ref: string,
+): Promise<boolean> {
+  const key = confirmationDedupeKey(scope, email, ref);
+  // Redis `SET key NX EX 300` — atomic "claim or no-op". Returns 'OK'
+  // on first claim, null when the key already exists. We don't care
+  // about the exact failure mode — anything other than 'OK' means
+  // "someone else just sent the same email, skip".
+  const claimed = await redis.set(key, '1', 'EX', CONFIRMATION_DEDUPE_TTL_SECONDS, 'NX');
+  if (!claimed) {
+    logger.info({ scope, key }, 'lead: confirmation email deduped (5-min window)');
+    return false;
+  }
+  return true;
 }
 
 // Returns true if the dealer email was sent successfully. Callers should
@@ -780,14 +814,21 @@ export async function dealerCreateBuyerEnquiry(
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
   // Buyer-confirmation email — fire-and-forget so SMTP latency doesn't
   // block the response. sendBuyerEmail swallows + logs send failures.
-  void sendBuyerEmail(
-    input.email,
-    buyerEnquiryConfirmationEmail({
-      buyerName: input.name,
-      bikeLabel,
-      referenceId: refId,
-    }),
-  );
+  // Audit-pass: dedupe within a 5-minute window keyed on (email +
+  // listingId) so a dealer who double-logs the same buyer for the same
+  // bike doesn't trigger two confirmation emails.
+  void (async () => {
+    if (await shouldSendConfirmation('buyer', input.email, listing.id)) {
+      await sendBuyerEmail(
+        input.email,
+        buyerEnquiryConfirmationEmail({
+          buyerName: input.name,
+          bikeLabel,
+          referenceId: refId,
+        }),
+      );
+    }
+  })();
   return { id: enquiry.id };
 }
 
@@ -838,13 +879,20 @@ export async function dealerCreateTradeInLead(
     refId,
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
-  void sendBuyerEmail(
-    input.email,
-    sellerTradeInConfirmationEmail({
-      sellerName: input.username,
-      bikeLabel: input.bikeModel,
-      referenceId: refId,
-    }),
-  );
+  // Audit-pass: dedupe within a 5-minute window keyed on (email + VIN)
+  // so re-logging the same trade-in doesn't double-email the seller.
+  void (async () => {
+    if (await shouldSendConfirmation('seller', input.email, input.vin)) {
+      await sendBuyerEmail(
+        input.email,
+        sellerTradeInConfirmationEmail({
+          sellerName: input.username,
+          bikeLabel: input.bikeModel,
+          vin: input.vin,
+          referenceId: refId,
+        }),
+      );
+    }
+  })();
   return { id: lead.id };
 }

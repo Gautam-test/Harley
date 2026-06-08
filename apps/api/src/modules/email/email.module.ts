@@ -119,8 +119,9 @@ function shell(heading: string, body: string): string {
       <h1 style="font-size:18px;margin:0 0 16px">${heading}</h1>
       ${body}
     </div>
-    <div style="padding:14px 24px;border-top:1px solid #eee;color:#888;font-size:12px">
-      H-D Certified &middot; Approved Used Harley-Davidson&reg; Motorcycles
+    <div style="padding:14px 24px;border-top:1px solid #eee;color:#888;font-size:12px;line-height:1.5">
+      H-D Certified &middot; Approved Used Harley-Davidson&reg; Motorcycles<br/>
+      <span style="color:#aaa">This is a transactional message from H-D Certified. You're receiving it because you submitted an enquiry or hold an account with us.</span>
     </div>
   </div>
 </div>`;
@@ -150,12 +151,18 @@ export function buyerEnquiryConfirmationEmail(opts: {
 }
 
 /** Seller: trade-in enquiry submission confirmation. Mirrors the buyer
- *  template — same structure, seller-specific copy. */
+ *  template — same structure, seller-specific copy. Audit-pass: VIN is
+ *  surfaced so the seller can cross-check the dealer logged the right
+ *  bike (sometimes dealers mistype). */
 export function sellerTradeInConfirmationEmail(opts: {
   sellerName: string;
   bikeLabel: string;
+  vin?: string;
   referenceId: string;
 }): EmailMessage {
+  const vinLine = opts.vin
+    ? para(`VIN on file: <strong style="font-family:monospace">${opts.vin}</strong> — please reply if this looks wrong.`)
+    : '';
   return {
     to: '',
     subject: 'We received your trade-in enquiry — H-D Certified',
@@ -163,9 +170,10 @@ export function sellerTradeInConfirmationEmail(opts: {
       'We received your trade-in enquiry',
       para(`Hi ${opts.sellerName},`) +
         para(`Thanks for letting us know about your <strong>${opts.bikeLabel}</strong>. Your trade-in enquiry has been routed to an authorised Harley-Davidson&reg; dealer who will reach out shortly to schedule a valuation.`) +
+        vinLine +
         para(`Reference ID: <strong>${opts.referenceId}</strong>`),
     ),
-    text: `Hi ${opts.sellerName}, thanks for your trade-in enquiry on your ${opts.bikeLabel}. A dealer will reach out shortly. Reference ID: ${opts.referenceId}`,
+    text: `Hi ${opts.sellerName}, thanks for your trade-in enquiry on your ${opts.bikeLabel}${opts.vin ? ` (VIN ${opts.vin})` : ''}. A dealer will reach out shortly. Reference ID: ${opts.referenceId}`,
   };
 }
 

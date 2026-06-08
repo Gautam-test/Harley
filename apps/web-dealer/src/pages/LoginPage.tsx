@@ -283,7 +283,14 @@ export function LoginPage() {
       </section>
       <ForgotPasswordModal
         open={forgotOpen}
-        onClose={() => setForgotOpen(false)}
+        onClose={() => {
+          setForgotOpen(false);
+          // Post-audit: clear any stale "Invalid credentials" banner
+          // left over from the prior failed login attempt — by the
+          // time the user closes the forgot-password modal that error
+          // is no longer relevant and reads as confusing noise.
+          setError(null);
+        }}
         apiPathPrefix="/auth/dealer"
         apiBase={((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/$/, '') + '/api/v1'}
       />
