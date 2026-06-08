@@ -176,9 +176,16 @@ export function LoginPage() {
               <label className="block text-xs font-subhead uppercase tracking-subhead text-gray-600 mb-2">
                 Email or Username
               </label>
+              {/* QA: placeholder used to leak a real-looking dealer email
+                  ("sales@capital-hd.example.in") + a username slug,
+                  which a casual screenshot or shoulder-surf could mine
+                  for credential-stuffing attempts. Replaced with a
+                  generic hint that conveys the same "email OR
+                  username" intent without disclosing any real-looking
+                  identifiers. */}
               <Input
                 autoComplete="off"
-                placeholder="sales@capital-hd.example.in or gurgaon-hd"
+                placeholder="Enter your email or username"
                 aria-invalid={Boolean(fieldErrors.username)}
                 {...register('username', {
                   onChange: () => setFieldErrors((p) => ({ ...p, username: undefined })),
