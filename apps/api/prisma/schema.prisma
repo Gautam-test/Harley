@@ -31,7 +31,11 @@ model Dealer {
   passwordHash   String
   name           String
   legalName      String?
-  email          String
+  // BUG-051: email is now @unique. Admin Add Dealer + Update Dealer
+  // paths normalise to lowercase before write so the constraint is
+  // case-insensitive in practice (matches the password-reset
+  // findFirst lookup which already used insensitive mode).
+  email          String       @unique
   phone          String
   address        String?
   city           String
