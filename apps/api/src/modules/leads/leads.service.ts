@@ -92,17 +92,24 @@ async function notifyDealer(
   }
 }
 
-// Fire-and-forget buyer email. Never throws — a mail failure must not
-// fail the lead create/update that triggered it. Callers `void` this.
+// Fire-and-forget buyer / seller email. Never throws — a mail failure
+// must not fail the lead create/update that triggered it. Callers `void`
+// this. Logs both the attempt and the outcome so a QA pass that "didn't
+// receive the email" can be diagnosed in pm2 logs without guessing.
 async function sendBuyerEmail(
   to: string,
   msg: { subject: string; html: string; text?: string },
 ): Promise<void> {
-  if (!to) return;
+  if (!to) {
+    logger.warn('Buyer/seller email skipped — empty recipient address');
+    return;
+  }
+  logger.info({ to, subject: msg.subject }, 'Buyer/seller email — attempting send');
   try {
     await emailProvider().send({ to, subject: msg.subject, html: msg.html, text: msg.text });
+    logger.info({ to, subject: msg.subject }, 'Buyer/seller email — send completed');
   } catch (e) {
-    logger.error({ err: e, to }, 'Buyer email notification failed');
+    logger.error({ err: e, to }, 'Buyer/seller email — send failed');
   }
 }
 
@@ -812,23 +819,21 @@ export async function dealerCreateBuyerEnquiry(
     refId,
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
-  // Buyer-confirmation email — fire-and-forget so SMTP latency doesn't
-  // block the response. sendBuyerEmail swallows + logs send failures.
-  // Audit-pass: dedupe within a 5-minute window keyed on (email +
-  // listingId) so a dealer who double-logs the same buyer for the same
-  // bike doesn't trigger two confirmation emails.
-  void (async () => {
-    if (await shouldSendConfirmation('buyer', input.email, listing.id)) {
-      await sendBuyerEmail(
-        input.email,
-        buyerEnquiryConfirmationEmail({
-          buyerName: input.name,
-          bikeLabel,
-          referenceId: refId,
-        }),
-      );
-    }
-  })();
+  // BUG-049: dropped the IIFE+dedupe wrapper that was masking failures
+  // on demo (QA reported buyer/seller emails never arriving even though
+  // dealer emails worked). The IIFE silently swallowed any throw from
+  // the Redis dedupe call, so a single Redis hiccup → no email + no log
+  // entry. Direct fire-and-forget mirrors the long-working notifyDealer
+  // pattern and sendBuyerEmail catches + logs every outcome (see its
+  // body for the attempt/complete/fail log lines).
+  void sendBuyerEmail(
+    input.email,
+    buyerEnquiryConfirmationEmail({
+      buyerName: input.name,
+      bikeLabel,
+      referenceId: refId,
+    }),
+  );
   return { id: enquiry.id };
 }
 
@@ -879,20 +884,17 @@ export async function dealerCreateTradeInLead(
     refId,
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
-  // Audit-pass: dedupe within a 5-minute window keyed on (email + VIN)
-  // so re-logging the same trade-in doesn't double-email the seller.
-  void (async () => {
-    if (await shouldSendConfirmation('seller', input.email, input.vin)) {
-      await sendBuyerEmail(
-        input.email,
-        sellerTradeInConfirmationEmail({
-          sellerName: input.username,
-          bikeLabel: input.bikeModel,
-          vin: input.vin,
-          referenceId: refId,
-        }),
-      );
-    }
-  })();
+  // BUG-049: dropped the IIFE+dedupe wrapper — see dealerCreateBuyerEnquiry
+  // for the full rationale. Direct fire-and-forget; sendBuyerEmail logs
+  // every attempt + outcome to pm2 logs.
+  void sendBuyerEmail(
+    input.email,
+    sellerTradeInConfirmationEmail({
+      sellerName: input.username,
+      bikeLabel: input.bikeModel,
+      vin: input.vin,
+      referenceId: refId,
+    }),
+  );
   return { id: lead.id };
 }
