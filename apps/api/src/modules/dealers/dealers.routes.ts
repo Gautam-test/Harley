@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { nearestDealersQuery } from '@hd-cpo/types';
 import { prisma } from '../../config/prisma.js';
 import { validate } from '../../middleware/validate.js';
+import { pincodeCoord } from '../listings/pincode-coords.js';
 
 interface DealerLocatorRow {
   id: string;
@@ -67,7 +68,6 @@ dealersRouter.get('/', validate(nearestDealersQuery, 'query'), async (req, res, 
     if (typeof q.lat === 'number' && typeof q.lng === 'number') {
       ref = { lat: q.lat, lng: q.lng };
     } else if (typeof q.pincode === 'string') {
-      const { pincodeCoord } = await import('../listings/pincode-coords.js');
       const resolved = pincodeCoord(q.pincode);
       if (resolved) ref = resolved;
     }
