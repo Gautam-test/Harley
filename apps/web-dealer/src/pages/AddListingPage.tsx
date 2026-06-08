@@ -861,28 +861,50 @@ export function AddListingPage() {
                 />
               </div>
 
-              {/* Certificate preview — shown after inspection uploaded AND
-                  registration number entered. In create mode (no slug yet)
-                  show a placeholder instead since the listing doesn't exist
-                  in the DB yet and the API route would 404. */}
+              {/* QA: certificate actions only — no inline preview render.
+                  Earlier this section embedded the certificate PNG inline
+                  which made Step 3 visually cluttered (large image taking
+                  up the full step). Replaced with two compact CTA
+                  buttons: View opens the PNG in a new tab; Download
+                  pulls the PDF. Create-mode (no slug yet) still shows
+                  the explanatory placeholder. */}
               {s.inspectionUrl && s.registrationNumber && (
                 isEditMode && existing.data?.slug ? (
                   <div className="mt-4 border border-hd-orange/40 p-4">
-                    <p className="font-subhead uppercase text-[11px] text-hd-orange mb-2">
-                      Certificate Preview
+                    <p className="font-subhead uppercase text-[11px] text-hd-orange mb-3">
+                      H-D Certified Certificate
                     </p>
-                    <img
-                      src={`/api/v1/listings/${existing.data.slug}/certificate.png`}
-                      alt="Certificate preview"
-                      className="w-full max-w-lg"
-                    />
-                    <a
-                      href={`/api/v1/listings/${existing.data.slug}/certificate.pdf`}
-                      download
-                      className="text-xs text-hd-orange hover:underline mt-2 block"
-                    >
-                      Download Certificate PDF ↓
-                    </a>
+                    <p className="text-xs text-gray-600 mb-3 leading-snug">
+                      Certificate auto-generated from this listing&rsquo;s
+                      registration number, inspected-by, and certified-on
+                      values.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={`/api/v1/listings/${existing.data.slug}/certificate.png`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 border border-hd-orange text-hd-orange font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:bg-hd-orange hover:text-hd-black transition"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        View Certificate
+                      </a>
+                      <a
+                        href={`/api/v1/listings/${existing.data.slug}/certificate.pdf`}
+                        download
+                        className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        Download Certificate
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <div className="mt-4 border border-hd-orange/40 p-4 bg-orange-50/20 text-sm text-gray-700">
