@@ -255,9 +255,17 @@ export function LoginPage() {
               </button>
             </div>
 
+            {/* ENH-001: copy updated to the spec-mandated wording. The
+                normal-case sentence reads better than the previous
+                uppercase chip, and the new line about signing in tells
+                the user exactly what to do next. */}
             {sessionExpired && !error && (
-              <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 font-subhead uppercase tracking-subhead text-xs">
-                Session timed out
+              <div
+                className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2"
+                role="status"
+                aria-live="polite"
+              >
+                Your session has expired. Please sign in again.
               </div>
             )}
             {error && (

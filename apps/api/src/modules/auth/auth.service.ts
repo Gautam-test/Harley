@@ -14,10 +14,10 @@ interface RefreshClaims extends AuthClaims {
   /** Unique per refresh token; consumed once on /auth/refresh and rotated. */
   jti: string;
   /** Session-start epoch (seconds). Set once at password-login and carried
-   *  forward through every rotation so the 12-h session ceiling is a fixed
-   *  wall-clock cap from initial sign-in (not a sliding window). Without
-   *  this, rotating refresh tokens kept extending the session indefinitely
-   *  for any active user — QA: "after 12h the session should expire". */
+   *  forward through every rotation so the 24-h session ceiling
+   *  (ENH-001) is a fixed wall-clock cap from initial sign-in, not a
+   *  sliding window. Without this, rotating refresh tokens kept
+   *  extending the session indefinitely for any active user. */
   ses?: number;
   /** Issued-at epoch (seconds). Standard JWT claim — populated by
    *  jsonwebtoken at sign time. Used by the refresh handler to distinguish
@@ -180,12 +180,15 @@ export async function refreshAccessToken(refreshToken: string) {
   }
   // Session-ceiling check — refresh tokens minted before this rollout
   // lack `ses`, so accept them once and pin their session to NOW (they
-  // get the full 12h from this moment as a one-time grace). Tokens
-  // minted post-rollout always carry `ses` and we honour the original
-  // login time.
+  // get the full configured TTL from this moment as a one-time grace).
+  // Tokens minted post-rollout always carry `ses` and we honour the
+  // original login time. Default ceiling is 24h per ENH-001; the
+  // ENH-001 spec mandates the exact "Your session has expired. Please
+  // sign in again." copy on the LoginPage banner that fires when this
+  // 401 reaches the SPA via the silent-refresh path.
   const ses = typeof claims.ses === 'number' ? claims.ses : nowSeconds();
   if (sessionRemainingSeconds(ses) <= 0) {
-    throw new HttpError(401, 'SESSION_EXPIRED', 'Your 12-hour session has expired — please sign in again');
+    throw new HttpError(401, 'SESSION_EXPIRED', 'Your session has expired. Please sign in again.');
   }
 
   // DEL returns 1 if the key existed, 0 if not. A "0" here can mean:

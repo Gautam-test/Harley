@@ -17,7 +17,8 @@ export function LoginPage() {
   // QA: password masking toggle state — mirrors the dealer-portal eye
   // icon so admins can review their entered characters before submit.
   const [showPassword, setShowPassword] = useState(false);
-  // Session-expiry banner — set by api.ts when a 12-hour session times out
+  // Session-expiry banner — set by api.ts when the configured 24-hour
+  // session (ENH-001) times out
   // and the silent-refresh fails. Cleared on first read so navigating back
   // to /login from a fresh action doesn't re-show the toast.
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -159,9 +160,15 @@ export function LoginPage() {
               </p>
             )}
           </div>
+          {/* ENH-001: copy updated to the spec-mandated wording, matching
+              the dealer LoginPage banner. */}
           {sessionExpired && !error && (
-            <div className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2 font-subhead uppercase tracking-subhead text-xs">
-              Session timed out
+            <div
+              className="text-warning text-sm bg-warning/10 border border-warning/40 px-3 py-2"
+              role="status"
+              aria-live="polite"
+            >
+              Your session has expired. Please sign in again.
             </div>
           )}
           {error && <div className="text-danger text-sm">{error}</div>}

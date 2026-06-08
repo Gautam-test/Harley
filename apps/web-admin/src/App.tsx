@@ -17,7 +17,10 @@ export function App() {
   const isAuthed = useAuthStore((s) => Boolean(s.accessToken));
   const sessionExpiresAt = useAuthStore((s) => s.sessionExpiresAt);
 
-  // Proactive 12h auto-logout — see web-dealer/App.tsx for the rationale.
+  // Proactive 24h auto-logout (ENH-001) — see web-dealer/App.tsx for
+  // the full rationale. SPA mirrors the server's sessionExpiresAt so the
+  // duration is driven by the JWT_REFRESH_TTL_SECONDS env var, not
+  // hardcoded here.
   useEffect(() => {
     if (!isAuthed || !sessionExpiresAt) return;
     const ms = sessionExpiresAt - Date.now();

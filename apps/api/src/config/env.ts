@@ -27,12 +27,19 @@ const envSchema = z.object({
   // Access token TTL — keep short (15 min) so revocation propagates fast;
   // the SPA silently refreshes via the rotating refresh token below.
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
-  // Refresh token (= effective dealer / admin session length): 12 hours
-  // per QA. Once expired, the SPA's silent-refresh path returns null and
-  // the api.ts client clears auth + bounces to /login with a "Session
-  // expired" toast. Override via env in long-lived demo / staging if a
-  // longer window is needed (production stays at the 12h default).
-  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(12 * 60 * 60),
+  // Refresh token (= effective dealer / admin session length): 24 hours
+  // per ENH-001. Once expired, the SPA's silent-refresh path returns
+  // null and the api.ts client clears auth + bounces to /login with a
+  // "Your session has expired. Please sign in again." banner. Override
+  // via env in long-lived demo / staging if a longer window is needed
+  // (production stays at the 24h default).
+  //
+  // The ceiling is enforced server-side via the `ses` claim baked into
+  // the refresh token at login time; subsequent refreshes preserve `ses`
+  // so the dealer / admin cannot extend their session past 24h from the
+  // original login — they have to sign in again. This matches the
+  // ENH-001 spec ("expired sessions rejected by protected APIs").
+  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(24 * 60 * 60),
 
   OTP_VERIFIED_TOKEN_SECRET: z.string().min(16),
   OTP_VERIFIED_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),

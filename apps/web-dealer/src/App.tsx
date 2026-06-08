@@ -28,13 +28,17 @@ export function App() {
   const isAuthed = useAuthStore((s) => Boolean(s.accessToken));
   const sessionExpiresAt = useAuthStore((s) => s.sessionExpiresAt);
 
-  // Proactive 12h auto-logout (QA: "after 12h the session should expire").
-  // Server enforces the cap on /auth/refresh, but an idle user who never
-  // makes a request would otherwise sit with a stale UI past the cap. We
-  // schedule a single timeout for the exact session-expiry moment; on
-  // fire, clear auth + raise the session-expired flag. The accessToken
-  // turning null re-renders the route tree, which routes the user to
-  // /login, where the LoginPage reads the flag and shows the timeout
+  // Proactive 24h auto-logout (ENH-001: "after 24h the session should
+  // expire"). Server enforces the cap on /auth/refresh, but an idle
+  // user who never makes a request would otherwise sit with a stale
+  // UI past the cap. We schedule a single timeout for the exact
+  // session-expiry moment driven by sessionExpiresAt from the login
+  // response — so whatever value the server config sets, the SPA
+  // mirrors it without hardcoding the duration. On fire, clear auth
+  // + raise the session-expired flag. The accessToken turning null
+  // re-renders the route tree, which routes the user to /login,
+  // where the LoginPage reads the flag and shows the
+  //   "Your session has expired. Please sign in again."
   // banner.
   useEffect(() => {
     if (!isAuthed || !sessionExpiresAt) return;
@@ -45,8 +49,8 @@ export function App() {
       useAuthStore.getState().clear();
       return;
     }
-    // setTimeout is capped at ~24.8 days (2^31 ms) — well above the 12h
-    // session, so a direct schedule is safe.
+    // setTimeout is capped at ~24.8 days (2^31 ms) — well above the
+    // 24h session ceiling, so a direct schedule is safe.
     const t = window.setTimeout(() => {
       try { window.sessionStorage.setItem('hd-cpo:session-expired', '1'); } catch { /* ignore */ }
       useAuthStore.getState().clear();
