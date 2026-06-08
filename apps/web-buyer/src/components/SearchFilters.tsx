@@ -131,16 +131,20 @@ export function SearchFilters() {
     const next = new URLSearchParams();
     if (v.searchBy === 'monthly') next.set('searchBy', 'monthly');
     // Pincode + distance feed the dealer-radius filter on the API.
-    // QA RE-OPEN: when "Any Distance" is selected (empty v.distance),
-    // we used to silently inject 50 km — which made the "All Distance"
-    // option behave the same as a 50 km radius and gave the buyer no
-    // way to actually disable the geo filter. Now: distance is only
-    // forwarded when the user explicitly picks a value. Pincode-only
-    // (no distance) keeps the exact-pincode match logic; pincode +
-    // explicit distance fires the strict haversine radius filter.
+    //
+    // QA: a buyer who supplies a pincode but leaves distance on "Any"
+    // expected the result grid to refresh to bikes near that pincode.
+    // The earlier "pincode-only → exact-match-first" logic fell through
+    // to the unbounded result set when no dealer was at the exact
+    // pincode, which made the filter look broken (listings looked
+    // identical to no-filter). Default to a 50 km catchment when
+    // pincode is supplied without an explicit distance — matches the
+    // hero search widget, gives the API a haversine radius to actually
+    // filter against, and "Any Distance" only takes effect when the
+    // buyer cleared the pincode too.
     if (v.pincode && /^\d{6}$/.test(v.pincode)) {
       next.set('pincode', v.pincode);
-      if (v.distance) next.set('distance', v.distance);
+      next.set('distance', v.distance || '50');
     }
     if (v.model) next.set('model', v.model);
     if (v.minYear) next.set('minYear', v.minYear);
@@ -230,13 +234,15 @@ export function SearchFilters() {
     searchBy,
   ]);
   // Pincode is a free-text input — only auto-apply once it's a valid 6-digit
-  // value, so we don't fire a request after each keystroke.
+  // value, so we don't fire a request after each keystroke. QA: 250ms (was
+  // 400ms) so the result grid feels immediate the moment the 6th digit is
+  // typed — matches the slider/select debounce above.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!allValues.pincode || /^\d{6}$/.test(allValues.pincode)) {
       debounceRef.current = setTimeout(() => {
         handleSubmit(onSubmit)();
-      }, 400);
+      }, 250);
     }
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
