@@ -121,7 +121,7 @@ export function ForgotPasswordModal({ open, onClose, apiPathPrefix, apiBase }: P
       setOtpId(r.otpId);
       setStep('verify');
       setInfo(
-        `If an account exists for ${trimmedEmail}, a 6-digit code has been emailed. Check your inbox (and spam).`,
+        `A 6-digit code has been emailed to ${trimmedEmail}. Check your inbox (and spam).`,
       );
       setResendIn(30);
     } catch (e) {
@@ -234,14 +234,31 @@ export function ForgotPasswordModal({ open, onClose, apiPathPrefix, apiBase }: P
             <Input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                // Clear the API not-found error as soon as the user
+                // edits the field — gives instant feedback that they're
+                // correcting the typo.
+                if (error) setError(null);
+              }}
               placeholder="you@example.in"
               autoComplete="off"
               autoFocus
+              aria-invalid={Boolean(error)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && emailValid && !busy) sendCode();
               }}
             />
+            {/* Inline field error per QA spec — red text directly
+                under the Registered Email input. Covers
+                USER_NOT_FOUND, OTP_LIMIT_REACHED, rate-limit, etc.
+                Pulls error out of the generic banner so this step
+                shows it where the user is looking. */}
+            {error && (
+              <p className="mt-1 text-[11px] text-danger" role="alert">
+                {error}
+              </p>
+            )}
             <Button
               type="button"
               onClick={sendCode}
@@ -365,7 +382,10 @@ export function ForgotPasswordModal({ open, onClose, apiPathPrefix, apiBase }: P
         {info && step !== 'done' && (
           <p className="mt-3 text-[12px] text-gray-600 leading-snug">{info}</p>
         )}
-        {error && (
+        {/* Generic error banner — suppressed on the email step because
+            we render the same error inline under the email field there
+            (per BUG spec). Verify / reset steps still surface errors here. */}
+        {error && step !== 'email' && (
           <div className="mt-3 bg-danger/10 border border-danger/30 text-danger px-3 py-2 text-sm">
             {error}
           </div>

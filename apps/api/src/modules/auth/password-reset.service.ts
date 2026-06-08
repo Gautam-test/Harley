@@ -87,13 +87,18 @@ async function lookupUser(role: ResetRole, email: string): Promise<UserLookup | 
 }
 
 /**
- * Step 1 — buyer/dealer/admin enters their registered email. We ALWAYS
- * return a 200 with `{ otpId }` so the caller can't tell which emails
- * exist on the platform. If the email matches a real user, we send the
- * OTP via email; if not, we silently no-op (the `otpId` we hand back
- * points to nothing and any subsequent verify will return OTP_EXPIRED).
+ * Step 1 — buyer/dealer/admin enters their registered email.
  *
- * Throws only on rate-limit overflow (3 sends / hour / email).
+ * QA decision: return 404 USER_NOT_FOUND when the email doesn't
+ * match a dealer / admin row. Reverses the prior anti-enumeration
+ * posture (always return 200 with a dud otpId) because the user
+ * base is closed + small (~15 dealers, 1 admin) so enumeration
+ * risk is low and the original UX was confusing — users typed a
+ * typo'd email, got an opaque "we sent a code" message, then
+ * never received anything.
+ *
+ * Throws on rate-limit overflow (3 sends / hour / email) and on
+ * unregistered email.
  */
 export async function requestReset(
   role: ResetRole,
@@ -132,11 +137,15 @@ export async function requestReset(
   const otpId = randomUUID();
 
   if (!user) {
-    // Silent no-op — hand back a dud otpId so the response shape is
-    // identical to the real-user path. The dud points to no Redis entry,
-    // so verify will return OTP_EXPIRED with no information leak.
-    logger.info({ emailHash, role }, 'pwreset: silent no-op (email not found)');
-    return { otpId, expiresInSeconds: TTL_SECONDS };
+    // QA flip: surface the not-found error directly so the user can
+    // correct their typo instead of waiting for an email that never
+    // arrives. Closed user base = enumeration risk is acceptable.
+    logger.info({ emailHash, role }, 'pwreset: email not registered');
+    throw new HttpError(
+      404,
+      'USER_NOT_FOUND',
+      'User not found. Please enter a registered email address or contact H-D Admin.',
+    );
   }
 
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
