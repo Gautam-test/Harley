@@ -26,7 +26,7 @@ export function HomePage() {
           gray divider lines, swap the arrow glyph for a clean chevron
           (›). The section now sits seamlessly between Benefits and
           Featured Certified per Figma. */}
-      <div className="bg-hd-white py-10 text-center">
+      <div className="bg-hd-white py-14 text-center">
         <Link
           to="/search"
           className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"

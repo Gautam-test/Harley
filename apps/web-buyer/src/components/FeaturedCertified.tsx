@@ -17,7 +17,7 @@ export function FeaturedCertified() {
   });
 
   return (
-    <section className="bg-hd-white py-14 md:py-16 border-t border-gray-200">
+    <section className="bg-hd-white py-20 md:py-24 border-t border-gray-200">
       <div className="max-w-container mx-auto px-6">
         {/* Figma /Customer/Home.png — section header is a 3-part block:
              tiny "APPROVED AND TESTED" preheader in subhead caps, then the
@@ -49,7 +49,7 @@ export function FeaturedCertified() {
         {/* QA RE-OPEN: copy uses sentence case with a period after
             "Dealer Network." per Figma — was "dealer network —" with
             an em-dash. */}
-        <p className="text-[15px] text-gray-700 max-w-3xl mb-8 leading-relaxed">
+        <p className="text-[18px] text-gray-600 max-w-3xl mb-8 leading-relaxed">
           Hand-picked Harley-Davidson&trade; motorcycles from our Authorised Dealer Network.
           Each one inspected, verified, and ready to ride.
         </p>

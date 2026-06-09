@@ -136,7 +136,7 @@ export function DealerLocator({ referencePincode }: Props = {}) {
         {/* BUG_UI_006 #4: Figma copy uses "authorized" (z), the ®
             symbol (not ™), and "Find the one closest to you" as the
             second sentence. */}
-        <p className="font-body text-gray-600 mt-4 max-w-2xl text-[15px] leading-relaxed">
+        <p className="font-body text-gray-600 mt-4 max-w-2xl text-[18px] leading-relaxed">
           Every certified motorcycle is backed by an authorized Harley-Davidson&reg; dealer.
           Find the one closest to you.
         </p>

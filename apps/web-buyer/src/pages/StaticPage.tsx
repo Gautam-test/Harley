@@ -416,7 +416,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
             //   h3 (cook)  → 18px font-subhead uppercase, text-on-light
             //   a          → hd-orange, underlined on hover
             className={`
-              text-[15px] text-gray-700
+              text-[18px] text-gray-600
               [&>*]:max-w-none
               [&_p]:leading-[1.7]
               [&_p]:mt-4
@@ -558,7 +558,7 @@ function FaqItem({
       </button>
       {open && (
         // QA latest: body answer pinned to 14px per Figma.
-        <p className="px-5 pb-5 text-[14px] text-gray-700 leading-relaxed">{item.a}</p>
+        <p className="px-5 pb-5 text-[18px] text-gray-600 leading-relaxed">{item.a}</p>
       )}
     </div>
   );
