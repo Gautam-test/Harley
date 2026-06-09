@@ -287,7 +287,7 @@ listingsRouter.get('/:slug', async (req, res, next) => {
           // BUG-039: also surface address + phone so the PDP's
           // "View Dealer Details" modal can show the actual selling
           // dealer's contact card (not just name + city).
-          select: { id: true, name: true, city: true, pincode: true, state: true, address: true, phone: true },
+          select: { id: true, name: true, city: true, pincode: true, state: true, address: true, phone: true, email: true },
         },
       },
     });
