@@ -29,19 +29,19 @@ interface FeatureRow {
 // fix for the "halts after row 2" bug — the rows render reliably from
 // the in-repo asset regardless of upstream availability.
 // Each feature row's body is rendered as a scannable bullet list rather
-// than a single paragraph — easier to skim on the home page. The legacy
-// `body` field is kept on the type for safety; bullets are preferred
-// when both are present.
+// than a single paragraph. Bullets are the ORIGINAL copy split sentence
+// by sentence — nothing rewritten or summarised. Punctuation tweaks
+// (full stops at end of each bullet) are the only deltas.
 const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
     iconSrc: '/brand/benefits/1.svg',
     image: '/brand/benefits/feature-images/1.svg',
     bullets: [
-      'Same standard inspection across all authorised dealers.',
-      '110-point check covers the full mechanical and electrical operation of the machine.',
-      'Detailed record signed by the performing technician, handed to every customer.',
-      'Only after passing can a machine be classed as H-D Certified™ and qualify for the other benefits.',
+      'Inspection of the technical condition of the motorcycle is the same for all authorised dealers.',
+      'It amounts to a check of 110 points covering the whole operation of the machine.',
+      'A detailed record signed by the performing technician is available to the customer from each inspection.',
+      'Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
     ],
   },
   {
@@ -49,8 +49,7 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/2.svg',
     image: '/brand/benefits/feature-images/2.svg',
     bullets: [
-      'Background check against finance, theft and insurance write-off databases.',
-      'Only motorcycles originally sold by Harley-Davidson® India Pvt Ltd (the importer of record) are accepted.',
+      'In the H-D Certified™, motorcycles are offered only with XXXX specification, as sold by Harley-Davidson® India Pvt Ltd (the importer of record).',
     ],
   },
   {
@@ -58,8 +57,7 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/3.svg',
     image: '/brand/benefits/feature-images/3.svg',
     bullets: [
-      'Online check cross-references the odometer reading against service records.',
-      'Verified KM is confirmed in writing as part of the sale.',
+      'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
     ],
   },
   {
@@ -67,9 +65,8 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/4.svg',
     image: '/brand/benefits/feature-images/4.svg',
     bullets: [
-      'Minimum 12-month guarantee on mechanical and electrical components.',
-      'Optional extension beyond 12 months for added cover.',
-      'Protects against unforeseen repair expense.',
+      'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee.',
+      'This can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     ],
   },
   {
@@ -77,9 +74,8 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/5.svg',
     image: '/brand/benefits/feature-images/5.svg',
     bullets: [
-      '24/7 Roadside Assistance, recovery and onward travel when required.',
-      'Provided by Australia Wide Assist as part of the package.',
-      'Cover extends automatically if you extend your Guarantee.',
+      'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7.',
+      'Should you extend your Guarantee then the Assistance package is also extended.',
     ],
   },
   {
@@ -87,8 +83,8 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/6.svg',
     image: '/brand/benefits/feature-images/6.svg',
     bullets: [
-      'First 12 months’ membership of the Harley-Davidson® Owners Group included.',
-      'Renewable each year at your option.',
+      'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group.',
+      'Each year you will have the choice of renewing your membership.',
     ],
     cta: { label: 'HOG Benefits Click Here', href: HOG_BENEFITS_URL },
   },
