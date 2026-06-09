@@ -50,7 +50,12 @@ pnpm --filter @hd-cpo/api prisma:generate
 # a clean 2-dealer environment.
 if [ "${SEED_EXTRA:-1}" = "1" ]; then
   echo "→ Seeding extra dealers + listings (idempotent upsert)..."
-  pnpm --filter @hd-cpo/api prisma:seed-extra
+  # `|| true` — seed-extra is non-critical and has been observed to
+  # fail with P2002 when a dealer email collides with a manually-edited
+  # row. Without this guard, `set -e` killed deploy.sh before the API
+  # build step, so every API code change silently failed to deploy
+  # (frontend looked fine because Vite serves source directly).
+  pnpm --filter @hd-cpo/api prisma:seed-extra || echo "⚠ seed-extra skipped (non-fatal)"
 fi
 
 # 4. Build the shared workspace packages (types, torque-client, etc).
