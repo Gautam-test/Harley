@@ -12,7 +12,13 @@ export const phoneIN = z
     'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
   );
 
-export const pincodeIN = z.string().regex(/^[0-9]{6}$/, 'Pincode must be 6 digits');
+// Indian PIN codes always start 1-9 (region 0 doesn't exist in the postal
+// system). Rejects "000000" and other zero-prefixed inputs — matches the
+// frontend PINCODE_REGEX, so a curl bypass can't slip an invalid pincode
+// through the API. Surfaced during BUG-053/055 retest pass.
+export const pincodeIN = z
+  .string()
+  .regex(/^[1-9][0-9]{5}$/, 'Pincode must be 6 digits and cannot start with 0');
 
 export const emailSchema = z.string().email();
 
