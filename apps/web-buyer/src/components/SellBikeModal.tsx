@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
@@ -356,21 +356,17 @@ export function SellBikeModal() {
                   <CopyRefButton value={formatLeadId('trade-in', submitted.id)} />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-5">
+              {/* BUG-061: Track Enquiry CTA removed. Single Close
+                  button promoted to primary orange so the buyer has a
+                  clear next action after enquiry submission. */}
+              <div className="flex justify-end mt-5">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="border border-gray-300 px-6 py-2.5 font-subhead uppercase tracking-subhead text-xs text-gray-700 hover:border-hd-black hover:text-hd-black transition"
+                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
                 >
                   Close
                 </button>
-                <Link
-                  to={`/track?id=${formatLeadId('trade-in', submitted.id)}`}
-                  onClick={handleClose}
-                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
-                >
-                  Track Enquiry →
-                </Link>
               </div>
             </div>
           ) : (

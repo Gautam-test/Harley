@@ -7,7 +7,6 @@ import {
   advanceOrderStatus,
   createOrder,
   listDealerOrders,
-  trackOrder,
   type OrderStatus,
 } from './orders.service.js';
 
@@ -15,21 +14,12 @@ export const publicOrdersRouter = Router();
 export const dealerOrdersRouter = Router();
 
 // ─── PUBLIC — Track Your Harley ─────────────────────────────────────────
-
-const orderIdParam = z.object({ orderId: z.string().min(4).max(64) });
-
-publicOrdersRouter.get(
-  '/track/:orderId',
-  validate(orderIdParam, 'params'),
-  async (req, res, next) => {
-    try {
-      const { orderId } = req.params as { orderId: string };
-      res.json(await trackOrder(orderId));
-    } catch (e) {
-      next(e);
-    }
-  },
-);
+//
+// BUG-061: public /orders/track/:orderId endpoint removed alongside
+// the buyer-facing Track Your Enquiry feature. Dealers still see their
+// own orders via the authenticated routes below. The trackOrder
+// service function is left in place for now in case admin tooling
+// needs it later — it's just no longer publicly exposed.
 
 // ─── DEALER — manage own orders ─────────────────────────────────────────
 

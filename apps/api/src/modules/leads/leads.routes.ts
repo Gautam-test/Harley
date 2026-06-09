@@ -26,7 +26,8 @@ import {
   listTradeInLeads,
   updateLeadStatus,
 } from './leads.service.js';
-import { trackLead } from './leads.track.js';
+// BUG-061: trackLead import removed — Track Your Enquiry feature
+// deleted end-to-end along with the leads.track.ts module.
 
 export const publicLeadsRouter = Router();
 export const dealerLeadsRouter = Router();
@@ -49,19 +50,10 @@ function requireVerifiedToken(purpose: 'ENQUIRY' | 'TRADE_IN') {
 
 // ─── PUBLIC ─────────────────────────────────────────────────────────────
 
-// Lead tracker — anyone with a valid enquiry CUID can check status.
-publicLeadsRouter.get(
-  '/track/:id',
-  validate(z.object({ id: z.string().min(6).max(64) }), 'params'),
-  async (req, res, next) => {
-    try {
-      const { id } = req.params as { id: string };
-      res.json(await trackLead({ id }));
-    } catch (e) {
-      next(e);
-    }
-  },
-);
+// BUG-061: Public /leads/track/:id endpoint removed. The Track Your
+// Enquiry buyer feature is no longer in scope; the Enquiry / TradeInLead
+// tables remain populated for dealer + admin views, just not publicly
+// queryable.
 
 
 // QA: pre-flight duplicate gate for the Sell Your Motorcycle form. Lets

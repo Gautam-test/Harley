@@ -10,7 +10,8 @@ import { ListingDetailPage } from './pages/ListingDetailPage';
 import { SellBikePage } from './pages/SellBikePage';
 import { StaticPage } from './pages/StaticPage';
 import { InfoPage } from './pages/InfoPage';
-import { TrackPage } from './pages/TrackPage';
+// BUG-061: Track Your Enquiry feature removed end-to-end. TrackPage
+// import + /track route both dropped; the page file is deleted.
 import { DealersPage } from './pages/DealersPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
@@ -66,7 +67,7 @@ export function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/listings/:slug" element={<ListingDetailPage />} />
           <Route path="/sell-bike" element={<SellBikePage />} />
-          <Route path="/track" element={<TrackPage />} />
+          {/* BUG-061: /track route removed with the feature. */}
           <Route path="/dealers" element={<DealersPage />} />
           <Route path="/finance" element={<InfoPage variant="finance" />} />
           <Route path="/insurance" element={<InfoPage variant="insurance" />} />

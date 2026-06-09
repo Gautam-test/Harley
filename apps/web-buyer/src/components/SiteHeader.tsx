@@ -97,9 +97,7 @@ export function SiteHeader() {
           >
             Sell Your Motorcycle
           </button>
-          <NavLink to="/track" className={navLinkClasses}>
-            Track Enquiry
-          </NavLink>
+          {/* BUG-061: Track Enquiry nav link removed with the feature. */}
         </nav>
 
         {/* Hamburger trigger — only visible below md. Three stacked lines
@@ -166,9 +164,7 @@ export function SiteHeader() {
             >
               Sell Your Motorcycle
             </button>
-            <NavLink to="/track" className={drawerLinkClasses}>
-              Track Enquiry
-            </NavLink>
+            {/* BUG-061: Track Enquiry drawer link removed. */}
           </nav>
         </>
       )}
