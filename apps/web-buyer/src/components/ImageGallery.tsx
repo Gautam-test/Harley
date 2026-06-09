@@ -32,84 +32,81 @@ export function ImageGallery({
 }) {
   const [active, setActive] = useState(0);
   const safe = images.length > 0 ? images : [FALLBACK];
+  const hasMany = safe.length > 1;
+  const go = (delta: number) =>
+    setActive((a) => (a + delta + safe.length) % safe.length);
 
   return (
-    <div className="space-y-3">
-      <div className="relative aspect-[4/3] bg-surface-2 overflow-hidden">
+    <div className="relative aspect-[16/10] bg-surface-2 overflow-hidden group">
+      {/* All images rendered stacked & preloaded so the browser caches every
+          one on first paint. Only the active image is opaque; the rest sit
+          underneath at opacity-0. Result: clicking prev/next is instant
+          (no network round-trip), with a subtle cross-fade for polish. */}
+      {safe.map((src, i) => (
         <img
-          src={safe[active]}
-          alt={alt}
-          className={`w-full h-full object-cover ${sold ? 'grayscale-[35%]' : ''}`}
-          // First image loads eagerly per PRD §6.1.3 AC2; thumbnails are small.
-          fetchPriority="high"
+          key={src + i}
+          src={src}
+          alt={i === active ? alt : ''}
+          aria-hidden={i !== active}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${
+            i === active ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          } ${sold ? 'grayscale-[35%]' : ''}`}
+          // First image loads eagerly per PRD §6.1.3 AC2; the rest load
+          // immediately too so prev/next clicks paint without waiting.
+          fetchPriority={i === 0 ? 'high' : 'auto'}
+          loading="eager"
+          decoding="async"
           onError={onImgError}
         />
-        {/* QA latest (VDP Detail.png re-apply, surgical scope): white
-            brand stamp overlaid on the top-left of the active image.
-            CPO renders the full "H-D CERTIFIED" wordmark; AS_IS
-            renders the "AS · IS" plate. Both use the same dash
-            separator structure as the search-card brand stamp. Other
-            layout changes from the prior commit (equal-height grid,
-            title-row chip removal, sidebar mt-auto) are NOT
-            re-applied here. */}
-        {certificationStatus === 'CPO' && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-hd-white text-hd-black font-subhead font-bold uppercase tracking-subhead text-[11px] px-3 py-1.5 shadow-sm">
-            <span>H-D</span>
-            <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
-            <span>CERTIFIED</span>
+      ))}
+
+      {/* No corner plate on the gallery — the title-row "H-D CERTIFIED"
+          chip below, the 110 PT inspection banner, and the certificate
+          card already carry the same signal. Stacking a 4th instance on
+          top of the hero photo read as noisy + orphan-y during image
+          load. AS-IS bikes also stay plate-free. */}
+
+      {sold && (
+        <div
+          aria-hidden
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <span className="-rotate-12 select-none bg-danger/90 text-hd-white font-headline tracking-headline uppercase text-5xl sm:text-6xl px-12 py-3 border-4 border-hd-white shadow-2xl">
+            Sold
           </span>
-        )}
-        {certificationStatus === 'AS_IS' && (
-          <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-hd-white text-hd-black font-subhead font-bold uppercase tracking-subhead text-[11px] px-3 py-1.5 shadow-sm">
-            <span>AS</span>
-            <span aria-hidden className="inline-block h-[2px] w-2 bg-hd-orange" />
-            <span>IS</span>
-          </span>
-        )}
-        {sold && (
-          <div
-            aria-hidden
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <span className="-rotate-12 select-none bg-danger/90 text-hd-white font-headline tracking-headline uppercase text-5xl sm:text-6xl px-12 py-3 border-4 border-hd-white shadow-2xl">
-              Sold
-            </span>
-          </div>
-        )}
-      </div>
-      {safe.length > 1 && (
-        // QA BUG-004: previously sliced to 4 thumbnails, which dropped the
-        // 5th (and any 6th) photo silently. Dealers can upload up to 6 —
-        // render all of them. Layout uses a 5-column track so the common
-        // 5-photo case fills exactly one row; a 6th wraps to row 2.
-        <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-          {safe.map((src, i) => (
-            <button
-              key={src + i}
-              type="button"
-              onClick={() => setActive(i)}
-              className={`relative aspect-[4/3] overflow-hidden border-2 transition ${
-                i === active ? 'border-hd-orange' : 'border-surface-2 hover:border-text-secondary'
-              }`}
-            >
-              <img
-                src={src}
-                alt=""
-                loading="lazy"
-                className={`w-full h-full object-cover ${sold ? 'grayscale-[35%]' : ''}`}
-                onError={onImgError}
-              />
-              {sold && (
-                <span
-                  aria-hidden
-                  className="absolute inset-0 flex items-center justify-center pointer-events-none -rotate-12 bg-danger/80 text-hd-white font-headline tracking-headline uppercase text-[10px]"
-                >
-                  Sold
-                </span>
-              )}
-            </button>
-          ))}
         </div>
+      )}
+
+      {/* Slider controls — prev/next arrows overlaid on the hero, plus an
+          image counter pill bottom-right. Hidden when there's only one
+          image. Arrows fade in on hover at lg+ (touch devices always see
+          them). Keyboard-accessible via standard tab order. */}
+      {hasMany && (
+        <>
+          <button
+            type="button"
+            onClick={() => go(-1)}
+            aria-label="Previous image"
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 bg-hd-white/85 hover:bg-hd-white text-hd-black shadow-md transition lg:opacity-0 group-hover:opacity-100"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => go(1)}
+            aria-label="Next image"
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-10 h-10 bg-hd-white/85 hover:bg-hd-white text-hd-black shadow-md transition lg:opacity-0 group-hover:opacity-100"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+          <span className="absolute bottom-3 right-3 z-10 bg-hd-black/70 text-hd-white text-[11px] font-subhead uppercase tracking-wide px-2.5 py-1">
+            {active + 1} / {safe.length}
+          </span>
+        </>
       )}
     </div>
   );

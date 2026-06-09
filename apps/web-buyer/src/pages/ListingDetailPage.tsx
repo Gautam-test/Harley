@@ -157,7 +157,7 @@ export function ListingDetailPage() {
               />
             </div>
 
-            <aside>
+            <aside id="enquire-sidebar">
               <ListingSidebarCard
                 slug={data.slug}
                 modelInterest={`${data.year} ${data.modelName}`}
@@ -171,31 +171,25 @@ export function ListingDetailPage() {
                 dealerAddress={data.dealerAddress ?? null}
                 dealerPhone={data.dealerPhone ?? null}
                 dealerEmail={data.dealerEmail ?? null}
+                certificationStatus={data.certificationStatus}
               />
             </aside>
           </div>
 
-          {/* Title row */}
+          {/* Title row — only CPO bikes carry the H-D Certified chip;
+              AS-IS listings render no badge per client request. */}
           <div className="mt-10">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* CPO + As-Is badges aligned with the listing-card rebuild:
-                  both render as sharp black rectangles with white text so
-                  the buyer sees the same chrome on the grid AND the detail
-                  page. */}
-              {data.certificationStatus === 'CPO' ? (
+            {data.certificationStatus === 'CPO' && (
+              <div className="flex flex-wrap items-center gap-3">
                 <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
                   H-D Certified
                 </span>
-              ) : (
-                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-                  As-Is
-                </span>
-              )}
-            </div>
-            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-3 leading-tight">
+              </div>
+            )}
+            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-4 leading-tight">
               {heading}
             </h1>
-            <p className="font-subhead uppercase tracking-subhead text-xs text-gray-600 mt-2">
+            <p className="font-subhead uppercase tracking-subhead text-[13px] text-gray-600 mt-3">
               {metaLine}
             </p>
           </div>
@@ -264,9 +258,9 @@ export function ListingDetailPage() {
                   ))}
                 </div>
 
-                <div className="p-6">
+                <div className="p-6 md:p-8">
                   {tab === 'overview' ? (
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-line text-sm">
+                    <p className="text-gray-700 leading-7 whitespace-pre-line text-[16px]">
                       {descriptionBody}
                     </p>
                   ) : (
@@ -351,12 +345,13 @@ export function ListingDetailPage() {
       {/* 6 alternating feature rows — reused from home (compact = no intro) */}
       <BenefitsSection compact />
 
-      <div className="bg-hd-white py-10 text-center border-t border-gray-200">
+      <div className="bg-hd-white py-14 text-center border-t border-gray-200">
         <Link
           to="/search"
-          className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
+          className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
         >
-          View All Approved Used Stock
+          <span>View All Approved Used Stock</span>
+          <span aria-hidden className="text-lg leading-none">&rsaquo;</span>
         </Link>
       </div>
 
@@ -365,6 +360,38 @@ export function ListingDetailPage() {
           geolocation permission. Geolocation (if granted on the
           client) still takes priority over the pincode. */}
       <DealerLocator referencePincode={data.pincode} />
+
+      {/* Mobile-only sticky enquiry bar. Below lg the sidebar gets pushed
+          far down the page once the buyer is reading the Overview / spec
+          tabs; this rail keeps Price + ENQUIRE one tap away regardless
+          of scroll position. Hidden on lg+ where the sidebar stays
+          permanently visible on the right. Adds bottom safe-area padding
+          for iOS notch devices. */}
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-hd-white border-t border-gray-200 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex items-center gap-3 px-4 py-3"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex-1 min-w-0">
+          <p className="font-subhead font-bold tracking-subhead text-lg text-text-on-light leading-none">
+            ₹ {data.price.toLocaleString('en-IN')}
+          </p>
+          <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-wide truncate">
+            EMI from ₹ {emiFrom.toLocaleString('en-IN')}/Mo
+          </p>
+        </div>
+        <a
+          href="#enquire-sidebar"
+          onClick={(e) => {
+            e.preventDefault();
+            document
+              .getElementById('enquire-sidebar')
+              ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-5 py-3 hover:brightness-110 transition"
+        >
+          Enquire Now
+        </a>
+      </div>
     </>
   );
 }
@@ -473,7 +500,7 @@ function DetailSkeleton() {
     <div className="max-w-container mx-auto px-6 py-12">
       <div className="grid lg:grid-cols-[1fr_360px] gap-10">
         <div>
-          <div className="aspect-[4/3] bg-gray-200 animate-pulse" />
+          <div className="aspect-[16/10] bg-gray-200 animate-pulse" />
           <div className="h-12 w-3/4 bg-gray-200 animate-pulse mt-8" />
           <div className="h-8 w-1/3 bg-gray-200 animate-pulse mt-4" />
         </div>

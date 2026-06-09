@@ -69,7 +69,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
         isSold ? 'opacity-90 cursor-pointer' : 'hover:border-hd-orange'
       }`}
     >
-      <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+      <div className="relative aspect-[16/10] bg-gray-100 overflow-hidden">
         <img
           src={listing.primaryImage || '/brand/listing-placeholder.svg'}
           alt={`${listing.year} ${listing.modelName}`}
@@ -113,8 +113,10 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             spacing + dash positioning. SVGs:
               • hd-certified-badge.svg — 152×20 black plate, "H-D" + orange dash + "CERTIFIED"
               • as-is-badge.svg        — 52×27 black plate, "AS" + orange dash + "IS" */}
-        <div className="absolute top-3 left-3">
-          {listing.certificationStatus === 'CPO' ? (
+        {/* Only CPO bikes get a corner badge — AS-IS stays plate-free
+            per client request so the photo reads cleaner. */}
+        {listing.certificationStatus === 'CPO' && (
+          <div className="absolute top-3 left-3">
             <img
               src="/brand/badges/hd-certified-badge.svg"
               alt="H-D Certified"
@@ -123,17 +125,8 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
               height={20}
               decoding="async"
             />
-          ) : (
-            <img
-              src="/brand/badges/as-is-badge.svg"
-              alt="As-Is"
-              className="h-5 w-auto"
-              width={52}
-              height={27}
-              decoding="async"
-            />
-          )}
-        </div>
+          </div>
+        )}
       </div>
       {/* QA BUG_UI_031: card body rebuilt per latest Figma —
             • Title in bold 1903 Sans (kept)
@@ -274,7 +267,7 @@ export function ListingCardSkeleton() {
   // Matches ListingCardItem: sharp corners (no rounded-card) per BUG_UI_005 #3.
   return (
     <div className="bg-hd-white border border-gray-200 overflow-hidden">
-      <div className="aspect-[4/3] bg-gray-200 animate-pulse" />
+      <div className="aspect-[16/10] bg-gray-200 animate-pulse" />
       <div className="p-4 space-y-3">
         <div className="h-3 w-40 bg-gray-200 animate-pulse" />
         <div className="h-3 w-48 bg-gray-200 animate-pulse" />
