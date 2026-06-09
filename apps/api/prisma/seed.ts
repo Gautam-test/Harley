@@ -221,7 +221,24 @@ async function main() {
     },
   });
 
-  for (const l of LISTINGS) {
+  for (const [idx, l] of LISTINGS.entries()) {
+    // BUG-047/053/059: every Download Certificate PDF QA report has
+    // boiled down to "button hidden because registrationNumber is null
+    // on every seed listing". The cert button is correctly gated per
+    // BUG-043 — but with zero seed rows carrying the cert metadata, QA
+    // could never see it. Backfill all CPO seed listings with realistic
+    // certificate metadata so the button is visible by default on the
+    // demo. AS_IS rows stay metadata-less because the cert isn't
+    // applicable.
+    const isCpo = l.certificationStatus === CertStatus.CPO;
+    const certFields = isCpo
+      ? {
+          registrationNumber: `DL${String(10 + idx).padStart(2, '0')}HD${String(1000 + idx).padStart(4, '0')}`,
+          inspectedBy: 'Authorised H-D Technician',
+          certifiedOn: new Date(Date.now() - (30 + idx) * 24 * 60 * 60 * 1000),
+        }
+      : {};
+
     await prisma.listing.upsert({
       where: { vin: l.vin },
       update: {
@@ -236,6 +253,7 @@ async function main() {
         certificationStatus: l.certificationStatus,
         status: ListingStatus.ACTIVE,
         publishedAt: new Date(),
+        ...certFields,
       },
       create: {
         vin: l.vin,
@@ -252,6 +270,7 @@ async function main() {
         certificationStatus: l.certificationStatus,
         status: ListingStatus.ACTIVE,
         publishedAt: new Date(),
+        ...certFields,
       },
     });
   }

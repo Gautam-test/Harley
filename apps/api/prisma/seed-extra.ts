@@ -493,6 +493,19 @@ async function main() {
       const template = LISTING_TEMPLATES[(offset + i) % LISTING_TEMPLATES.length]!;
       const vin = buildVin(template, d.slug);
       const slug = buildSlug(template, vin);
+      // BUG-047/053/059: every CPO listing seeded with realistic cert
+      // metadata so the buyer-PDP Download Certificate PDF button is
+      // visible by default on the demo. AS_IS rows stay blank because
+      // the cert isn't applicable.
+      const isCpo = template.certificationStatus === CertStatus.CPO;
+      const certFields = isCpo
+        ? {
+            registrationNumber: `${d.slug.slice(0, 2).toUpperCase()}${(i + 1).toString().padStart(2, '0')}HD${vin.slice(-4)}`,
+            inspectedBy: 'Authorised H-D Technician',
+            certifiedOn: new Date(Date.now() - (60 + i * 7) * 24 * 60 * 60 * 1000),
+          }
+        : {};
+
       const existing = await prisma.listing.findUnique({ where: { vin } });
       if (existing) {
         await prisma.listing.update({
@@ -509,6 +522,7 @@ async function main() {
             certificationStatus: template.certificationStatus,
             status: ListingStatus.ACTIVE,
             publishedAt: existing.publishedAt ?? new Date(),
+            ...certFields,
           },
         });
         updatedListings += 1;
@@ -531,6 +545,7 @@ async function main() {
             publishedAt: new Date(),
             // owners column added in migration 20260506100000.
             ...({ owners: 1 + (i % 3) } as Record<string, unknown>),
+            ...certFields,
           },
         });
         createdListings += 1;
