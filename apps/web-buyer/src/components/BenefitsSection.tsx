@@ -28,10 +28,10 @@ interface FeatureRow {
 // returning 404 in QA and collapsing rows 3-6 off-screen) is the actual
 // fix for the "halts after row 2" bug — the rows render reliably from
 // the in-repo asset regardless of upstream availability.
-// Each feature row's body is rendered as a scannable bullet list rather
-// than a single paragraph. Bullets are the ORIGINAL copy split sentence
-// by sentence — nothing rewritten or summarised. Punctuation tweaks
-// (full stops at end of each bullet) are the only deltas.
+// Only the "110 Point Pre-Delivery Check" row uses bullets — per client
+// request the other 5 rows stay as a single paragraph body. The bullets
+// on row 1 are the EXACT original sentences from the prior paragraph,
+// just split on sentence boundaries.
 const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
@@ -47,45 +47,37 @@ const FEATURES: FeatureRow[] = [
   {
     title: 'History Check / HPI Check / Insurance Database',
     iconSrc: '/brand/benefits/2.svg',
-    image: '/brand/benefits/feature-images/2.svg',
-    bullets: [
+    body:
       'In the H-D Certified™, motorcycles are offered only with XXXX specification, as sold by Harley-Davidson® India Pvt Ltd (the importer of record).',
-    ],
+    image: '/brand/benefits/feature-images/2.svg',
   },
   {
     title: 'Kilometer Verification Check',
     iconSrc: '/brand/benefits/3.svg',
-    image: '/brand/benefits/feature-images/3.svg',
-    bullets: [
+    body:
       'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
-    ],
+    image: '/brand/benefits/feature-images/3.svg',
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
     iconSrc: '/brand/benefits/4.svg',
+    body:
+      'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee, this can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     image: '/brand/benefits/feature-images/4.svg',
-    bullets: [
-      'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee.',
-      'This can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
-    ],
   },
   {
     title: '12 Month Roadside Assistance',
     iconSrc: '/brand/benefits/5.svg',
+    body:
+      'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7, should you extend your Guarantee then the Assistance package is also extended.',
     image: '/brand/benefits/feature-images/5.svg',
-    bullets: [
-      'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7.',
-      'Should you extend your Guarantee then the Assistance package is also extended.',
-    ],
   },
   {
     title: '12 Month HOG Membership',
     iconSrc: '/brand/benefits/6.svg',
+    body:
+      'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group. Each year you will have the choice of renewing your membership.',
     image: '/brand/benefits/feature-images/6.svg',
-    bullets: [
-      'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group.',
-      'Each year you will have the choice of renewing your membership.',
-    ],
     cta: { label: 'HOG Benefits Click Here', href: HOG_BENEFITS_URL },
   },
 ];
