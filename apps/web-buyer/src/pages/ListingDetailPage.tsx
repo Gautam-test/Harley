@@ -171,7 +171,6 @@ export function ListingDetailPage() {
                 dealerAddress={data.dealerAddress ?? null}
                 dealerPhone={data.dealerPhone ?? null}
                 dealerEmail={data.dealerEmail ?? null}
-                certificationStatus={data.certificationStatus}
               />
             </aside>
           </div>

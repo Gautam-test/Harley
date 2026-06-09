@@ -21,10 +21,6 @@ interface ListingSidebarCardProps {
   dealerAddress?: string | null;
   dealerPhone?: string | null;
   dealerEmail?: string | null;
-  /** When 'CPO', surface the 3-up trust badges (110-pt / 12-mo guarantee /
-   *  roadside) directly under the price so the buyer sees the included
-   *  benefits before scrolling. */
-  certificationStatus?: 'CPO' | 'AS_IS';
 }
 
 // Mirrors the frozen Figma listing-detail right rail exactly:
@@ -45,7 +41,6 @@ export function ListingSidebarCard({
   dealerAddress,
   dealerPhone,
   dealerEmail,
-  certificationStatus,
 }: ListingSidebarCardProps) {
   // No localStorage-driven hints, no my-status pre-check, no popup. The
   // duplicate-by-mobile rule lives entirely on the API: if the buyer
@@ -148,45 +143,10 @@ export function ListingSidebarCard({
             · {EMI_DEFAULTS.months} Months
           </p>
 
-          {/* Trust badges row — surfaces the 3 headline benefits the buyer
-              gets with a CPO bike right at the point of price decision.
-              Hidden for AS_IS listings because they don't carry these
-              warranties. Plain inline SVG icons keep the bundle small. */}
-          {certificationStatus === 'CPO' && (
-            <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-3 gap-2 text-center">
-              <TrustBadge
-                icon={
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M9 12l2 2 4-4" />
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  </svg>
-                }
-                label="110-Pt"
-                sub="Inspected"
-              />
-              <TrustBadge
-                icon={
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                }
-                label="12-Mo"
-                sub="Guarantee"
-              />
-              <TrustBadge
-                icon={
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <circle cx="7" cy="17" r="2" />
-                    <circle cx="17" cy="17" r="2" />
-                    <path d="M5 17H3v-6l2-5h9l4 5h3v6h-2" />
-                  </svg>
-                }
-                label="24/7"
-                sub="Roadside"
-              />
-            </div>
-          )}
+          {/* Trust badges row removed per client request — the 110-Pt /
+              12-Mo / 24/7 chips were hardcoded marketing signals, not
+              per-listing data, so the client preferred to omit them
+              rather than imply per-bike guarantees. */}
         </div>
 
         {/* Dealer block */}
@@ -480,29 +440,3 @@ export function ListingSidebarCard({
   );
 }
 
-// Trust badge — small icon + 2-line label, used in the 3-up grid right
-// under the price block. Icon inherits text colour (hd-orange) via
-// currentColor on the inline SVG.
-function TrustBadge({
-  icon,
-  label,
-  sub,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  sub: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="text-hd-orange w-6 h-6 [&_svg]:w-full [&_svg]:h-full">
-        {icon}
-      </div>
-      <span className="font-subhead font-bold text-[11px] text-text-on-light uppercase tracking-subhead leading-none">
-        {label}
-      </span>
-      <span className="text-[10px] text-gray-500 leading-none uppercase tracking-wide">
-        {sub}
-      </span>
-    </div>
-  );
-}
