@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
+import { Badge, Button, IconButton, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { reverseGeocode } from '../lib/reverseGeocode';
 
@@ -280,6 +280,10 @@ function CreateDealerModal({
   }>({ mode: 'onSubmit', reValidateMode: 'onChange' });
   const [error, setError] = useState<string | null>(null);
   const [pincodeLookup, setPincodeLookup] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  // BUG-053/055 real-time UX: surface the State/City/Pincode mismatch
+  // error inline as the admin fills the form, not just on server
+  // submit. Server-side check still authoritative.
+  const [pincodeMatchError, setPincodeMatchError] = useState<string | null>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
@@ -318,37 +322,52 @@ function CreateDealerModal({
     );
   };
 
-  // Auto-fill City + State when pincode reaches 6 valid digits.
-  // Uses postalpincode.in — free, CORS-enabled, no API key. Only fills
-  // empty fields so the admin can still override after autofill.
+  // Auto-fill City + State when pincode reaches 6 valid digits, AND
+  // detect mismatch when admin typed city/state that don't match the
+  // pincode's dataset. Uses the shared checkPincodeMatch helper from
+  // `@hd-cpo/ui` so the 30-min in-memory cache is shared across forms
+  // and the lookup never thrashes the network.
   const watchedPincode = watch('pincode');
+  const watchedCity = watch('city');
+  const watchedState = watch('state');
   useEffect(() => {
     if (!watchedPincode || !/^\d{6}$/.test(watchedPincode)) {
       setPincodeLookup('idle');
+      setPincodeMatchError(null);
       return;
     }
     let cancelled = false;
     const timer = setTimeout(async () => {
       setPincodeLookup('loading');
-      try {
-        const res = await fetch(`https://api.postalpincode.in/pincode/${watchedPincode}`);
-        const json = (await res.json()) as Array<{ Status: string; PostOffice?: Array<{ District: string; State: string }> }>;
-        if (cancelled) return;
-        const po = json?.[0]?.PostOffice?.[0];
-        if (po) {
-          const current = getValues();
-          if (!current.city) setValue('city', po.District, { shouldValidate: true });
-          if (!current.state) setValue('state', po.State);
-          setPincodeLookup('done');
-        } else {
-          setPincodeLookup('error');
-        }
-      } catch {
-        if (!cancelled) setPincodeLookup('error');
+      const result = await checkPincodeMatch({
+        pincode: watchedPincode,
+        city: watchedCity,
+        state: watchedState,
+      });
+      if (cancelled) return;
+      if (result.status === 'invalid') {
+        setPincodeLookup('error');
+        setPincodeMatchError(result.error ?? 'Invalid pincode.');
+        return;
+      }
+      if (result.status === 'mismatch') {
+        setPincodeLookup('done');
+        setPincodeMatchError(result.error ?? null);
+        return;
+      }
+      // ok — clear mismatch error, autofill any empty fields
+      setPincodeLookup('done');
+      setPincodeMatchError(null);
+      const current = getValues();
+      if (!current.city && result.canonicalCity) {
+        setValue('city', result.canonicalCity, { shouldValidate: true });
+      }
+      if (!current.state && result.canonicalState) {
+        setValue('state', result.canonicalState);
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [watchedPincode, setValue, getValues]);
+  }, [watchedPincode, watchedCity, watchedState, setValue, getValues]);
   const create = useMutation({
     mutationFn: (values: Record<string, unknown>) =>
       api<{ id: string; username: string; generatedPassword: string | null }>('/admin/dealers', {
@@ -556,9 +575,20 @@ function CreateDealerModal({
               }}
             />
             {errors.pincode && <p className="text-danger text-xs mt-1">{errors.pincode.message}</p>}
-            {pincodeLookup === 'loading' && <p className="text-xs text-gray-500 mt-1">Looking up city…</p>}
-            {pincodeLookup === 'done' && <p className="text-xs text-success mt-1">✓ City & State auto-filled</p>}
-            {pincodeLookup === 'error' && <p className="text-xs text-warning mt-1">Pincode not found — fill city manually</p>}
+            {/* BUG-053/055 real-time mismatch error trumps the autofill
+                status hints — show the spec copy in red so it can't be
+                missed before submit. */}
+            {!errors.pincode && pincodeMatchError && (
+              <p className="text-danger text-xs mt-1" role="alert">
+                {pincodeMatchError}
+              </p>
+            )}
+            {!errors.pincode && !pincodeMatchError && pincodeLookup === 'loading' && (
+              <p className="text-xs text-gray-500 mt-1">Looking up city…</p>
+            )}
+            {!errors.pincode && !pincodeMatchError && pincodeLookup === 'done' && (
+              <p className="text-xs text-success mt-1">✓ Pincode matches</p>
+            )}
           </label>
         </div>
         <label className="block">

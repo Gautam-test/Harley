@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm, Controller, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Input, Select } from '@hd-cpo/ui';
+import { Button, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { useOtpStore, type OtpPurpose } from '../store/otp';
 import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
@@ -588,6 +588,35 @@ export function InfoGateModal({
     },
   });
 
+  // BUG-053/055 real-time UX: show the State/City/Pincode mismatch
+  // error inline as the buyer fills the form, not just on submit.
+  // Server-side check still authoritative.
+  const [pincodeMatchError, setPincodeMatchError] = useState<string | null>(null);
+  const watchedPincode = useWatch({ control, name: 'pincode' });
+  const watchedCity = useWatch({ control, name: 'city' });
+  const watchedState = useWatch({ control, name: 'state' });
+  useEffect(() => {
+    if (!watchedPincode || !/^\d{6}$/.test(watchedPincode)) {
+      setPincodeMatchError(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await checkPincodeMatch({
+        pincode: watchedPincode,
+        city: watchedCity,
+        state: watchedState,
+      });
+      if (cancelled) return;
+      setPincodeMatchError(
+        result.status === 'mismatch' || result.status === 'invalid'
+          ? result.error ?? null
+          : null,
+      );
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedPincode, watchedCity, watchedState, control]);
+
   // Watch the selected state so the City dropdown can filter to its
   // matching cities. Empty state → empty city list (placeholder only).
   const selectedState = useWatch({ control, name: 'state' });
@@ -973,12 +1002,16 @@ export function InfoGateModal({
                     })()}
                   />
                 </Labelled>
-                <Labelled label="Pincode" error={errors.pincode?.message} show={false}>
+                <Labelled
+                  label="Pincode"
+                  error={errors.pincode?.message ?? (pincodeMatchError ?? undefined)}
+                  show={false}
+                >
                   <Input
                     placeholder="Pincode (6 digits)"
                     inputMode="numeric"
                     maxLength={6}
-                    aria-invalid={Boolean(errors.pincode)}
+                    aria-invalid={Boolean(errors.pincode || pincodeMatchError)}
                     {...(() => {
                       const r = register('pincode', optionalPincodeRules);
                       return {

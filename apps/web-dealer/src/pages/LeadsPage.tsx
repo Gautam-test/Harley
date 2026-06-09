@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Badge, Button, IconButton, Input, Select } from '@hd-cpo/ui';
+import { Badge, Button, IconButton, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api, ApiError } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
@@ -48,6 +48,38 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'buyer', label: 'Buyer' },
   { id: 'trade-in', label: 'Seller' },
 ];
+
+// BUG-053/055 shared hook: returns the live "Pincode does not match
+// city/state" error string for a form, or null when the trio is OK or
+// not yet checkable. Used by both AddBuyerEnquiryModal and
+// AddSellerEnquiryModal — same logic, same UX. Debounced 400ms so a
+// fast typist doesn't thrash the network; result cached 30 min by the
+// shared checkPincodeMatch helper from @hd-cpo/ui.
+function usePincodeMatchError(
+  pincode: string,
+  city: string,
+  state: string,
+): string | null {
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pincode || !/^\d{6}$/.test(pincode)) {
+      setErr(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await checkPincodeMatch({ pincode, city, state });
+      if (cancelled) return;
+      setErr(
+        result.status === 'mismatch' || result.status === 'invalid'
+          ? result.error ?? null
+          : null,
+      );
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [pincode, city, state]);
+  return err;
+}
 
 const TAB_SUBTITLE: Record<Tab, string> = {
   all: 'Every buyer + seller enquiry routed to your dealership in one feed. Use the tabs to narrow by kind, or + Add Enquiry to log a phone call or walk-in.',
@@ -598,6 +630,8 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
   // phone number to try a different one.
   const [dupError, setDupError] = useState<string | null>(null);
   const [showFieldErrors, setShowFieldErrors] = useState(false);
+  // BUG-053/055: real-time pincode/city/state mismatch error.
+  const pincodeMatchError = usePincodeMatchError(form.pincode, form.city, form.state);
 
   // Per-field validation. Required fields are name + phone + email +
   // listingId + source. City / state / pincode / budget / message are
@@ -842,7 +876,11 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 aria-invalid={Boolean(errFor('city'))}
               />
             </Field>
-            <Field label="PIN code" error={errFor('pincode')}>
+            {/* BUG-053/055: pincode-vs-city/state mismatch shown inline
+                in real time. Existing per-field validator stays as the
+                primary error, pincodeMatchError as the fallback so a
+                bad-pincode (e.g. starts with 0) still takes precedence. */}
+            <Field label="PIN code" error={errFor('pincode') ?? pincodeMatchError ?? undefined}>
               <Input
                 value={form.pincode}
                 onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}
@@ -994,6 +1032,8 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [dupError, setDupError] = useState<string | null>(null);
   const [showFieldErrors, setShowFieldErrors] = useState(false);
+  // BUG-053/055: real-time pincode/city/state mismatch error.
+  const pincodeMatchError = usePincodeMatchError(form.pincode, form.city, form.state);
 
   // Per-field validation. Required: username + phone + email + city +
   // bikeModel + vin + source. Year / kms / owner / asking-price are
@@ -1202,7 +1242,11 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 aria-invalid={Boolean(errFor('city'))}
               />
             </Field>
-            <Field label="PIN code" error={errFor('pincode')}>
+            {/* BUG-053/055: pincode-vs-city/state mismatch shown inline
+                in real time. Existing per-field validator stays as the
+                primary error, pincodeMatchError as the fallback so a
+                bad-pincode (e.g. starts with 0) still takes precedence. */}
+            <Field label="PIN code" error={errFor('pincode') ?? pincodeMatchError ?? undefined}>
               <Input
                 value={form.pincode}
                 onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}

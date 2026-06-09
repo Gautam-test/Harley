@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button, Input, Select } from '@hd-cpo/ui';
+import { Button, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { HD_MODEL_CATALOG } from '../lib/models';
@@ -100,6 +100,32 @@ export function SellBikeModal() {
   const [submitting, setSubmitting] = useState(false);
   const [geoBusy, setGeoBusy] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  // BUG-053/055: real-time inline pincode-mismatch error.
+  const [pincodeMatchError, setPincodeMatchError] = useState<string | null>(null);
+  const watchedPincode = useWatch({ control, name: 'pincode' });
+  const watchedCity = useWatch({ control, name: 'city' });
+  const watchedState = useWatch({ control, name: 'state' });
+  useEffect(() => {
+    if (!watchedPincode || !/^\d{6}$/.test(watchedPincode)) {
+      setPincodeMatchError(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const result = await checkPincodeMatch({
+        pincode: watchedPincode,
+        city: watchedCity,
+        state: watchedState,
+      });
+      if (cancelled) return;
+      setPincodeMatchError(
+        result.status === 'mismatch' || result.status === 'invalid'
+          ? result.error ?? null
+          : null,
+      );
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [watchedPincode, watchedCity, watchedState, control]);
   // QA RE-OPEN bug #2: preserve the (otpId, sentAt) from the first
   // /otp/send across the Edit-Details → Resubmit lifecycle. The OTP
   // modal unmounts when the user taps Edit Details; without this
@@ -543,12 +569,15 @@ export function SellBikeModal() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Pin Code" error={errors.pincode?.message}>
+                <Labelled
+                  label="Pin Code"
+                  error={errors.pincode?.message ?? (pincodeMatchError ?? undefined)}
+                >
                   <Input
                     inputMode="numeric"
                     maxLength={6}
                     placeholder="110053"
-                    aria-invalid={Boolean(errors.pincode)}
+                    aria-invalid={Boolean(errors.pincode || pincodeMatchError)}
                     {...(() => {
                       const r = register('pincode', optionalPincodeRules);
                       return {
