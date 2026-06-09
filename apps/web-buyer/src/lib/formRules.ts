@@ -20,7 +20,10 @@ const NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/;
 // so the displayed format "+91 70156646715" passes client-side validation.
 // The space is stripped before the value goes to the API (see usages of
 // the toApiPhone helper in each modal).
-const PHONE_REGEX = /^\+91\s?[0-9]{10}$/;
+// BUG-058: first subscriber digit must be 6/7/8/9 (Indian mobile range).
+// Earlier regex accepted any 10 digits — invalid landline-format / service-
+// code numbers slipped into the buyer/seller forms.
+const PHONE_REGEX = /^\+91\s?[6-9][0-9]{9}$/;
 // Tighter than the trivial /^\S+@\S+\.\S+$/ — rejects spaces in the local
 // part, requires a TLD of at least 2 chars, no consecutive dots in the
 // domain. Still pragmatic enough to accept every real-world email.
@@ -64,7 +67,7 @@ export const phoneRules = {
   validate: {
     format: (v: string) =>
       PHONE_REGEX.test(v) ||
-      'Enter a valid Indian mobile: +91 followed by 10 digits',
+      'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
   },
 } as const;
 

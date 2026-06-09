@@ -103,15 +103,14 @@ export function App() {
           {/* Settings page retired May 2026; replaced by view-only Profile. */}
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<Navigate to="/profile" replace />} />
-          {/* QA BUG-014: authed catch-all renders a static 404 instead
-              of silently redirecting to /dashboard (which would fire
-              every dashboard query for a clearly invalid URL). */}
-          <Route path="*" element={<NotFoundPage />} />
         </Route>
       ) : null}
-      {!isAuthed && (
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      )}
+      {/* BUG-057: catch-all renders the 404 page as a STANDALONE
+          layout (no DealerShell sidebar / profile chip). NotFoundPage
+          branches on auth — authed dealer sees "Back to Dashboard"
+          + quick-jump; unauthed visitor sees only "Go to Dealer
+          Login" so no protected route names or layout chrome leak. */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

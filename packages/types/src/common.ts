@@ -1,8 +1,16 @@
 import { z } from 'zod';
 
+// BUG-058: Indian mobile numbers must start with 6, 7, 8, or 9. The
+// previous regex accepted any 10-digit sequence (including 0-5 start
+// which is reserved for landline / service codes) — leading to invalid
+// numbers slipping into dealer + buyer + seller records. Message is
+// the spec-mandated copy so the frontend can render it verbatim.
 export const phoneIN = z
   .string()
-  .regex(/^\+91[0-9]{10}$/, 'Phone must be +91 followed by 10 digits');
+  .regex(
+    /^\+91[6-9][0-9]{9}$/,
+    'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
+  );
 
 export const pincodeIN = z.string().regex(/^[0-9]{6}$/, 'Pincode must be 6 digits');
 

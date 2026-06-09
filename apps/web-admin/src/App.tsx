@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DealersPage } from './pages/DealersPage';
@@ -48,18 +48,17 @@ export function App() {
           {/* QA BUG-017: /content route removed entirely. */}
           {/* /audit route removed — Audit section dropped from admin scope. */}
           <Route path="/profile" element={<ProfilePage />} />
-          {/* QA BUG-014: authed catch-all renders a static 404 instead
-              of silently redirecting to /dashboard (which would fire
-              every dashboard query for a clearly invalid URL). */}
-          <Route path="*" element={<NotFoundPage />} />
         </Route>
       ) : null}
-      {/* Unauthed catch-all still funnels to /login — there is no public
-          admin surface to expose, and the 404 page itself depends on the
-          shell + sidebar so it isn't safe to render unauthenticated. */}
-      {!isAuthed && (
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      )}
+      {/* BUG-057: catch-all renders the 404 page as a STANDALONE
+          layout (own header + footer, no AdminShell sidebar / profile
+          chip). NotFoundPage internally branches on the auth store —
+          authed admin sees "Back to Dashboard" + quick-jump links;
+          unauthed visitor sees only "Go to Admin Login" so no
+          protected route names or layout chrome are disclosed. The
+          rule applies whether or not the visitor is authed, which is
+          why it lives outside the shell block. */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

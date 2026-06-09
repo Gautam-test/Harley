@@ -478,9 +478,11 @@ function CreateDealerModal({
               className="pl-12"
               {...register('phone', {
                 required: 'Phone number is required',
+                // BUG-058: first digit must be 6/7/8/9 (Indian mobile range).
                 pattern: {
-                  value: /^[0-9]{10}$/,
-                  message: 'Phone must be exactly 10 digits',
+                  value: /^[6-9][0-9]{9}$/,
+                  message:
+                    'Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
                 },
               })}
               // Real-time strip non-numeric so the input visually
