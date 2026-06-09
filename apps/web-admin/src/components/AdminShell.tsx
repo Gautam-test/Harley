@@ -154,9 +154,10 @@ export function AdminShell() {
                 src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
                 alt="H-D Certified™"
                 className="h-8 w-auto"
-                // Intrinsic aspect for the new brand-supplied SVG (158×24).
-                // Keep height={32} to match h-8 so layout shift is avoided.
-                width={211}
+                // Shared brand-supplied wordmark SVG (430×80 vector — same
+                // file the buyer header serves). Height locked to h-8/32px
+                // so width auto-computes to ~172px and avoids layout shift.
+                width={172}
                 height={32}
                 decoding="async"
               />
