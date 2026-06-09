@@ -179,7 +179,19 @@ async function main() {
   const dealerPasswordHash = await bcrypt.hash('Dealer@123!', 12);
   const dealer = await prisma.dealer.upsert({
     where: { username: 'gurgaon-hd' },
-    update: {},
+    // Refresh contact fields on re-seed. Previously `update: {}` meant
+    // a Capital row created before the `email` column existed kept its
+    // null forever — every deploy left the View Dealer Details modal
+    // without an email row. Now the upsert refreshes the bits that
+    // commonly change between seed iterations.
+    update: {
+      email: 'sales@capital-hd.example.in',
+      phone: '+911244567890',
+      address: 'Plot 12, Sector 14',
+      city: 'Gurgaon',
+      state: 'Haryana',
+      pincode: '122001',
+    },
     create: {
       username: 'gurgaon-hd',
       passwordHash: dealerPasswordHash,
@@ -202,7 +214,16 @@ async function main() {
   // Second dealer for the locator demo.
   await prisma.dealer.upsert({
     where: { username: 'mumbai-hd' },
-    update: {},
+    // See gurgaon-hd above — refresh contact fields so a row created
+    // pre-email-column gets backfilled on the next deploy.
+    update: {
+      email: 'sales@7islands-hd.example.in',
+      phone: '+912242233344',
+      address: 'Linking Road, Bandra West',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400050',
+    },
     create: {
       username: 'mumbai-hd',
       passwordHash: dealerPasswordHash,
