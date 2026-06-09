@@ -131,16 +131,20 @@ export function HeroSearch() {
             larger fixed flag height than the hero canvas (560px flag
             vs 460px hero on lg). The parent <section> intentionally
             DROPS overflow-hidden so the flag tail can spill out. */}
-        <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
-          <img
-            src="/brand/hd-flag.svg"
-            alt="H-D Bar & Shield flag"
-            className="h-[360px] sm:h-[420px] md:h-[480px] lg:h-[560px] w-auto"
-            width={85}
-            height={627}
-            decoding="async"
-          />
-        </div>
+        {/* Temporarily hidden per client request — orange H-D Bar & Shield
+            flag accent. Re-enable by removing this comment wrapper. */}
+        {false && (
+          <div className="absolute top-0 left-0 z-20 hidden sm:block pointer-events-none">
+            <img
+              src="/brand/hd-flag.svg"
+              alt="H-D Bar & Shield flag"
+              className="h-[360px] sm:h-[420px] md:h-[480px] lg:h-[560px] w-auto"
+              width={85}
+              height={627}
+              decoding="async"
+            />
+          </div>
+        )}
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url("${HERO_IMG}")` }}

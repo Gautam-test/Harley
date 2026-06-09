@@ -20,6 +20,7 @@ interface ListingSidebarCardProps {
   dealerPincode?: string | null;
   dealerAddress?: string | null;
   dealerPhone?: string | null;
+  dealerEmail?: string | null;
 }
 
 // Mirrors the frozen Figma listing-detail right rail exactly:
@@ -39,6 +40,7 @@ export function ListingSidebarCard({
   dealerPincode,
   dealerAddress,
   dealerPhone,
+  dealerEmail,
 }: ListingSidebarCardProps) {
   // No localStorage-driven hints, no my-status pre-check, no popup. The
   // duplicate-by-mobile rule lives entirely on the API: if the buyer
@@ -374,19 +376,34 @@ export function ListingSidebarCard({
                   </div>
                 )}
               </div>
-              {dealerPhone && (
-                <div>
-                  <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
-                    Phone
-                  </p>
-                  <a
-                    href={`tel:${dealerPhone.replace(/\s+/g, '')}`}
-                    className="text-hd-orange font-mono text-base hover:underline"
-                  >
-                    {dealerPhone}
-                  </a>
-                </div>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {dealerPhone && (
+                  <div>
+                    <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                      Phone
+                    </p>
+                    <a
+                      href={`tel:${dealerPhone.replace(/\s+/g, '')}`}
+                      className="text-hd-orange font-mono text-base hover:underline break-all"
+                    >
+                      {dealerPhone}
+                    </a>
+                  </div>
+                )}
+                {dealerEmail && (
+                  <div>
+                    <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+                      Email
+                    </p>
+                    <a
+                      href={`mailto:${dealerEmail}`}
+                      className="text-hd-orange text-sm hover:underline break-all"
+                    >
+                      {dealerEmail}
+                    </a>
+                  </div>
+                )}
+              </div>
 
               <div className="aspect-[16/9] border border-gray-200 overflow-hidden bg-surface-light mt-4">
                 <iframe

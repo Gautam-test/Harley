@@ -343,6 +343,9 @@ listingsRouter.get('/:slug', async (req, res, next) => {
       // can render the actual selling dealer's contact card.
       dealerAddress: (listing.dealer as { address?: string | null }).address ?? null,
       dealerPhone: (listing.dealer as { phone?: string | null }).phone ?? null,
+      // Selling dealer email — surfaced on the "View Dealer Details" modal
+      // alongside phone so the buyer can reach the dealer by either channel.
+      dealerEmail: (listing.dealer as { email?: string | null }).email ?? null,
     });
   } catch (e) {
     next(e);

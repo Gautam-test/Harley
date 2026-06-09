@@ -41,6 +41,7 @@ interface ListingDetail {
   // dealer's contact card on the "View Dealer Details" modal.
   dealerAddress?: string | null;
   dealerPhone?: string | null;
+  dealerEmail?: string | null;
   registrationNumber?: string | null;
 }
 
@@ -169,6 +170,7 @@ export function ListingDetailPage() {
                 dealerPincode={data.pincode ?? null}
                 dealerAddress={data.dealerAddress ?? null}
                 dealerPhone={data.dealerPhone ?? null}
+                dealerEmail={data.dealerEmail ?? null}
               />
             </aside>
           </div>
