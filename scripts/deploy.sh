@@ -48,6 +48,15 @@ pnpm --filter @hd-cpo/api prisma:generate
 # generic INVALID_CREDENTIALS branch and the dealer can't sign in.
 # Setting SEED_EXTRA=0 disables the step if the QA team ever needs
 # a clean 2-dealer environment.
+# 3c-pre. Main seed (Capital Gurgaon + Seven Islands Mumbai dealers,
+# bootstrap admin, sample listings). Idempotent — uses dealer.upsert
+# keyed by username. Previously only seed-extra ran on deploy, which
+# meant changes to the main seed (e.g. backfilling the dealer email
+# column after the schema added it) never reached demo. Same `|| echo`
+# guard so a seed hiccup never kills the API rebuild step below.
+echo "→ Running main seed (bootstrap admin + 2 flagship dealers)..."
+pnpm --filter @hd-cpo/api prisma:seed || echo "⚠ main seed skipped (non-fatal)"
+
 if [ "${SEED_EXTRA:-1}" = "1" ]; then
   echo "→ Seeding extra dealers + listings (idempotent upsert)..."
   # `|| true` — seed-extra is non-critical and has been observed to
