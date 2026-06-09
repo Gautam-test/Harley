@@ -8,7 +8,9 @@ import { HOG_BENEFITS_URL } from '../lib/constants';
 
 interface FeatureRow {
   title: string;
-  body: string;
+  /** Legacy single-paragraph body. Kept optional for backward compatibility
+   *  — when `bullets` is present it wins. */
+  body?: string;
   bullets?: string[];
   image: string;
   /** Path under /brand/benefits/ to the brand-supplied SVG icon.
@@ -26,48 +28,68 @@ interface FeatureRow {
 // returning 404 in QA and collapsing rows 3-6 off-screen) is the actual
 // fix for the "halts after row 2" bug — the rows render reliably from
 // the in-repo asset regardless of upstream availability.
+// Each feature row's body is rendered as a scannable bullet list rather
+// than a single paragraph — easier to skim on the home page. The legacy
+// `body` field is kept on the type for safety; bullets are preferred
+// when both are present.
 const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
     iconSrc: '/brand/benefits/1.svg',
-    body:
-      'Inspection of the technical condition of the motorcycle is the same for all authorised dealers. It amounts to a check of 110 points covering the whole operation of the machine. A detailed record signed by the performing technician is available to the customer from each inspection. Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
     image: '/brand/benefits/feature-images/1.svg',
+    bullets: [
+      'Same standard inspection across all authorised dealers.',
+      '110-point check covers the full mechanical and electrical operation of the machine.',
+      'Detailed record signed by the performing technician, handed to every customer.',
+      'Only after passing can a machine be classed as H-D Certified™ and qualify for the other benefits.',
+    ],
   },
   {
     title: 'History Check / HPI Check / Insurance Database',
     iconSrc: '/brand/benefits/2.svg',
-    body:
-      'In the H-D Certified™, motorcycles are offered only with XXXX specification, as sold by Harley-Davidson® India Pvt Ltd (the importer of record).',
     image: '/brand/benefits/feature-images/2.svg',
+    bullets: [
+      'Background check against finance, theft and insurance write-off databases.',
+      'Only motorcycles originally sold by Harley-Davidson® India Pvt Ltd (the importer of record) are accepted.',
+    ],
   },
   {
     title: 'Kilometer Verification Check',
     iconSrc: '/brand/benefits/3.svg',
-    body:
-      'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
     image: '/brand/benefits/feature-images/3.svg',
+    bullets: [
+      'Online check cross-references the odometer reading against service records.',
+      'Verified KM is confirmed in writing as part of the sale.',
+    ],
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
     iconSrc: '/brand/benefits/4.svg',
-    body:
-      'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee, this can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
     image: '/brand/benefits/feature-images/4.svg',
+    bullets: [
+      'Minimum 12-month guarantee on mechanical and electrical components.',
+      'Optional extension beyond 12 months for added cover.',
+      'Protects against unforeseen repair expense.',
+    ],
   },
   {
     title: '12 Month Roadside Assistance',
     iconSrc: '/brand/benefits/5.svg',
-    body:
-      'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7, should you extend your Guarantee then the Assistance package is also extended.',
     image: '/brand/benefits/feature-images/5.svg',
+    bullets: [
+      '24/7 Roadside Assistance, recovery and onward travel when required.',
+      'Provided by Australia Wide Assist as part of the package.',
+      'Cover extends automatically if you extend your Guarantee.',
+    ],
   },
   {
     title: '12 Month HOG Membership',
     iconSrc: '/brand/benefits/6.svg',
-    body:
-      'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group. Each year you will have the choice of renewing your membership.',
     image: '/brand/benefits/feature-images/6.svg',
+    bullets: [
+      'First 12 months’ membership of the Harley-Davidson® Owners Group included.',
+      'Renewable each year at your option.',
+    ],
     cta: { label: 'HOG Benefits Click Here', href: HOG_BENEFITS_URL },
   },
 ];
@@ -203,7 +225,12 @@ function FeatureSection({
     // #F5F5F5, alternating. Even indices get white, odd indices grey
     // — flipped from the previous pattern that started grey-first.
     <section
-      className="py-14 md:py-20"
+      // Tighter vertical padding so each row is ~60-70% of viewport
+      // height — when the buyer scrolls to one row, slivers of the prior
+      // and next rows (each with its alternating bg colour) peek above
+      // and below. Signals "more content here" without needing chevrons
+      // or a scroll-snap container.
+      className="py-8 md:py-10"
       style={{ backgroundColor: index % 2 === 1 ? '#F5F5F5' : '#FFFFFF' }}
     >
       <div
@@ -217,7 +244,7 @@ function FeatureSection({
             no height and the visible page appeared to "halt early"
             after the 2nd row. Fallback to a local placeholder + bg
             colour on the wrapper guarantees every row paints. */}
-        <div className="aspect-[4/3] overflow-hidden bg-gray-200">
+        <div className="aspect-[16/10] overflow-hidden bg-gray-200">
           <img
             src={feature.image}
             alt=""
@@ -261,7 +288,21 @@ function FeatureSection({
               <h3 className="font-subhead font-bold tracking-subhead uppercase text-lg md:text-xl text-text-on-light leading-tight">
                 {feature.title}
               </h3>
-              <p className="text-[18px] text-gray-600 mt-3 leading-relaxed">{feature.body}</p>
+              {/* Prefer bullet list when present — easier to scan than a
+                  block paragraph. Legacy `body` field still supported for
+                  rows that haven't been migrated. Orange disc markers
+                  match the home Overview list. */}
+              {feature.bullets && feature.bullets.length > 0 ? (
+                <ul className="mt-3 text-[16px] text-gray-600 leading-relaxed space-y-2 list-disc pl-5 marker:text-hd-orange">
+                  {feature.bullets.map((b) => (
+                    <li key={b} className="pl-1">
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              ) : feature.body ? (
+                <p className="text-[18px] text-gray-600 mt-3 leading-relaxed">{feature.body}</p>
+              ) : null}
               {feature.cta && (
                 <a
                   href={feature.cta.href}
