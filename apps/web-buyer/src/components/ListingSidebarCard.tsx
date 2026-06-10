@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { formatLeadId } from '../lib/leadId';
@@ -271,10 +272,12 @@ export function ListingSidebarCard({
                   </div>
                 </div>
 
-                {/* BUG-061: Track Your Enquiry button removed with
-                    the feature. The reference ID above is still copyable
-                    so the buyer can quote it to the dealer over phone
-                    or email. */}
+                <Link
+                  to={`/track?id=${formatLeadId('buyer', submitted.id)}`}
+                  className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
+                >
+                  Track Your Enquiry →
+                </Link>
               </div>
             </div>
           )}
