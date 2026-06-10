@@ -631,10 +631,10 @@ export function SellBikeModal() {
                 />
               </Labelled>
 
-              {/* "Looking for upgrade?" — simple Yes / No */}
+              {/* "Are you looking for an upgrade?" — simple Yes / No */}
               <div>
-                <p className="font-subhead font-bold tracking-subhead uppercase text-[11px] text-text-on-light mb-2">
-                  Looking for upgrade?
+                <p className="font-subhead font-bold tracking-subhead text-[11px] text-text-on-light mb-2">
+                  Are you looking for an upgrade?
                 </p>
                 <div className="flex gap-6">
                   {[

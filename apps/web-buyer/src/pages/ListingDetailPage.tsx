@@ -184,33 +184,35 @@ export function ListingDetailPage() {
             </aside>
           </div>
 
-          {/* Title row — only CPO bikes carry the H-D Certified chip;
-              AS-IS listings render no badge per client request. */}
-          <div className="mt-10">
-            {data.certificationStatus === 'CPO' && (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
-                  H-D Certified
-                </span>
-              </div>
-            )}
-            <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-4 leading-tight">
-              {heading}
-            </h1>
-            <p className="font-subhead uppercase tracking-subhead text-[13px] text-gray-600 mt-3">
-              {metaLine}
-            </p>
-          </div>
-
-          {/* Spec rows + EMI calculator */}
-          <div className="mt-8 grid lg:grid-cols-[1fr_360px] gap-8 items-start">
+          {/* Title + Spec rows + EMI calculator — single grid so the EMI
+              Calculator starts horizontally aligned with the H1 heading.
+              Left column: CPO chip → H1 → meta line → spec row → tabs.
+              Right column: EMI calculator (sticky). */}
+          <div className="mt-10 grid lg:grid-cols-[1fr_360px] gap-8 items-start">
             <div>
+              {/* Title row — only CPO bikes carry the H-D Certified chip;
+                  AS-IS listings render no badge per client request. */}
+              {data.certificationStatus === 'CPO' && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="inline-block bg-hd-black text-hd-white font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5">
+                    H-D Certified
+                  </span>
+                </div>
+              )}
+              <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-4 leading-tight">
+                {heading}
+              </h1>
+              <p className="font-subhead uppercase tracking-subhead text-[13px] text-gray-600 mt-3">
+                {metaLine}
+              </p>
+
               {/* QA NEW: single comprehensive spec highlights grid per
                   Figma — YEAR, MODEL, CATEGORY, KMS, OWNERS, INSPECTION,
                   MILEAGE, COLOUR, LOCATION, VEHICLE REGISTRATION. Five
                   columns on lg+, two on mobile. The earlier 3-row stack
                   was missing Model / Category / Mileage / Colour /
                   Vehicle Registration. */}
+              <div className="mt-8">
               <SpecRow
                 items={[
                   { label: 'Year', value: String(data.year) },
@@ -244,6 +246,7 @@ export function ListingDetailPage() {
                 ]}
                 full
               />
+              </div>
 
               {/* QA latest: tabs + content rendered as ELEVATED white
                   card layered on the soft #F4F4F4 page canvas. Tab
@@ -354,7 +357,7 @@ export function ListingDetailPage() {
       {/* 6 alternating feature rows — CPO bikes only (not shown for Pre-Owned AS_IS) */}
       {data.certificationStatus === 'CPO' && <BenefitsSection compact />}
 
-      <div className="bg-hd-white py-14 text-center border-t border-gray-200">
+      <div className="bg-hd-white py-6 text-center border-t border-gray-200">
         <Link
           to="/search"
           className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
