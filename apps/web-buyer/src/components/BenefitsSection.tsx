@@ -36,7 +36,7 @@ const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
     iconSrc: '/brand/benefits/1.svg',
-    image: '/brand/benefits/feature-images/1.svg',
+    image: '/brand/benefits/feature-images/1.jpg',
     bullets: [
       'Inspection of the technical condition of the motorcycle is the same for all authorised dealers.',
       'It amounts to a check of 110 points covering the whole operation of the machine.',
@@ -50,35 +50,35 @@ const FEATURES: FeatureRow[] = [
     iconSrc: '/brand/benefits/2.svg',
     body:
       'Motorcycles provided by H-D Certified are supplied with all required documents and proof.',
-    image: '/brand/benefits/feature-images/2.svg',
+    image: '/brand/benefits/feature-images/2.jpg',
   },
   {
     title: 'Kilometer Verification Check',
     iconSrc: '/brand/benefits/3.svg',
     body:
       'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
-    image: '/brand/benefits/feature-images/3.svg',
+    image: '/brand/benefits/feature-images/3.jpg',
   },
   {
     title: '12 Month Comprehensive Mechanical & Electrical Component Guarantee',
     iconSrc: '/brand/benefits/4.svg',
     body:
       'Once the machine has been H-D Certified™ we back this with a minimum 12 month Guarantee, this can be extended beyond the 12 months to provide you with added protection against unforeseen expense.',
-    image: '/brand/benefits/feature-images/4.svg',
+    image: '/brand/benefits/feature-images/4.jpg',
   },
   {
     title: '12 Month Roadside Assistance',
     iconSrc: '/brand/benefits/5.svg',
     body:
       'In addition to the 12 month Guarantee we provide Roadside Assistance (the Roadside assistance package provider is Australia Wide Assist), Recovery and Onward Travel if required 24/7, should you extend your Guarantee then the Assistance package is also extended.',
-    image: '/brand/benefits/feature-images/5.svg',
+    image: '/brand/benefits/feature-images/5.jpg',
   },
   {
     title: '12 Month HOG Membership',
     iconSrc: '/brand/benefits/6.svg',
     body:
       'As a H-D Certified™ owner you will receive the first 12 months’ membership of the Harley-Davidson® Owners Group. Each year you will have the choice of renewing your membership.',
-    image: '/brand/benefits/feature-images/6.svg',
+    image: '/brand/benefits/feature-images/6.jpg',
     cta: { label: 'HOG Benefits Click Here', href: HOG_BENEFITS_URL },
   },
 ];
@@ -225,7 +225,6 @@ function FeatureSection({
           <img
             src={feature.image}
             alt=""
-            loading="lazy"
             className="w-full h-full object-cover"
             onError={(e) => {
               const img = e.currentTarget;
