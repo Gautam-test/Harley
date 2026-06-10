@@ -245,25 +245,33 @@ export function SellBikeModal() {
     setError(null);
     try {
       const v = getValues();
+      const payload = {
+        username: v.username,
+        bikeModel: v.bikeModel,
+        // Client feedback #17: VIN is optional — omit when blank so the
+        // API's optional vin field isn't given an empty string.
+        ...(v.vin.trim() ? { vin: v.vin.trim().toUpperCase() } : {}),
+        phone: toApiPhone(data.phone),
+        email: v.email,
+        city: v.city || 'Unknown',
+        dealerId: v.dealerId || undefined,
+        // Client feedback #16: upgrade timeline captured in notes.
+        ...(v.upgradeTimeline ? { upgradeTimeline: v.upgradeTimeline } : {}),
+      };
+      // DEBUG: log the exact payload so we can see what the API rejects.
+      console.log('[SellBike] POST /leads/trade-in payload:', JSON.stringify(payload, null, 2));
       const res = await api<{ id: string }>('/leads/trade-in', {
         method: 'POST',
         withOtpToken: true,
-        body: JSON.stringify({
-          username: v.username,
-          bikeModel: v.bikeModel,
-          // Client feedback #17: VIN is optional — omit when blank so the
-          // API's optional vin field isn't given an empty string.
-          ...(v.vin.trim() ? { vin: v.vin.trim().toUpperCase() } : {}),
-          phone: toApiPhone(data.phone),
-          email: v.email,
-          city: v.city || 'Unknown',
-          dealerId: v.dealerId || undefined,
-          // Client feedback #16: upgrade timeline captured in notes.
-          ...(v.upgradeTimeline ? { upgradeTimeline: v.upgradeTimeline } : {}),
-        }),
+        body: JSON.stringify(payload),
       });
       setSubmitted({ id: res.id });
     } catch (e) {
+      // Show field-level Zod details when available so we can debug which
+      // field the API is rejecting.
+      if (e instanceof ApiError) {
+        console.error('[SellBike] API error:', e.code, e.message);
+      }
       setError(e instanceof ApiError ? e.message : 'Could not submit');
     } finally {
       setSubmitting(false);
