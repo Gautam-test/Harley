@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Select } from '@hd-cpo/ui';
 import { EMI_DEFAULTS } from '../lib/emi';
 import { HD_FAMILIES, modelsForFamily } from '../lib/models';
+import { api } from '../lib/api';
 
 const COLOURS = ['', 'Vivid Black', 'Pearl White', 'Red', 'Blue', 'Silver', 'Orange', 'Black Denim', 'Industrial Yellow'];
 
@@ -48,32 +49,39 @@ const YEAR_OPTIONS = (() => {
 // Defaults sit at the slider MAX, so "no filter applied" is the resting
 // state; the form skips forwarding the param when value === max
 // (see onSubmit).
-const PRICE_MAX = 5_000_000;
-const PRICE_MIN = 500_000;
-// QA latest: Km Driven upper cap raised to 500,000 KM per Figma label.
-// Previously KMS_MAX=80,000 with a visually-aligned 5,000 KM cap label —
-// the cap-label spec changed to 500,000 KM so the slider itself now has
-// to travel that far. Both the underlying max and the displayed boundary
-// marker share the same number to avoid the "drag hits an invisible
-// wall" surprise.
-const KMS_MAX = 500_000;
-const KMS_MIN = 89;
-const KMS_LABEL_MAX = 500_000;
+// Client feedback #10: these are now defaults only — the component fetches
+// live min/max from /api/v1/listings/filter-ranges on mount and updates
+// slider bounds dynamically based on actual dealer inventory.
+const PRICE_MAX_DEFAULT = 5_000_000;
+const PRICE_MIN_DEFAULT = 500_000;
+const KMS_MAX_DEFAULT = 500_000;
+const KMS_MIN_DEFAULT = 89;
 const MONTHLY_MAX = 100_000;
 const MONTHLY_MIN = 5_000;
 
-const formDefaults = (params: URLSearchParams): FormValues => ({
-  searchBy: (params.get('searchBy') as 'cash' | 'monthly') || 'cash',
-  pincode: params.get('pincode') ?? '',
-  distance: params.get('distance') ?? '',
-  model: params.get('model') ?? '',
-  minYear: params.get('minYear') ?? '',
-  colour: params.get('colour') ?? '',
-  cert: (params.get('cert') as FormValues['cert']) ?? '',
-  maxPrice: params.get('maxPrice') ?? String(PRICE_MAX),
-  maxMonthly: params.get('maxMonthly') ?? String(MONTHLY_MAX),
-  maxKms: params.get('maxKms') ?? String(KMS_MAX),
-});
+interface FilterRanges {
+  minPrice: number;
+  maxPrice: number;
+  minKms: number;
+  maxKms: number;
+}
+
+const formDefaults = (params: URLSearchParams, ranges?: FilterRanges): FormValues => {
+  const priceMax = ranges?.maxPrice ?? PRICE_MAX_DEFAULT;
+  const kmsMax   = ranges?.maxKms   ?? KMS_MAX_DEFAULT;
+  return {
+    searchBy: (params.get('searchBy') as 'cash' | 'monthly') || 'cash',
+    pincode: params.get('pincode') ?? '',
+    distance: params.get('distance') ?? '',
+    model: params.get('model') ?? '',
+    minYear: params.get('minYear') ?? '',
+    colour: params.get('colour') ?? '',
+    cert: (params.get('cert') as FormValues['cert']) ?? '',
+    maxPrice: params.get('maxPrice') ?? String(priceMax),
+    maxMonthly: params.get('maxMonthly') ?? String(MONTHLY_MAX),
+    maxKms: params.get('maxKms') ?? String(kmsMax),
+  };
+};
 
 // Filter sidebar mirrors the frozen Figma "Search Stock" layout:
 //   Search By: Cash Price | Monthly Budget toggle
@@ -86,6 +94,25 @@ const formDefaults = (params: URLSearchParams): FormValues => ({
 // the API since dealer-radius search isn't wired.
 export function SearchFilters() {
   const [params, setParams] = useSearchParams();
+  // Client feedback #10: dynamic filter ranges from live inventory
+  const [ranges, setRanges] = useState<FilterRanges>({
+    minPrice: PRICE_MIN_DEFAULT,
+    maxPrice: PRICE_MAX_DEFAULT,
+    minKms:   KMS_MIN_DEFAULT,
+    maxKms:   KMS_MAX_DEFAULT,
+  });
+  useEffect(() => {
+    api<FilterRanges>('/listings/filter-ranges')
+      .then((r) => {
+        setRanges(r);
+        // If user hasn't set a custom filter, reset sliders to dynamic max
+        if (!params.get('maxPrice')) setValue('maxPrice', String(r.maxPrice));
+        if (!params.get('maxKms'))   setValue('maxKms',   String(r.maxKms));
+      })
+      .catch(() => { /* keep defaults on error */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const { register, handleSubmit, reset, control, setValue, watch } = useForm<FormValues>({
     defaultValues: formDefaults(params),
   });
@@ -155,7 +182,7 @@ export function SearchFilters() {
     // act as filters — otherwise a user clicking Apply without touching the
     // sliders would silently exclude bikes priced above 4.9 lakh or with
     // more than 5,000 km.
-    if (searchBy === 'cash' && v.maxPrice && Number(v.maxPrice) < PRICE_MAX) {
+    if (searchBy === 'cash' && v.maxPrice && Number(v.maxPrice) < ranges.maxPrice) {
       next.set('maxPrice', v.maxPrice);
     } else if (
       searchBy === 'monthly' &&
@@ -181,7 +208,7 @@ export function SearchFilters() {
       next.set('maxPrice', String(equivalentPrice));
       next.set('maxMonthly', v.maxMonthly); // keep so reload restores the slider
     }
-    if (v.maxKms && Number(v.maxKms) < KMS_MAX) next.set('maxKms', v.maxKms);
+    if (v.maxKms && Number(v.maxKms) < ranges.maxKms) next.set('maxKms', v.maxKms);
     selfDrivenChange.current = true;
     setParams(next);
   };
@@ -399,8 +426,8 @@ export function SearchFilters() {
           <SliderField
             label="Max Price"
             value={maxPrice}
-            min={PRICE_MIN}
-            max={PRICE_MAX}
+            min={ranges.minPrice}
+            max={ranges.maxPrice}
             step={50000}
             register={register('maxPrice')}
             displayValue={`₹${Number(maxPrice).toLocaleString('en-IN', {
@@ -426,13 +453,13 @@ export function SearchFilters() {
         <SliderField
           label="Km Driven"
           value={maxKms}
-          min={KMS_MIN}
-          max={KMS_MAX}
+          min={ranges.minKms}
+          max={ranges.maxKms}
           step={1000}
           register={register('maxKms')}
           displayValue={`${Number(maxKms).toLocaleString('en-IN')} KM`}
           showRange
-          rangeLabels={[`${KMS_MIN} KM`, `${KMS_LABEL_MAX.toLocaleString('en-IN')} KM`]}
+          rangeLabels={[`${ranges.minKms} KM`, `${ranges.maxKms.toLocaleString('en-IN')} KM`]}
         />
 
         {/* QA: "Apply Filters" CTA removed — every filter (price, year,

@@ -179,6 +179,29 @@ export function ListingSidebarCard({
           <p className="text-xs text-gray-600 mt-1">
             Authorised H-D dealer · {dealerCity}
           </p>
+          {/* Client feedback #13: dealer mobile + email always visible on PDP */}
+          {(dealerPhone || dealerEmail) && (
+            <div className="mt-2 space-y-1">
+              {dealerPhone && (
+                <a
+                  href={`tel:${dealerPhone.replace(/\s+/g, '')}`}
+                  className="flex items-center gap-1.5 text-xs text-hd-orange hover:underline"
+                >
+                  <span aria-hidden>📞</span>
+                  {dealerPhone}
+                </a>
+              )}
+              {dealerEmail && (
+                <a
+                  href={`mailto:${dealerEmail}`}
+                  className="flex items-center gap-1.5 text-xs text-hd-orange hover:underline break-all"
+                >
+                  <span aria-hidden>✉</span>
+                  {dealerEmail}
+                </a>
+              )}
+            </div>
+          )}
 
           <div className="mt-3 aspect-[16/9] border border-gray-200 overflow-hidden bg-surface-light">
             <iframe

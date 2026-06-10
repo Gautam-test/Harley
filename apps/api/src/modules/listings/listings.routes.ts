@@ -270,6 +270,35 @@ listingsRouter.get('/', validate(listingSearchQuery, 'query'), async (req, res, 
   }
 });
 
+// Client feedback #10 — filter-ranges: returns the live min/max price and
+// km values from ACTIVE inventory so the buyer's search filters display
+// realistic bounds instead of hardcoded Figma placeholders.
+// Must come BEFORE /:slug so Express doesn't treat "filter-ranges" as a slug.
+listingsRouter.get('/filter-ranges', async (_req, res, next) => {
+  try {
+    const [priceAgg, kmsAgg] = await Promise.all([
+      prisma.listing.aggregate({
+        where: { status: 'ACTIVE' },
+        _min: { price: true },
+        _max: { price: true },
+      }),
+      prisma.listing.aggregate({
+        where: { status: 'ACTIVE' },
+        _min: { kmsDriven: true },
+        _max: { kmsDriven: true },
+      }),
+    ]);
+    res.json({
+      minPrice: priceAgg._min.price ?? 500_000,
+      maxPrice: priceAgg._max.price ?? 5_000_000,
+      minKms:   kmsAgg._min.kmsDriven ?? 89,
+      maxKms:   kmsAgg._max.kmsDriven ?? 500_000,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // PRD §6.1.3 — public listing detail by slug. 404 on every non-ACTIVE
 // status. SOLD intentionally drops the 1-hour grace window here (QA: the
 // detail page must be fully blocked once a bike is sold). The search grid
