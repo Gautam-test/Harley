@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
@@ -21,6 +21,13 @@ interface ListingSidebarCardProps {
   dealerAddress?: string | null;
   dealerPhone?: string | null;
   dealerEmail?: string | null;
+  /** Client feedback #14: when true the enquiry modal opens automatically
+   *  on first render (first PDP visit per session). ListingDetailPage
+   *  passes this once per session and clears it after. */
+  autoOpen?: boolean;
+  /** Called when the buyer completes an enquiry so the parent can set the
+   *  session flag that prevents future auto-opens. */
+  onEnquirySubmitted?: () => void;
 }
 
 // Mirrors the frozen Figma listing-detail right rail exactly:
@@ -41,6 +48,8 @@ export function ListingSidebarCard({
   dealerAddress,
   dealerPhone,
   dealerEmail,
+  autoOpen,
+  onEnquirySubmitted,
 }: ListingSidebarCardProps) {
   // No localStorage-driven hints, no my-status pre-check, no popup. The
   // duplicate-by-mobile rule lives entirely on the API: if the buyer
@@ -55,6 +64,16 @@ export function ListingSidebarCard({
   // actual dealer card — not a scroll to the nearest-3 locator (which
   // shows recommendations, not the bike's selling dealer).
   const [dealerDetailsOpen, setDealerDetailsOpen] = useState(false);
+
+  // Client feedback #14: auto-open enquiry modal on first PDP visit per
+  // session. Parent drives `autoOpen` via a sessionStorage gate; once it
+  // fires once the flag is set and the prop goes back to false. We only
+  // auto-open when there's no enquiry already submitted this session.
+  useEffect(() => {
+    if (autoOpen && !submitted) {
+      setModalOpen(true);
+    }
+  }, [autoOpen, submitted]);
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
@@ -95,6 +114,9 @@ export function ListingSidebarCard({
         }),
       });
       setSubmitted({ id: res.id });
+      // Client feedback #14: signal parent so it can suppress future
+      // auto-opens for the rest of this session.
+      onEnquirySubmitted?.();
     } catch (e) {
       // Every API error — including 409 ENQUIRY_ALREADY_OPEN — surfaces
       // as an inline message under the CTAs. We deliberately don't pop
@@ -211,7 +233,8 @@ export function ListingSidebarCard({
                 disabled={submitting}
                 className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:brightness-110 transition disabled:opacity-60"
               >
-                {submitting ? 'Sending…' : 'Enquire With Dealer'}
+                {/* Client feedback #15: label changed to "Request a Call Back" */}
+                {submitting ? 'Sending…' : 'Request a Call Back'}
               </button>
               {/* QA: the previous "You've already enquired" amber banner
                   AND the "You've already verified — clicking will submit"

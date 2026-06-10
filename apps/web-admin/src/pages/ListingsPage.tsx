@@ -316,10 +316,11 @@ export function ListingsPage() {
                     ₹{l.price.toLocaleString('en-IN')}
                   </div>
                   <div className="mt-1">
+                    {/* Client feedback #12: "As-Is" → "Pre-Owned" */}
                     {l.certificationStatus === 'CPO' ? (
                       <Badge variant="cpo">CPO</Badge>
                     ) : (
-                      <Badge variant="as-is">As-Is</Badge>
+                      <Badge variant="as-is">Pre-Owned</Badge>
                     )}
                   </div>
                 </Td>

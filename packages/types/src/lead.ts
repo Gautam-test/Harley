@@ -181,13 +181,21 @@ export type DealerBuyerEnquiryInput = z.infer<typeof dealerBuyerEnquiryInput>;
 export const tradeInLeadInput = z.object({
   username: z.string().min(2).max(100),
   bikeModel: z.string().min(1).max(100),
-  vin: vin,
+  // Client feedback #17: VIN is now optional — sellers often don't have
+  // the VIN readily available when filling in the Sell Your Motorcycle
+  // form. When omitted, the lead is created without a VIN; the dealer
+  // can fill it in later from the lead detail drawer.
+  vin: vin.optional(),
   phone: phoneIN,
-  email: z.string().email(), // PRD §6.1.6 — recommend adding (Open Question 6)
-  city: z.string().min(1).max(100), // PRD §6.1.6 — recommend adding
+  email: z.string().email(),
+  city: z.string().min(1).max(100),
   // Optional — when supplied (e.g. from "Choose Dealer" select on /sell-bike),
   // routes the lead to that dealer instead of the nearest active one.
   dealerId: z.string().min(1).optional(),
+  // Client feedback #16: upgrade interest timeline — stored as a free
+  // string (one of: 'not-now', 'within-6-months', 'within-12-months',
+  // 'immediately'). Surfaced in dealer + admin lead detail.
+  upgradeTimeline: z.string().max(50).optional(),
 });
 export type TradeInLeadInput = z.infer<typeof tradeInLeadInput>;
 

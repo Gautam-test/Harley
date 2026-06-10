@@ -178,19 +178,24 @@ model GeneralLead {
 }
 
 model TradeInLead {
-  id        String     @id @default(cuid())
-  dealerId  String
-  dealer    Dealer     @relation(fields: [dealerId], references: [id])
-  username  String
-  bikeModel String
-  vin       String
-  phoneEnc  String
-  emailEnc  String
-  city      String
-  status    LeadStatus @default(NEW)
-  notes     Json?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id              String     @id @default(cuid())
+  dealerId        String
+  dealer          Dealer     @relation(fields: [dealerId], references: [id])
+  username        String
+  bikeModel       String
+  // Client feedback #17: VIN is now optional — sellers may not have it
+  // readily available. When null the dealer fills it in later.
+  vin             String?
+  phoneEnc        String
+  emailEnc        String
+  city            String
+  // Client feedback #16: buyer's upgrade interest timeline.
+  // Values: 'not-now' | 'within-6-months' | 'within-12-months' | 'immediately'
+  upgradeTimeline String?
+  status          LeadStatus @default(NEW)
+  notes           Json?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 
   @@index([dealerId, status])
   @@index([createdAt])

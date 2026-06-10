@@ -474,7 +474,8 @@ export function DashboardPage() {
               </div>
               <dl className="mt-5 space-y-2 text-sm">
                 <LegendRow swatch="bg-hd-orange" label="CPO (active)" value={m.mix.cpo} />
-                <LegendRow swatch="bg-gray-400" label="As-Is (active)" value={m.mix.asis} />
+                {/* Client feedback #12: "As-Is" → "Pre-Owned" */}
+                <LegendRow swatch="bg-gray-400" label="Pre-Owned (active)" value={m.mix.asis} />
                 <LegendRow swatch="bg-success/70" label="Sold (lifetime)" value={m.mix.sold} />
               </dl>
             </>

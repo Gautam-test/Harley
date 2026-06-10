@@ -187,7 +187,9 @@ export function HeroSearch() {
               className="font-subhead font-bold tracking-subhead text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
             >
               H-D Certified
-              <span className="text-hd-orange align-super text-[0.55em] ml-1">&trade;</span>
+              {/* Client feedback #2: ™ symbol must be white (matches the
+                  surrounding heading colour, not the orange emphasis word). */}
+              <span className="text-hd-white align-super text-[0.55em] ml-1">&trade;</span>
               {' '}Approved Used Motorcycles
             </h1>
             {/* QA latest: subhead 22px per Figma, font-weight 500

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -82,6 +82,19 @@ export function ListingDetailPage() {
   });
 
   const [tab, setTab] = useState<'overview' | 'specs'>('overview');
+  // Client feedback #14: auto-open buyer enquiry popup on first PDP visit
+  // per session. Suppressed once an enquiry is submitted this session.
+  const [autoOpenEnquiry, setAutoOpenEnquiry] = useState(false);
+  useEffect(() => {
+    if (!data) return;
+    const alreadyDone = sessionStorage.getItem('hd_enquiry_done') === '1';
+    const alreadyShown = sessionStorage.getItem('hd_popup_shown') === '1';
+    if (!alreadyDone && !alreadyShown) {
+      sessionStorage.setItem('hd_popup_shown', '1');
+      const t = setTimeout(() => setAutoOpenEnquiry(true), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [data]);
 
   if (isLoading) return <DetailSkeleton />;
   if (isError && error instanceof ApiError && error.status === 404) return <NotFound />;
@@ -162,6 +175,11 @@ export function ListingDetailPage() {
                 dealerAddress={data.dealerAddress ?? null}
                 dealerPhone={data.dealerPhone ?? null}
                 dealerEmail={data.dealerEmail ?? null}
+                autoOpen={autoOpenEnquiry}
+                onEnquirySubmitted={() => {
+                  sessionStorage.setItem('hd_enquiry_done', '1');
+                  setAutoOpenEnquiry(false);
+                }}
               />
             </aside>
           </div>
@@ -208,8 +226,9 @@ export function ListingDetailPage() {
                       : '—',
                   },
                   {
+                    // Client feedback #12: "As-Is" → "Pre-Owned" in spec display.
                     label: 'Inspection',
-                    value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'As-Is',
+                    value: data.certificationStatus === 'CPO' ? '110 Pt Passed' : 'Pre-Owned',
                   },
                   { label: 'Mileage', value: mileageDisplay },
                   { label: 'Colour', value: data.colour },
@@ -447,7 +466,7 @@ function SpecsTable({ data }: { data: ListingDetail }) {
     ],
     [
       'Inspection',
-      data.certificationStatus === 'CPO' ? '110-Point Passed' : 'As-Is',
+      data.certificationStatus === 'CPO' ? '110-Point Passed' : 'Pre-Owned',
     ],
     ['Mileage', mileage ? `${mileage} km/l` : '—'],
     ['Colour', data.colour],
@@ -461,7 +480,7 @@ function SpecsTable({ data }: { data: ListingDetail }) {
     ['VIN', data.vin],
     [
       'Certification',
-      data.certificationStatus === 'CPO' ? 'H-D Certified™' : 'As-Is',
+      data.certificationStatus === 'CPO' ? 'H-D Certified™' : 'Pre-Owned',
     ],
   ];
   return (

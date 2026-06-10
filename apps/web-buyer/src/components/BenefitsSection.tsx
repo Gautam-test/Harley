@@ -45,10 +45,11 @@ const FEATURES: FeatureRow[] = [
     ],
   },
   {
+    // Client feedback #5: replace placeholder copy with client-approved copy.
     title: 'History Check / HPI Check / Insurance Database',
     iconSrc: '/brand/benefits/2.svg',
     body:
-      'In the H-D Certified™, motorcycles are offered only with XXXX specification, as sold by Harley-Davidson® India Pvt Ltd (the importer of record).',
+      'Motorcycles provided by H-D Certified are supplied with all required documents and proof.',
     image: '/brand/benefits/feature-images/2.svg',
   },
   {

@@ -161,10 +161,11 @@ function DrawerBody({ listing }: { listing: AdminListingDetail }) {
           {listing.modelFamily} · {listing.colour} · {listing.kmsDriven.toLocaleString('en-IN')} km
         </p>
         <div className="flex items-center gap-3 mt-2">
+          {/* Client feedback #12: "As-Is" → "Pre-Owned" */}
           {listing.certificationStatus === 'CPO' ? (
             <Badge variant="cpo">CPO</Badge>
           ) : (
-            <Badge variant="as-is">As-Is</Badge>
+            <Badge variant="as-is">Pre-Owned</Badge>
           )}
           <span className="font-headline text-2xl text-hd-orange">
             ₹{listing.price.toLocaleString('en-IN')}

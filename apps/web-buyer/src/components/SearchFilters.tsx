@@ -571,6 +571,8 @@ function EmiCalculatorPanel() {
         />
       </div>
 
+      {/* Client feedback #11: rate range 10.5%–20%. Default already
+          seeded from EMI_DEFAULTS.rateAnnual = 10.5%. */}
       <div className="mt-3">
         <div className="flex items-baseline justify-between">
           <label htmlFor="emi-rate" className="font-body text-[12px] text-gray-500">
@@ -583,13 +585,13 @@ function EmiCalculatorPanel() {
         <input
           id="emi-rate"
           type="range"
-          min={5}
-          max={15}
+          min={10.5}
+          max={20}
           step={0.1}
           value={rateAnnualPct}
           onChange={(e) => setRateAnnualPct(Number(e.target.value))}
           className="hero-range w-full cursor-pointer mt-2"
-          style={{ background: trackGradient(pct(rateAnnualPct, 5, 15)) }}
+          style={{ background: trackGradient(pct(rateAnnualPct, 10.5, 20)) }}
         />
       </div>
 

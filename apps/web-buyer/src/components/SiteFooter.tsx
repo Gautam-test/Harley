@@ -21,6 +21,9 @@ import { Link } from 'react-router-dom';
 const LINKS: { to: string; label: string }[] = [
   { to: '/privacy', label: 'Privacy Policy' },
   { to: '/cookies', label: 'Cookie Policy' },
+  // Client feedback #8: Terms & Conditions link added. /terms route
+  // is already wired in App.tsx to StaticPage contentKey="terms".
+  { to: '/terms', label: 'Terms & Conditions' },
   { to: '/about', label: 'About us' },
   { to: '/contact', label: 'Contact Us' },
 ];

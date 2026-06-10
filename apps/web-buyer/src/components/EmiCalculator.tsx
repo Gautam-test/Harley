@@ -130,7 +130,9 @@ export function EmiCalculator({ price }: EmiCalculatorProps) {
         />
       </div>
 
-      {/* Interest Rate */}
+      {/* Interest Rate — Client feedback #11: min 10.5%, max 20%
+          (matches the indicative band H-D dealers work within). Default
+          already seeded from EMI_DEFAULTS.rateAnnual = 10.5%. */}
       <div className="mt-4">
         <div className="flex items-baseline justify-between">
           <label htmlFor="pdp-emi-rate" className="font-body text-[12px] text-text-on-light">
@@ -143,13 +145,13 @@ export function EmiCalculator({ price }: EmiCalculatorProps) {
         <input
           id="pdp-emi-rate"
           type="range"
-          min={5}
+          min={10.5}
           max={20}
           step={0.1}
           value={rate}
           onChange={(e) => setRate(Number(e.target.value))}
           className="hero-range w-full cursor-pointer mt-2"
-          style={{ background: trackGradient(pct(rate, 5, 20)) }}
+          style={{ background: trackGradient(pct(rate, 10.5, 20)) }}
         />
       </div>
 

@@ -46,6 +46,8 @@ interface FormValues {
   city: string;
   pincode: string;
   dealerId: string;
+  // Client feedback #16: "Looking for upgrade?" field.
+  upgradeTimeline: string;
   acceptedTerms: boolean;
 }
 
@@ -89,6 +91,7 @@ export function SellBikeModal() {
         city: '',
         pincode: '',
         dealerId: '',
+        upgradeTimeline: '',
         acceptedTerms: false,
       },
       mode: 'onChange',
@@ -206,9 +209,10 @@ export function SellBikeModal() {
   const onSubmit = async () => {
     setError(null);
     const vin = (getValues().vin || '').trim().toUpperCase();
-    if (vin.length < 6) {
-      // Defer to the schema validators — won't reach here in practice
-      // because the form's onChange validation already blocks it.
+    // Client feedback #17: VIN is now optional. When blank, skip the
+    // vin-status pre-flight and go straight to OTP. When provided, the
+    // full format + duplicate check runs as before.
+    if (vin.length === 0 || vin.length < 6) {
       setOtpOpen(true);
       return;
     }
@@ -247,11 +251,15 @@ export function SellBikeModal() {
         body: JSON.stringify({
           username: v.username,
           bikeModel: v.bikeModel,
-          vin: v.vin,
+          // Client feedback #17: VIN is optional — omit when blank so the
+          // API's optional vin field isn't given an empty string.
+          ...(v.vin.trim() ? { vin: v.vin.trim().toUpperCase() } : {}),
           phone: toApiPhone(data.phone),
           email: v.email,
           city: v.city || 'Unknown',
           dealerId: v.dealerId || undefined,
+          // Client feedback #16: upgrade timeline captured in notes.
+          ...(v.upgradeTimeline ? { upgradeTimeline: v.upgradeTimeline } : {}),
         }),
       });
       setSubmitted({ id: res.id });
@@ -418,18 +426,21 @@ export function SellBikeModal() {
                     ))}
                   </Select>
                 </Labelled>
-                <Labelled label="VIN Number" required error={errors.vin?.message}>
-                  {/* Single-line placeholder per Figma — drop the
-                      multi-line "17 characters · letters + numbers · no
-                      I, O, Q" hint that cluttered the field. Validator
-                      below still enforces the rule. */}
+                {/* Client feedback #17: VIN Number is no longer mandatory.
+                    Validation only runs when a value is provided. */}
+                <Labelled label="VIN Number" error={errors.vin?.message}>
                   <Input
                     maxLength={17}
-                    placeholder="Enter Motorcycle vin number"
+                    placeholder="Optional — enter if available"
                     className="font-mono uppercase"
                     aria-invalid={Boolean(errors.vin)}
                     {...register('vin', {
-                      ...vinRules,
+                      validate: {
+                        format: (v: string) =>
+                          !v.trim() ||
+                          /^[A-HJ-NPR-Z0-9]{17}$/.test(v.trim()) ||
+                          'VIN must be 17 characters: A-Z (no I, O, Q) or 0-9',
+                      },
                       onChange: (e) =>
                         setValue('vin', String(e.target.value).toUpperCase(), {
                           shouldValidate: true,
@@ -624,6 +635,37 @@ export function SellBikeModal() {
                   {...register('email', emailRules)}
                 />
               </Labelled>
+
+              {/* Client feedback #16: "Looking for upgrade?" radio field.
+                  Options: Not now / Within 6 months / Within 12 months /
+                  Immediately. Stored in the lead payload and visible in
+                  Admin + Dealer portal lead detail (via notes). */}
+              <div>
+                <p className="font-subhead font-bold tracking-subhead uppercase text-[11px] text-text-on-light mb-2">
+                  Looking for upgrade?
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {[
+                    { value: 'not-now', label: 'Not now' },
+                    { value: 'within-6-months', label: 'Within 6 months' },
+                    { value: 'within-12-months', label: 'Within 12 months' },
+                    { value: 'immediately', label: 'Immediately' },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        value={opt.value}
+                        className="accent-hd-orange"
+                        {...register('upgradeTimeline')}
+                      />
+                      {opt.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               {error && <div className="text-danger text-sm">{error}</div>}
 

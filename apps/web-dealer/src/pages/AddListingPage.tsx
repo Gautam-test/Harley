@@ -1188,7 +1188,7 @@ function CertToggle({
       {(
         [
           { v: 'CPO', label: 'CPO Certified' },
-          { v: 'AS_IS', label: 'As-Is' },
+          { v: 'AS_IS', label: 'Pre-Owned' },
         ] as const
       ).map((opt) => {
         const active = value === opt.v;

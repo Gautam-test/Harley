@@ -336,7 +336,8 @@ function CertTabs({
   const tabs: { id: '' | 'CPO' | 'AS_IS'; label: string }[] = [
     { id: '', label: 'All Pre-Owned Motorcycles' },
     { id: 'CPO', label: 'Certified Pre-Owned' },
-    { id: 'AS_IS', label: 'As-Is Pre-Owned Motorcycles' },
+    // Client feedback #12: "As-is Motorcycles" → "Pre-Owned Motorcycles"
+    { id: 'AS_IS', label: 'Pre-Owned Motorcycles' },
   ];
   return (
     <nav

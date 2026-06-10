@@ -373,7 +373,9 @@ export async function createTradeInLead(input: TradeInLeadInput) {
   // A seller cannot raise a second enquiry for the same bike until:
   //   a) the previous lead is closed by the dealer, AND
   //   b) the bike is SOLD / REMOVED from the platform (not just listed).
-  const vinBlock = await checkTradeInVinGate(input.vin);
+  // When VIN is omitted (client feedback #17: VIN now optional) we skip
+  // the gate — cannot dedupe without a VIN.
+  const vinBlock = input.vin ? await checkTradeInVinGate(input.vin) : null;
   if (vinBlock === 'OPEN_LEAD') {
     throw new HttpError(
       409,
@@ -393,10 +395,14 @@ export async function createTradeInLead(input: TradeInLeadInput) {
       dealerId,
       username: input.username,
       bikeModel: input.bikeModel,
-      vin: input.vin,
+      // Client feedback #17: VIN is optional — may be undefined when seller
+      // doesn't have it available at submission time.
+      vin: input.vin ?? null,
       phoneEnc: encryptPii(input.phone),
       emailEnc: encryptPii(input.email),
       city: input.city,
+      // Client feedback #16: upgrade interest timeline.
+      upgradeTimeline: input.upgradeTimeline ?? null,
     },
   });
   const ok = await notifyDealer(
@@ -404,7 +410,8 @@ export async function createTradeInLead(input: TradeInLeadInput) {
     'TRADE_IN',
     input.username,
     input.city,
-    `Bike: ${input.bikeModel}, VIN ${input.vin}`,
+    // Client feedback #17: VIN is optional — show 'N/A' when not provided.
+    `Bike: ${input.bikeModel}${input.vin ? `, VIN ${input.vin}` : ''}`,
     formatLeadId('trade-in', lead.id, lead.createdAt),
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
@@ -887,8 +894,8 @@ export async function dealerCreateTradeInLead(
   // VIN-based duplicate gate — same rules as the customer-portal path.
   // Dealer logging on behalf of seller cannot create a second lead for
   // the same bike until: (a) previous lead is closed AND (b) bike is
-  // SOLD / REMOVED from the platform.
-  const vinBlock = await checkTradeInVinGate(input.vin);
+  // SOLD / REMOVED from the platform. Skip when VIN is absent.
+  const vinBlock = input.vin ? await checkTradeInVinGate(input.vin) : null;
   if (vinBlock === 'OPEN_LEAD') {
     throw new HttpError(
       409,
@@ -908,7 +915,8 @@ export async function dealerCreateTradeInLead(
       dealerId,
       username: input.username,
       bikeModel: input.bikeModel,
-      vin: input.vin,
+      vin: input.vin ?? null,
+      upgradeTimeline: input.upgradeTimeline ?? null,
       phoneEnc: encryptPii(input.phone),
       emailEnc: encryptPii(input.email),
       city: input.city,
@@ -923,7 +931,7 @@ export async function dealerCreateTradeInLead(
     'TRADE_IN',
     input.username,
     input.city,
-    `Bike: ${input.bikeModel}, VIN ${input.vin}`,
+    `Bike: ${input.bikeModel}${input.vin ? `, VIN ${input.vin}` : ''}`,
     refId,
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
@@ -935,7 +943,7 @@ export async function dealerCreateTradeInLead(
     sellerTradeInConfirmationEmail({
       sellerName: input.username,
       bikeLabel: input.bikeModel,
-      vin: input.vin,
+      ...(input.vin ? { vin: input.vin } : {}),
       referenceId: refId,
     }),
   );
