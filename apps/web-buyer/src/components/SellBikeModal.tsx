@@ -466,18 +466,13 @@ export function SellBikeModal() {
                     })}
                   />
                 </Labelled>
-                <Labelled label="Location" required error={(errors as Record<string, { message?: string } | undefined>).location?.message}>
+                <Labelled label="Location" error={(errors as Record<string, { message?: string } | undefined>).location?.message}>
                   <div className="relative">
                     <Input
                       placeholder={geoBusy ? 'Locating…' : 'Choose location'}
                       readOnly={geoBusy}
                       aria-invalid={Boolean((errors as Record<string, unknown>).location)}
-                      {...register('location', {
-                        required: 'Location is required',
-                        validate: (v: string) =>
-                          (typeof v === 'string' && v.trim().length > 0) ||
-                          'Location is required',
-                      })}
+                      {...register('location')}
                       className="pr-10"
                     />
                     <button
@@ -636,20 +631,15 @@ export function SellBikeModal() {
                 />
               </Labelled>
 
-              {/* Client feedback #16: "Looking for upgrade?" radio field.
-                  Options: Not now / Within 6 months / Within 12 months /
-                  Immediately. Stored in the lead payload and visible in
-                  Admin + Dealer portal lead detail (via notes). */}
+              {/* "Looking for upgrade?" — simple Yes / No */}
               <div>
                 <p className="font-subhead font-bold tracking-subhead uppercase text-[11px] text-text-on-light mb-2">
                   Looking for upgrade?
                 </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="flex gap-6">
                   {[
-                    { value: 'not-now', label: 'Not now' },
-                    { value: 'within-6-months', label: 'Within 6 months' },
-                    { value: 'within-12-months', label: 'Within 12 months' },
-                    { value: 'immediately', label: 'Immediately' },
+                    { value: 'yes', label: 'Yes' },
+                    { value: 'no', label: 'No' },
                   ].map((opt) => (
                     <label
                       key={opt.value}
