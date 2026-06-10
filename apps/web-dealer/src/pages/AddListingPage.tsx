@@ -944,11 +944,11 @@ export function AddListingPage() {
           ) : (
             <div className="mt-5 bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-700">
               <p className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
-                As-Is — Inspection Skipped
+                Pre-Owned — Inspection Skipped
               </p>
               <p className="mt-1">
-                As-Is listings ship without the 110-point inspection. The bike
-                will be tagged <span className="font-subhead">As-Is</span> on
+                Pre-Owned listings ship without the 110-point inspection. The bike
+                will be tagged <span className="font-subhead">Pre-Owned</span> on
                 the buyer site and won&rsquo;t carry the H-D Certified&trade;
                 guarantee.
               </p>
@@ -969,7 +969,7 @@ export function AddListingPage() {
         >
           {s.certificationStatus === 'AS_IS' ? (
             <p className="text-xs text-gray-500">
-              As-Is listings don&rsquo;t carry the CPO kit. Switch to CPO above
+              Pre-Owned listings don&rsquo;t carry the CPO kit. Switch to CPO above
               if this bike passed the 110-point inspection.
             </p>
           ) : (
