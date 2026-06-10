@@ -351,6 +351,156 @@ export function ListingDetailPage() {
         </div>
       </div>
 
+      {/* CPO-only benefits block — only shown for H-D Certified™ listings */}
+      {data.certificationStatus === 'CPO' && (
+        <div className="bg-hd-black text-hd-white py-14">
+          <div className="max-w-container mx-auto px-6">
+            {/* Section heading */}
+            <div className="mb-10 text-center">
+              <span className="inline-block bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[10px] px-3 py-1.5 mb-4">
+                H-D Certified™ Benefits
+              </span>
+              <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-hd-white leading-tight">
+                What's Included With Every H-D Certified™ Motorcycle
+              </h2>
+            </div>
+
+            {/* 6 benefit items */}
+            <div className="grid md:grid-cols-2 gap-px bg-white/10">
+              {/* 1 — 110 Point Inspection */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    01
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      110 Point Pre-Delivery Check
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      Inspection of the technical condition of the motorcycle is the same for all
+                      authorised dealers. It amounts to a check of 110 points covering the whole
+                      operation of the machine. A detailed record signed by the performing technician
+                      is available to the customer from each inspection. Only once this has been done
+                      can a machine earn the right to be classed as H-D Certified™ and qualify for
+                      the other benefits associated with these premium used Motorcycles.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2 — History / HPI Check */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    02
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      History Check / HPI Check / Insurance Database
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      Motorcycles provided by H-D Certified are supplied with all required documents
+                      and proof.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 — Kilometer Verification */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    03
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      Kilometer Verification Check
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      An online check is performed to verify from records that the KM declared on the
+                      Motorcycle is correct and confirmed in writing.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4 — 12 Month Guarantee */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    04
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      12 Month Comprehensive Mechanical &amp; Electrical Component Guarantee
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      Once the machine has been H-D Certified™ we back this with a minimum 12 month
+                      Guarantee, this can be extended beyond the 12 months to provide you with added
+                      protection against unforeseen expense.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5 — Roadside Assistance */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    05
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      12 Month Roadside Assistance
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      In addition to the 12 month Guarantee we provide Roadside Assistance (the
+                      Roadside assistance package provider is Australia Wide Assist), Recovery and
+                      Onward Travel if required 24/7, should you extend your Guarantee then the
+                      Assistance package is also extended.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 6 — HOG Membership */}
+              <div className="bg-hd-black p-7 border-l-2 border-hd-orange">
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold tracking-subhead text-[11px] px-2 py-1 mt-0.5">
+                    06
+                  </div>
+                  <div>
+                    <h3 className="font-subhead font-bold tracking-subhead uppercase text-[13px] text-hd-orange mb-2">
+                      12 Month HOG Membership
+                    </h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
+                      As a H-D Certified™ owner you will receive the first 12 months' membership of
+                      the Harley-Davidson® Owners Group. Each year you will have the choice of
+                      renewing your membership.
+                    </p>
+                    <a
+                      href="https://www.harley-davidson.com/us/en/owners/hog.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-2 text-hd-orange text-xs font-subhead uppercase tracking-subhead hover:underline"
+                    >
+                      HOG Benefits Click Here
+                      <span aria-hidden>↗</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Disclaimer note */}
+            <p className="mt-8 text-center text-[11px] text-gray-500 uppercase tracking-wide">
+              * These benefits are valid for H-D Certified™ Pre-Owned motorcycles only.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 6 alternating feature rows — reused from home (compact = no intro) */}
       <BenefitsSection compact />
 
