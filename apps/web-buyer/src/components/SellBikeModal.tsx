@@ -258,8 +258,6 @@ export function SellBikeModal() {
         // Client feedback #16: upgrade timeline captured in notes.
         ...(v.upgradeTimeline ? { upgradeTimeline: v.upgradeTimeline } : {}),
       };
-      // DEBUG: log the exact payload so we can see what the API rejects.
-      console.log('[SellBike] POST /leads/trade-in payload:', JSON.stringify(payload, null, 2));
       const res = await api<{ id: string }>('/leads/trade-in', {
         method: 'POST',
         withOtpToken: true,
@@ -267,11 +265,6 @@ export function SellBikeModal() {
       });
       setSubmitted({ id: res.id });
     } catch (e) {
-      // Show field-level Zod details when available so we can debug which
-      // field the API is rejecting.
-      if (e instanceof ApiError) {
-        console.error('[SellBike] API error:', e.code, e.message);
-      }
       setError(e instanceof ApiError ? e.message : 'Could not submit');
     } finally {
       setSubmitting(false);
