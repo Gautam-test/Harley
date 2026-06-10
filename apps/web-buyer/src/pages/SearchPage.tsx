@@ -115,16 +115,12 @@ export function SearchPage() {
         <meta name="description" content="Search Certified Pre-Owned Harley-Davidson motorcycles from authorised Indian dealers." />
       </Helmet>
 
-      {/* BUG_UI_008: breadcrumb "HOME / SEARCH STOCK" above headline, and
-          Figma-correct Title Case subtitle. Note: the brand-supplied
-          "shipping containers + bike lineup" hero photo isn't in the
-          asset pack yet — keeping the existing search-stock.jpg until
-          ops drops the new shot into public/heros/. Marked in the
-          ticket so it's traceable. */}
+      {/* Client feedback #9: breadcrumbs removed from customer portal.
+          Hero title + subtitle stay; the breadcrumbs prop is omitted so
+          PageHero renders no crumb row above the headline. */}
       <PageHero
         title="Search"
         emphasis="Stock"
-        breadcrumbs={[{ label: 'Home', to: '/' }, { label: 'Search Stock' }]}
         subtitle="Every H-D Certified™ Motorcycle Is Inspected, Verified, And Backed By An Authorized Harley-Davidson® Dealer."
         image={HERO.searchStock}
         size="lg"

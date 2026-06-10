@@ -2,13 +2,15 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { HeroSearch } from '../components/HeroSearch';
 import { BenefitsSection } from '../components/BenefitsSection';
-import { FeaturedCertified } from '../components/FeaturedCertified';
-import { DealerLocator } from '../components/DealerLocator';
 
-// Mirrors the frozen Figma "Home" layout (PRD §6.1.1):
-//   hero → search band → "What are the benefits" intro → "Overview" bullets
-//   → 6 alternating image/text feature rows → "View all" CTA
-//   → Featured Certified cards → Find Your Dealer
+// Client feedback (items #6 + #7): the "Featured Listings" grid and the
+// home "Find Your Dealer" locator are both removed end-to-end from the
+// customer portal. The underlying /api/v1/dealers endpoint is retained
+// because the Search Stock distance filter + dealer-picker modals
+// (InfoGateModal, SellBikeModal) still depend on it.
+//
+// Frozen Figma reference is now: hero → search band → benefits intro →
+// "Overview" bullets → 6 alternating feature rows → "View all" CTA.
 export function HomePage() {
   return (
     <>
@@ -22,10 +24,6 @@ export function HomePage() {
       <HeroSearch />
       <BenefitsSection />
 
-      {/* QA RE-OPEN: CTA — drop rounded corners, drop the top/bottom
-          gray divider lines, swap the arrow glyph for a clean chevron
-          (›). The section now sits seamlessly between Benefits and
-          Featured Certified per Figma. */}
       <div className="bg-hd-white py-14 text-center">
         <Link
           to="/search"
@@ -35,9 +33,6 @@ export function HomePage() {
           <span aria-hidden className="text-lg leading-none">&rsaquo;</span>
         </Link>
       </div>
-
-      <FeaturedCertified />
-      <DealerLocator />
     </>
   );
 }

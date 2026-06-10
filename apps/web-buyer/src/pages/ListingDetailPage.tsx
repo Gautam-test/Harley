@@ -9,7 +9,10 @@ import { ImageGallery } from '../components/ImageGallery';
 import { EmiCalculator } from '../components/EmiCalculator';
 import { ListingSidebarCard } from '../components/ListingSidebarCard';
 import { BenefitsSection } from '../components/BenefitsSection';
-import { DealerLocator } from '../components/DealerLocator';
+// Client feedback #7: DealerLocator removed from PDP — Find Your Dealer
+// feature dropped from the customer portal. The selling dealer's card
+// (in the sidebar above) is still surfaced; nearest-3 alternates are
+// no longer shown.
 
 interface ListingDetail {
   id: string;
@@ -132,19 +135,7 @@ export function ListingDetailPage() {
           read as elevated white blocks layered on top of it. */}
       <div className="bg-surface-light text-text-on-light">
         <div className="max-w-container mx-auto px-6 py-6">
-          {/* QA latest: UPPERCASE "HOME / SEARCH STOCK" with slash
-              separator (not ›). Current page name highlighted in
-              brand orange. */}
-          <nav
-            aria-label="Breadcrumb"
-            className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] mb-5"
-          >
-            <Link to="/" className="text-text-on-light hover:text-hd-orange transition">
-              Home
-            </Link>
-            <span aria-hidden className="mx-2 text-gray-400">/</span>
-            <span className="text-hd-orange">Search Stock</span>
-          </nav>
+          {/* Client feedback #9: breadcrumb removed from customer portal. */}
 
           {/* Top section — gallery left, price/dealer card right */}
           <div className="grid lg:grid-cols-[1fr_360px] gap-8">
@@ -354,11 +345,7 @@ export function ListingDetailPage() {
         </Link>
       </div>
 
-      {/* BUG-035: pass the listing's pincode so the locator shows
-          dealers near THIS bike when the buyer hasn't granted
-          geolocation permission. Geolocation (if granted on the
-          client) still takes priority over the pincode. */}
-      <DealerLocator referencePincode={data.pincode} />
+      {/* Client feedback #7: nearest-dealers locator removed from PDP. */}
 
       {/* Mobile-only sticky enquiry bar. Below lg the sidebar gets pushed
           far down the page once the buyer is reading the Overview / spec

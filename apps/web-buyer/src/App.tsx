@@ -11,7 +11,9 @@ import { SellBikePage } from './pages/SellBikePage';
 import { StaticPage } from './pages/StaticPage';
 import { InfoPage } from './pages/InfoPage';
 import { TrackPage } from './pages/TrackPage';
-import { DealersPage } from './pages/DealersPage';
+// Client feedback #7: standalone /dealers Find Your Dealer page removed
+// end-to-end from the customer portal. Backend API + dealer-picker
+// modals retained.
 import { NotFoundPage } from './pages/NotFoundPage';
 
 // QA: Footer "Marketplace / Info / Legal" links land on a section page but
@@ -67,7 +69,7 @@ export function App() {
           <Route path="/listings/:slug" element={<ListingDetailPage />} />
           <Route path="/sell-bike" element={<SellBikePage />} />
           <Route path="/track" element={<TrackPage />} />
-          <Route path="/dealers" element={<DealersPage />} />
+          {/* Client feedback #7: /dealers route removed. */}
           <Route path="/finance" element={<InfoPage variant="finance" />} />
           <Route path="/insurance" element={<InfoPage variant="insurance" />} />
           <Route path="/about" element={<StaticPage contentKey="about" />} />

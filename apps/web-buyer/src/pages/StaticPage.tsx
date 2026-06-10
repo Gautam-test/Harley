@@ -371,18 +371,10 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         // "Cookie Notice as of October 2020" subtitle under the
         // main heading.
         solidBlack={isLegal}
-        // QA latest: HOME / COOKIE on cookies page, HOME / PRIVACY &
-        // POLICY on the Privacy page, HOME / ABOUT US on the About
-        // page — current segment in orange per Figma.
-        breadcrumbs={
-          isCookies
-            ? [{ label: 'Home', to: '/' }, { label: 'Cookie' }]
-            : isPrivacy
-            ? [{ label: 'Home', to: '/' }, { label: 'Privacy & Policy' }]
-            : isAbout
-            ? [{ label: 'Home', to: '/' }, { label: 'About Us' }]
-            : undefined
-        }
+        // Client feedback #9: breadcrumbs removed from customer portal —
+        // the prior cookies/privacy/about crumbs (HOME / COOKIE, etc.)
+        // are no longer rendered. PageHero just shows the title +
+        // subtitle without a crumb row.
         subtitle={
           isCookies
             ? 'Cookie Notice as of October 2020'
