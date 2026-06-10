@@ -171,17 +171,29 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         </section>
       )}
 
-      {/* 6 alternating image/text feature rows. QA latest: row 1 must
-          render WHITE (#FFFFFF), row 2 soft-grey (#F5F5F5), and so on
-          — odd indices (1, 3, 5 = rows 2, 4, 6) get the grey fill.
-          The wrapper colour matches row 1 so the page reads as a
-          continuous white-to-grey alternation right from the section
-          edge. */}
-      <div className="bg-hd-white">
+      {/* 6 alternating image/text feature rows — clean 50/50 split per
+          reference design. Even rows: image left, text right.
+          Odd rows: text left, image right. No overlap, no shadow card. */}
+      <div>
         {FEATURES.map((f, i) => (
           <FeatureSection key={f.title} feature={f} reverse={i % 2 === 1} index={i} />
         ))}
       </div>
+
+      {/* "View All Approved Stock" CTA — shown only on the home page
+          (compact = false). The PDP already has its own CTA below the
+          BenefitsSection block. */}
+      {!compact && (
+        <div className="py-12 text-center" style={{ backgroundColor: FEATURES.length % 2 === 0 ? '#FFFFFF' : '#F5F5F5' }}>
+          <a
+            href="/search"
+            className="inline-flex items-center gap-3 bg-hd-orange text-hd-white font-bold uppercase tracking-widest text-sm px-10 py-4 hover:brightness-110 transition"
+          >
+            View All Approved Stock
+            <span aria-hidden className="text-lg leading-none">→</span>
+          </a>
+        </div>
+      )}
     </>
   );
 }
@@ -195,45 +207,21 @@ function FeatureSection({
   reverse: boolean;
   index: number;
 }) {
-  // BUG_UI_004 — overlapping asymmetric grid:
-  //
-  //   • Images are square-edged (no border-radius), full-bleed in their
-  //     column. Drops the rounded-card treatment that gave the rows a
-  //     "bubbly" feel against the rugged H-D voice.
-  //   • Text tile sits in a raised white card with a soft drop shadow,
-  //     intentionally OVERLAPPING the image edge on the opposite side
-  //     of the row (margin-left/-right negative pulls it back into the
-  //     image gutter). On mobile the overlap collapses to a clean stack.
-  //   • Icons rendered inside a thin circular outline (no fill), the
-  //     "minimalist wireframe" treatment Figma specifies.
-  //   • Headings now use font-subhead (1903 Sans, regular weight) rather
-  //     than font-headline (1903 Sans Condensed); the condensed cut was
-  //     too vertically compressed for these card titles.
+  const rowBg = index % 2 === 0 ? '#FFFFFF' : '#F5F5F5';
+
   return (
-    // QA latest: row 1 (index 0) = white, row 2 (index 1) = soft
-    // #F5F5F5, alternating. Even indices get white, odd indices grey
-    // — flipped from the previous pattern that started grey-first.
-    <section
-      // Tighter vertical padding so each row is ~60-70% of viewport
-      // height — when the buyer scrolls to one row, slivers of the prior
-      // and next rows (each with its alternating bg colour) peek above
-      // and below. Signals "more content here" without needing chevrons
-      // or a scroll-snap container.
-      className="py-8 md:py-10"
-      style={{ backgroundColor: index % 2 === 1 ? '#F5F5F5' : '#FFFFFF' }}
-    >
-      <div
-        className={`max-w-container mx-auto px-6 grid lg:grid-cols-2 gap-0 items-center ${
-          reverse ? 'lg:[&>*:first-child]:order-2' : ''
-        }`}
-      >
-        {/* Image column — square-edged per Figma; aspect 4/3 keeps the
-            bike framing consistent across rows. QA BUG_UI_045 root
-            cause: when the external CDN photo 404'd the row reserved
-            no height and the visible page appeared to "halt early"
-            after the 2nd row. Fallback to a local placeholder + bg
-            colour on the wrapper guarantees every row paints. */}
-        <div className="aspect-[16/10] overflow-hidden bg-gray-200">
+    <section style={{ backgroundColor: rowBg }}>
+      {/* Full-width edge-to-edge 50/50 grid — no padding wrapper so the
+          image column bleeds to the section edge on desktop. On mobile
+          the grid stacks: image on top, text below. */}
+      <div className="grid lg:grid-cols-2 items-stretch min-h-[320px] md:min-h-[380px]">
+
+        {/* ── Image column ────────────────────────────────────────── */}
+        <div
+          className={`overflow-hidden bg-gray-200 min-h-[240px] md:min-h-[320px] lg:min-h-0 ${
+            reverse ? 'lg:order-2' : 'lg:order-1'
+          }`}
+        >
           <img
             src={feature.image}
             alt=""
@@ -248,62 +236,53 @@ function FeatureSection({
             }}
           />
         </div>
-        {/* Text card — raised, drop-shadowed, overlaps the image gutter
-            on lg+ via negative margin pulled INTO the image. Sign of
-            the margin flips with `reverse` so the overlap always
-            extends into the adjacent image column, never out into the
-            page gutter. */}
+
+        {/* ── Text column ─────────────────────────────────────────── */}
         <div
-          className={`bg-hd-white shadow-xl lg:shadow-2xl p-6 md:p-8 lg:p-10 relative lg:z-10 ${
-            reverse
-              ? 'lg:-mr-16 lg:[&]:order-1'
-              : 'lg:-ml-16'
+          className={`flex flex-col justify-center px-8 md:px-12 lg:px-16 py-10 md:py-14 ${
+            reverse ? 'lg:order-1' : 'lg:order-2'
           }`}
+          style={{ backgroundColor: rowBg }}
         >
+          {/* Icon + Title on same row — matches the reference layout */}
           <div className="flex items-start gap-4">
-            {/* Brand-supplied SVG (already a 72×72 orange-ringed circle
-                with a transparent fill). Sized down to ~56-64px to sit
-                comfortably next to the headline. */}
             <img
               src={feature.iconSrc}
               alt=""
               aria-hidden
-              className="shrink-0 h-14 w-14 md:h-16 md:w-16"
+              className="shrink-0 h-14 w-14 md:h-16 md:w-16 mt-0.5"
               width={64}
               height={64}
               decoding="async"
             />
-            <div className="min-w-0">
-              <h3 className="font-subhead font-bold tracking-subhead uppercase text-lg md:text-xl text-text-on-light leading-tight">
-                {feature.title}
-              </h3>
-              {/* Prefer bullet list when present — easier to scan than a
-                  block paragraph. Legacy `body` field still supported for
-                  rows that haven't been migrated. Orange disc markers
-                  match the home Overview list. */}
-              {feature.bullets && feature.bullets.length > 0 ? (
-                <ul className="mt-3 text-[16px] text-gray-600 leading-relaxed space-y-2 list-disc pl-5 marker:text-hd-orange">
-                  {feature.bullets.map((b) => (
-                    <li key={b} className="pl-1">
-                      {b}
-                    </li>
-                  ))}
-                </ul>
-              ) : feature.body ? (
-                <p className="text-[18px] text-gray-600 mt-3 leading-relaxed">{feature.body}</p>
-              ) : null}
-              {feature.cta && (
-                <a
-                  href={feature.cta.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead px-5 py-2.5 hover:brightness-110 transition text-xs"
-                >
-                  {feature.cta.label} ↗
-                </a>
-              )}
-            </div>
+            <h3 className="font-subhead font-bold normal-case tracking-normal text-xl md:text-2xl text-text-on-light leading-snug">
+              {feature.title}.
+            </h3>
           </div>
+
+          {/* Body / bullet list */}
+          {feature.bullets && feature.bullets.length > 0 ? (
+            <ul className="mt-5 text-[15px] text-gray-600 leading-relaxed space-y-2 list-disc pl-5 marker:text-hd-orange">
+              {feature.bullets.map((b) => (
+                <li key={b} className="pl-1">{b}</li>
+              ))}
+            </ul>
+          ) : feature.body ? (
+            <p className="mt-5 text-[15px] text-gray-600 leading-relaxed">{feature.body}</p>
+          ) : null}
+
+          {/* Optional CTA — e.g. HOG Benefits */}
+          {feature.cta && (
+            <a
+              href={feature.cta.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-6 bg-hd-orange text-hd-white font-bold uppercase tracking-widest text-xs px-6 py-3 hover:brightness-110 transition w-fit"
+            >
+              {feature.cta.label}
+              <span aria-hidden>→</span>
+            </a>
+          )}
         </div>
       </div>
     </section>
