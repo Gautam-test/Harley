@@ -493,7 +493,10 @@ export function SellBikeModal() {
                               setValue('location', r.locality || `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`, { shouldValidate: true });
                               if (r.state) {
                                 setValue('state', r.state, { shouldValidate: true });
-                                setValue('city', r.city ?? '', { shouldValidate: true });
+                                // r.city is matched against our canonical list (may be null for
+                                // smaller cities). Fall back to r.locality which is the raw
+                                // free-text city/neighborhood name from BigDataCloud.
+                                setValue('city', r.city ?? r.locality ?? '', { shouldValidate: true });
                               }
                               if (r.pincode) setValue('pincode', r.pincode, { shouldValidate: true });
                               if (r.countryCode && r.countryCode !== 'IN') {

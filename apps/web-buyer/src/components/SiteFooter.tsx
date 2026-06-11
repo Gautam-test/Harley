@@ -32,17 +32,23 @@ export function SiteFooter() {
   return (
     <footer className="bg-hd-black border-t border-surface-2 mt-16">
       <div className="max-w-container mx-auto px-6 py-6 md:py-7 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Brand wordmark to match the SiteHeader. The bar-and-shield
-            variant was introduced in an earlier iteration but the latest
-            Figma reverts both header AND footer to the wordmark. */}
+        {/* Brand wordmark — same SVG file and height as the SiteHeader so
+            the logo is pixel-identical in both positions. The light variant
+            (white fill) is correct here because the footer background is
+            hd-black, matching the dark header. */}
         <Link
           to="/"
           aria-label="H-D Certified — home"
-          className="inline-flex items-center font-subhead font-bold uppercase tracking-[0.18em] text-base md:text-lg text-hd-white hover:text-hd-white/80 transition"
+          className="shrink-0 opacity-90 hover:opacity-100 transition"
         >
-          <span>H</span>
-          <span aria-hidden className="inline-block w-3 h-[3px] bg-hd-orange mx-2 align-middle" />
-          <span>D Certified</span>
+          <img
+            src="/brand/hd-certified-wordmark-light.svg"
+            alt="H-D Certified™"
+            className="h-4 w-auto"
+            width={225}
+            height={16}
+            decoding="async"
+          />
         </Link>
 
         {/* Inline link row. Pipe dividers between items. On mobile the

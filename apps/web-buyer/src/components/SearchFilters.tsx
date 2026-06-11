@@ -424,7 +424,7 @@ export function SearchFilters() {
             filter range is legible at a glance. */}
         {searchBy === 'cash' ? (
           <SliderField
-            label="Max Price"
+            label="Price"
             value={maxPrice}
             min={ranges.minPrice}
             max={ranges.maxPrice}
@@ -434,6 +434,11 @@ export function SearchFilters() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
+            showRange
+            rangeLabels={[
+              `₹${ranges.minPrice.toLocaleString('en-IN')}`,
+              `₹${ranges.maxPrice.toLocaleString('en-IN')}`,
+            ]}
           />
         ) : (
           <SliderField

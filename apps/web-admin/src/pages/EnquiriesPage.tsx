@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, Input, Select } from '@hd-cpo/ui';
+import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
 import { api } from '../lib/api';
 
 // Cross-dealer enquiry oversight for admins. Shows every lead in the system
@@ -329,7 +330,7 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {status.replace(/_/g, ' ')}
+      {LEAD_STAGE_LABELS[status] ?? status.replace(/_/g, ' ')}
     </Badge>
   );
 }
