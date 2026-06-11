@@ -194,12 +194,19 @@ export async function adminUpdateDealer(id: string, input: AdminUpdateDealerInpu
 }
 
 export async function adminSetDealerStatus(id: string, status: DealerStatus, ctx: AuditCtx) {
+  const prev = await prisma.dealer.findUniqueOrThrow({ where: { id }, select: { status: true } });
   const dealer = await prisma.dealer.update({ where: { id }, data: { status } });
   // PRD §6.3.3 — Suspended dealers can't log in; their listings auto-deactivate.
   if (status === 'SUSPENDED' || status === 'INACTIVE') {
     await prisma.listing.updateMany({
       where: { dealerId: id, status: 'ACTIVE' },
       data: { status: 'DEACTIVATED' },
+    });
+  } else if (status === 'ACTIVE' && (prev.status === 'SUSPENDED' || prev.status === 'INACTIVE')) {
+    // Restore listings that were auto-deactivated when the dealer was suspended/deactivated.
+    await prisma.listing.updateMany({
+      where: { dealerId: id, status: 'DEACTIVATED' },
+      data: { status: 'ACTIVE' },
     });
   }
   await audit({
