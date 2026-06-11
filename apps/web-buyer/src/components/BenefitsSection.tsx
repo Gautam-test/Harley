@@ -209,21 +209,19 @@ function FeatureSection({
 
   return (
     <section style={{ backgroundColor: rowBg }}>
-      {/* Full-width edge-to-edge 50/50 grid — no padding wrapper so the
-          image column bleeds to the section edge on desktop. On mobile
-          the grid stacks: image on top, text below. */}
-      <div className="grid lg:grid-cols-2 items-stretch min-h-[360px] md:min-h-[400px]">
+      <div className="grid lg:grid-cols-2 items-center">
 
         {/* ── Image column ────────────────────────────────────────── */}
         <div
-          className={`overflow-hidden bg-gray-200 min-h-[280px] md:min-h-[360px] lg:min-h-0 ${
+          className={`flex items-center justify-center p-6 md:p-8 lg:p-10 min-h-[280px] lg:min-h-[400px] ${
             reverse ? 'lg:order-2' : 'lg:order-1'
           }`}
+          style={{ backgroundColor: rowBg }}
         >
           <img
             src={feature.image}
             alt=""
-            className="w-full h-full object-cover"
+            className="w-full h-auto object-contain max-h-[340px]"
             onError={(e) => {
               const img = e.currentTarget;
               if (!img.dataset.fellBack) {
