@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -82,6 +82,21 @@ export function ListingDetailPage() {
   });
 
   const [tab, setTab] = useState<'overview' | 'specs'>('overview');
+  const sidebarRef = useRef<HTMLElement>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+  const [enquiryCounter, setEnquiryCounter] = useState(0);
+
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0, rootMargin: '0px' }
+    );
+    observer.observe(sidebar);
+    return () => observer.disconnect();
+  }, [data]);
+
   // Client feedback #14: auto-open buyer enquiry popup on first PDP visit
   // per session. Suppressed once an enquiry is submitted this session.
   const [autoOpenEnquiry, setAutoOpenEnquiry] = useState(false);
@@ -161,7 +176,7 @@ export function ListingDetailPage() {
               />
             </div>
 
-            <aside id="enquire-sidebar">
+            <aside id="enquire-sidebar" ref={sidebarRef}>
               <ListingSidebarCard
                 slug={data.slug}
                 modelInterest={`${data.year} ${data.modelName}`}
@@ -176,6 +191,7 @@ export function ListingDetailPage() {
                 dealerPhone={data.dealerPhone ?? null}
                 dealerEmail={data.dealerEmail ?? null}
                 autoOpen={autoOpenEnquiry}
+                openCounter={enquiryCounter}
                 onEnquirySubmitted={() => {
                   sessionStorage.setItem('hd_enquiry_done', '1');
                   setAutoOpenEnquiry(false);
@@ -368,6 +384,29 @@ export function ListingDetailPage() {
       </div>
 
       {/* Client feedback #7: nearest-dealers locator removed from PDP. */}
+
+      {/* Desktop sticky bar — appears when the price sidebar scrolls out of
+          view. Hidden on mobile (mobile has its own bottom bar below).
+          Black bar: bike name left, price centre-left, orange CTA right. */}
+      <div
+        className={`hidden lg:flex fixed top-0 inset-x-0 z-40 bg-hd-black text-hd-white items-center gap-6 px-8 h-14 shadow-lg transition-transform duration-300 ${
+          showStickyBar ? 'translate-y-0' : '-translate-y-full'
+        }`}
+      >
+        <p className="font-subhead font-bold uppercase tracking-subhead text-sm truncate flex-1">
+          {heading}
+        </p>
+        <p className="font-subhead font-bold text-hd-orange text-base shrink-0">
+          ₹ {data.price.toLocaleString('en-IN')}
+        </p>
+        <button
+          type="button"
+          onClick={() => setEnquiryCounter((c) => c + 1)}
+          className="shrink-0 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-5 py-2 hover:brightness-110 transition"
+        >
+          Request a Call Back
+        </button>
+      </div>
 
       {/* Mobile-only sticky enquiry bar. Below lg the sidebar gets pushed
           far down the page once the buyer is reading the Overview / spec

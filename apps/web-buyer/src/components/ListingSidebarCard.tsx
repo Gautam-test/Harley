@@ -28,6 +28,9 @@ interface ListingSidebarCardProps {
   /** Called when the buyer completes an enquiry so the parent can set the
    *  session flag that prevents future auto-opens. */
   onEnquirySubmitted?: () => void;
+  /** Increment this counter from a parent component to imperatively open
+   *  the enquiry modal (e.g. from the sticky scroll bar on desktop). */
+  openCounter?: number;
 }
 
 // Mirrors the frozen Figma listing-detail right rail exactly:
@@ -50,6 +53,7 @@ export function ListingSidebarCard({
   dealerEmail,
   autoOpen,
   onEnquirySubmitted,
+  openCounter,
 }: ListingSidebarCardProps) {
   // No localStorage-driven hints, no my-status pre-check, no popup. The
   // duplicate-by-mobile rule lives entirely on the API: if the buyer
@@ -74,6 +78,10 @@ export function ListingSidebarCard({
       setModalOpen(true);
     }
   }, [autoOpen, submitted]);
+
+  useEffect(() => {
+    if (openCounter) setModalOpen(true);
+  }, [openCounter]);
 
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
     `${dealerName} ${dealerCity}`,
