@@ -254,9 +254,7 @@ function FeatureSection({
               )}
             </>
           ) : feature.body ? (
-            <ul className="mt-5 text-[15px] text-gray-700 leading-relaxed list-disc pl-4 marker:text-hd-orange">
-              <li className="pl-1">{feature.body}</li>
-            </ul>
+            <p className="mt-5 text-[15px] text-gray-700 leading-relaxed">{feature.body}</p>
           ) : null}
 
           {/* Optional CTA — e.g. HOG Benefits */}
