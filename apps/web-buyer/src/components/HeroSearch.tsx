@@ -189,8 +189,8 @@ export function HeroSearch() {
               H-D Certified
               {/* Client feedback #2: ™ symbol must be white (matches the
                   surrounding heading colour, not the orange emphasis word). */}
-              <span className="text-hd-white align-super text-[0.55em] ml-1">&trade;</span>
-              {' '}Approved Used Motorcycles
+              <span className="text-hd-white align-super text-[0.55em] ml-0.5">&trade;</span>
+              <span className="ml-0.5">Approved Used Motorcycles</span>
             </h1>
             {/* QA latest: subhead 22px per Figma, font-weight 500
                 (Medium), Title Case. */}
