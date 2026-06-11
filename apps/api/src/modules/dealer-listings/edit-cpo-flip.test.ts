@@ -29,6 +29,7 @@ beforeAll(() => {
 
 const findUnique = vi.fn();
 const update = vi.fn();
+const dealerFindUnique = vi.fn();
 
 vi.mock('../../config/prisma.js', () => ({
   prisma: {
@@ -36,12 +37,17 @@ vi.mock('../../config/prisma.js', () => ({
       findUnique: (...args: unknown[]) => findUnique(...args),
       update: (...args: unknown[]) => update(...args),
     },
+    dealer: {
+      findUnique: (...args: unknown[]) => dealerFindUnique(...args),
+    },
   },
 }));
 
 beforeEach(() => {
   findUnique.mockReset();
   update.mockReset();
+  dealerFindUnique.mockReset();
+  dealerFindUnique.mockResolvedValue({ name: 'Test Dealer' });
 });
 
 const ROOT_VIN = '1HD1KHM18MB678901';

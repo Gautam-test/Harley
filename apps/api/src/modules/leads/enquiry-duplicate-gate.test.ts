@@ -36,6 +36,7 @@ beforeAll(() => {
 const enquiryFindMany = vi.fn();
 const enquiryCreate = vi.fn();
 const tradeInLeadFindMany = vi.fn();
+const tradeInLeadFindFirst = vi.fn();
 const tradeInLeadCreate = vi.fn();
 const listingFindUnique = vi.fn();
 const listingFindFirst = vi.fn();
@@ -50,6 +51,7 @@ vi.mock('../../config/prisma.js', () => ({
     },
     tradeInLead: {
       findMany: (...args: unknown[]) => tradeInLeadFindMany(...args),
+      findFirst: (...args: unknown[]) => tradeInLeadFindFirst(...args),
       create: (...args: unknown[]) => tradeInLeadCreate(...args),
     },
     listing: {
@@ -78,6 +80,7 @@ vi.mock('../email/email.module.js', () => ({
   // import resolution throws 'No export defined on the mock'.
   buyerEnquiryConfirmationEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
   buyerDealerUpdateEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
+  sellerTradeInConfirmationEmail: vi.fn().mockReturnValue({ subject: 'x', html: 'x', to: '' }),
   emailProvider: () => ({ send: vi.fn().mockResolvedValue(undefined) }),
 }));
 
@@ -85,6 +88,7 @@ beforeEach(() => {
   enquiryFindMany.mockReset();
   enquiryCreate.mockReset();
   tradeInLeadFindMany.mockReset();
+  tradeInLeadFindFirst.mockReset();
   tradeInLeadCreate.mockReset();
   listingFindUnique.mockReset();
   listingFindFirst.mockReset();
@@ -193,12 +197,11 @@ describe('createTradeInLead — duplicate-by-mobile gate (global)', () => {
     city: 'Gurgaon',
   };
 
-  it('rejects a second trade-in lead with the same phone (global, no listing scope)', async () => {
+  it('rejects a second trade-in lead for the same VIN while a lead is open', async () => {
     const { createTradeInLead } = await import('./leads.service.js');
     dealerFindFirst.mockResolvedValueOnce(null);
-    tradeInLeadFindMany.mockResolvedValueOnce([
-      { id: 'open-trade-1', phoneEnc: await encrypt(TRADE_IN_INPUT.phone) },
-    ]);
+    // checkTradeInVinGate: findFirst returns an open lead → OPEN_LEAD → 409
+    tradeInLeadFindFirst.mockResolvedValueOnce({ id: 'open-trade-1' });
 
     await expect(createTradeInLead(TRADE_IN_INPUT)).rejects.toMatchObject({
       status: 409,
@@ -207,10 +210,11 @@ describe('createTradeInLead — duplicate-by-mobile gate (global)', () => {
     expect(tradeInLeadCreate).not.toHaveBeenCalled();
   });
 
-  it('allows a fresh trade-in when the previous lead is terminal', async () => {
+  it('allows a fresh trade-in when no open or blocking lead exists', async () => {
     const { createTradeInLead } = await import('./leads.service.js');
     dealerFindFirst.mockResolvedValueOnce(null);
-    tradeInLeadFindMany.mockResolvedValueOnce([]);
+    // checkTradeInVinGate: first findFirst = null (no open lead), second findFirst = null (no closed lead)
+    tradeInLeadFindFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     tradeInLeadCreate.mockResolvedValueOnce({ id: 'new-trade-1' });
 
     const result = await createTradeInLead(TRADE_IN_INPUT);
@@ -269,20 +273,20 @@ describe('dealerCreateTradeInLead — same gate applies to dealer-portal logging
     source: 'walk-in' as const,
   };
 
-  it('rejects when the same phone already has an open trade-in lead', async () => {
+  it('rejects when the same VIN already has an open trade-in lead', async () => {
     const { dealerCreateTradeInLead } = await import('./leads.service.js');
-    tradeInLeadFindMany.mockResolvedValueOnce([
-      { id: 'open-trade-1', phoneEnc: await encrypt(DEALER_TRADE_INPUT.phone) },
-    ]);
+    // checkTradeInVinGate: findFirst returns an open lead → OPEN_LEAD → 409
+    tradeInLeadFindFirst.mockResolvedValueOnce({ id: 'open-trade-1' });
 
     await expect(
       dealerCreateTradeInLead('dealer-1', DEALER_TRADE_INPUT),
     ).rejects.toMatchObject({ status: 409, code: 'SELLER_ENQUIRY_ALREADY_OPEN' });
   });
 
-  it('allows when no open trade-in lead exists', async () => {
+  it('allows when no open or blocking trade-in lead exists', async () => {
     const { dealerCreateTradeInLead } = await import('./leads.service.js');
-    tradeInLeadFindMany.mockResolvedValueOnce([]);
+    // checkTradeInVinGate: first findFirst = null (no open lead), second findFirst = null (no closed lead)
+    tradeInLeadFindFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     tradeInLeadCreate.mockResolvedValueOnce({ id: 'new-trade-1' });
 
     const result = await dealerCreateTradeInLead('dealer-1', DEALER_TRADE_INPUT);
