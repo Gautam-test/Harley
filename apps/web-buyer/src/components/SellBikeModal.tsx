@@ -543,38 +543,36 @@ export function SellBikeModal() {
                 </Labelled>
               </div>
 
-              {/* QA NEW: Figma renders State + City as flat editable
-                  text inputs (not dropdown selectors). Buyer types their
-                  state and city directly. The cityOptions / selectedState
-                  watches still exist but are now only used by the dealer
-                  auto-pick effect — not the UI. */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="State" required error={errors.state?.message}>
-                  <Input
-                    placeholder="Enter state"
+                  <Select
                     aria-invalid={Boolean(errors.state)}
                     {...register('state', {
-                      required: 'State is required',
-                      onChange: () =>
-                        setValue('city', getValues('city') ?? '', { shouldValidate: false }),
+                      ...requiredSelect('a state'),
+                      onChange: () => {
+                        setValue('city', '', { shouldValidate: true });
+                      },
                     })}
-                  />
+                  >
+                    <option value="">Select state</option>
+                    {INDIA_STATES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </Select>
                 </Labelled>
                 <Labelled label="City" required error={errors.city?.message}>
-                  <Input
-                    placeholder="Enter city"
+                  <Select
                     aria-invalid={Boolean(errors.city)}
-                    {...(() => {
-                      const r = register('city', { required: 'City is required' });
-                      return {
-                        ...r,
-                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                          e.target.value = sanitizeAlpha(e.target.value);
-                          void r.onChange(e);
-                        },
-                      };
-                    })()}
-                  />
+                    disabled={!selectedState}
+                    {...register('city', requiredSelect('a city'))}
+                  >
+                    <option value="">
+                      {selectedState ? 'Select city' : 'Pick a state first'}
+                    </option>
+                    {cityOptions.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </Select>
                 </Labelled>
               </div>
 

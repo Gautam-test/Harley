@@ -8,14 +8,11 @@ import { HOG_BENEFITS_URL } from '../lib/constants';
 
 interface FeatureRow {
   title: string;
-  /** Legacy single-paragraph body. Kept optional for backward compatibility
-   *  — when `bullets` is present it wins. */
   body?: string;
   bullets?: string[];
+  /** Paragraph rendered below the bullet list (row 1 only). */
+  extra?: string;
   image: string;
-  /** Path under /brand/benefits/ to the brand-supplied SVG icon.
-   *  Each SVG already carries the orange circular ring + transparent
-   *  fill — no wrapper/background needed. */
   iconSrc: string;
   cta?: { label: string; href: string };
 }
@@ -41,8 +38,9 @@ const FEATURES: FeatureRow[] = [
       'Inspection of the technical condition of the motorcycle is the same for all authorised dealers.',
       'It amounts to a check of 110 points covering the whole operation of the machine.',
       'A detailed record signed by the performing technician is available to the customer from each inspection.',
-      'Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
     ],
+    extra:
+      'Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
   },
   {
     // Client feedback #5: replace placeholder copy with client-approved copy.
@@ -184,7 +182,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
           (compact = false). The PDP already has its own CTA below the
           BenefitsSection block. */}
       {!compact && (
-        <div className="py-12 text-center" style={{ backgroundColor: FEATURES.length % 2 === 0 ? '#FFFFFF' : '#F5F5F5' }}>
+        <div className="py-12 text-center" style={{ backgroundColor: FEATURES.length % 2 === 0 ? '#FFFFFF' : '#EBEBEB' }}>
           <a
             href="/search"
             className="inline-flex items-center gap-3 bg-hd-orange text-hd-white font-bold uppercase tracking-widest text-sm px-10 py-4 hover:brightness-110 transition"
@@ -207,18 +205,18 @@ function FeatureSection({
   reverse: boolean;
   index: number;
 }) {
-  const rowBg = index % 2 === 0 ? '#FFFFFF' : '#F5F5F5';
+  const rowBg = index % 2 === 0 ? '#FFFFFF' : '#EBEBEB';
 
   return (
     <section style={{ backgroundColor: rowBg }}>
       {/* Full-width edge-to-edge 50/50 grid — no padding wrapper so the
           image column bleeds to the section edge on desktop. On mobile
           the grid stacks: image on top, text below. */}
-      <div className="grid lg:grid-cols-2 items-stretch min-h-[320px] md:min-h-[380px]">
+      <div className="grid lg:grid-cols-2 items-stretch min-h-[360px] md:min-h-[400px]">
 
         {/* ── Image column ────────────────────────────────────────── */}
         <div
-          className={`overflow-hidden bg-gray-200 min-h-[240px] md:min-h-[320px] lg:min-h-0 ${
+          className={`overflow-hidden bg-gray-200 min-h-[280px] md:min-h-[360px] lg:min-h-0 ${
             reverse ? 'lg:order-2' : 'lg:order-1'
           }`}
         >
@@ -238,36 +236,43 @@ function FeatureSection({
 
         {/* ── Text column ─────────────────────────────────────────── */}
         <div
-          className={`flex flex-col justify-center px-8 md:px-12 lg:px-16 py-10 md:py-14 ${
+          className={`flex flex-col justify-center px-8 md:px-10 lg:px-12 py-10 md:py-12 ${
             reverse ? 'lg:order-1' : 'lg:order-2'
           }`}
           style={{ backgroundColor: rowBg }}
         >
           {/* Icon + Title on same row — matches the reference layout */}
-          <div className="flex items-start gap-4">
+          <div className="flex items-center gap-4">
             <img
               src={feature.iconSrc}
               alt=""
               aria-hidden
-              className="shrink-0 h-14 w-14 md:h-16 md:w-16 mt-0.5"
-              width={64}
-              height={64}
+              className="shrink-0 h-[72px] w-[72px]"
+              width={72}
+              height={72}
               decoding="async"
             />
-            <h3 className="font-subhead font-bold normal-case tracking-normal text-xl md:text-2xl text-text-on-light leading-snug">
-              {feature.title}.
+            <h3 className="font-subhead font-bold normal-case tracking-normal text-[20px] md:text-[24px] text-text-on-light leading-snug">
+              {feature.title}
             </h3>
           </div>
 
           {/* Body / bullet list */}
           {feature.bullets && feature.bullets.length > 0 ? (
-            <ul className="mt-5 text-[15px] text-gray-600 leading-relaxed space-y-2 list-disc pl-5 marker:text-hd-orange">
-              {feature.bullets.map((b) => (
-                <li key={b} className="pl-1">{b}</li>
-              ))}
-            </ul>
+            <>
+              <ul className="mt-5 text-[15px] text-gray-700 leading-relaxed space-y-3 list-disc pl-4 marker:text-hd-orange">
+                {feature.bullets.map((b) => (
+                  <li key={b} className="pl-1">{b}</li>
+                ))}
+              </ul>
+              {feature.extra && (
+                <p className="mt-4 text-[15px] text-gray-700 leading-relaxed">{feature.extra}</p>
+              )}
+            </>
           ) : feature.body ? (
-            <p className="mt-5 text-[15px] text-gray-600 leading-relaxed">{feature.body}</p>
+            <ul className="mt-5 text-[15px] text-gray-700 leading-relaxed list-disc pl-4 marker:text-hd-orange">
+              <li className="pl-1">{feature.body}</li>
+            </ul>
           ) : null}
 
           {/* Optional CTA — e.g. HOG Benefits */}
