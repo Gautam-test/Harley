@@ -903,11 +903,7 @@ export function InfoGateModal({
                               });
                               if (r.state) {
                                 setValue('state', r.state, { shouldValidate: true });
-                                if (r.city) {
-                                  setValue('city', r.city, { shouldValidate: true });
-                                } else {
-                                  setValue('city', '', { shouldValidate: true });
-                                }
+                                setValue('city', r.city ?? r.locality ?? '', { shouldValidate: true });
                               }
                               if (r.pincode) {
                                 setValue('pincode', r.pincode, { shouldValidate: true });
