@@ -134,8 +134,14 @@ export function LoginPage() {
           column instead of the whole page. Desktop/tablet never trigger it. */}
       <section className="flex items-center justify-center px-6 py-8 lg:py-6 overflow-y-auto">
         <div className="w-full max-w-md">
-          <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">Dealer Portal</p>
-          <p className="font-subhead uppercase tracking-subhead text-[11px] text-text-on-light/60 mt-1">Harley-Davidson</p>
+          <img
+            src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
+            alt="H-D Certified"
+            className="h-8 w-auto"
+            width={172}
+            height={32}
+            decoding="async"
+          />
 
           <h2 className="font-headline text-4xl tracking-headline mt-6 uppercase">
             Sign <span className="text-hd-orange">In</span>

@@ -62,10 +62,15 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-surface-light flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-hd-white border border-gray-200 p-8 shadow-sm">
-        <h1 className="font-headline text-3xl tracking-headline text-text-on-light">
-          H-D <span className="text-hd-orange">ADMIN</span>
-        </h1>
-        <p className="text-gray-600 text-sm mt-2">Network oversight for H-D Certified.</p>
+        <img
+          src={`${import.meta.env.BASE_URL}brand/hd-certified-wordmark.svg`}
+          alt="H-D Certified"
+          className="h-8 w-auto"
+          width={172}
+          height={32}
+          decoding="async"
+        />
+        <p className="text-gray-600 text-sm mt-3">Network oversight for H-D Certified.</p>
         {/* Buyer-bounce link — a customer who typed /admin by accident
             can return to the public site in one click. */}
         <p className="text-[11px] text-gray-500 mt-2">
