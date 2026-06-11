@@ -44,7 +44,7 @@ export function NotFoundPage() {
             <>
               <Link
                 to="/dashboard"
-                className="mt-6 inline-flex items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:brightness-110 transition"
+                className="mt-6 inline-flex items-center bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:brightness-110 transition"
               >
                 Back to Dashboard
               </Link>
@@ -66,7 +66,7 @@ export function NotFoundPage() {
           ) : (
             <Link
               to="/login"
-              className="mt-6 inline-flex items-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:brightness-110 transition"
+              className="mt-6 inline-flex items-center bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:brightness-110 transition"
             >
               Go to Dealer Login
             </Link>

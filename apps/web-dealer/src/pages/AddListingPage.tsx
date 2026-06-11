@@ -900,7 +900,7 @@ export function AddListingPage() {
                         href={`/api/v1/listings/${existing.data.slug}/certificate.png?v=${encodeURIComponent(existing.data.updatedAt)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 border border-hd-orange text-hd-orange font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:bg-hd-orange hover:text-hd-black transition"
+                        className="inline-flex items-center gap-1.5 border border-hd-orange text-hd-orange font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:bg-hd-orange hover:text-hd-white transition"
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -911,7 +911,7 @@ export function AddListingPage() {
                       <a
                         href={`/api/v1/listings/${existing.data.slug}/certificate.pdf?v=${encodeURIComponent(existing.data.updatedAt)}`}
                         download
-                        className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                        className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
                       >
                         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

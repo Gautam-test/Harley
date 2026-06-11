@@ -296,7 +296,7 @@ export function MyListingsPage() {
                     </div>
                     <Link
                       to={`/listings/${l.id}/edit`}
-                      className="shrink-0 self-center bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                      className="shrink-0 self-center bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
                     >
                       Resume Edit →
                     </Link>

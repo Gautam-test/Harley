@@ -285,7 +285,7 @@ export function LeadDetailPage() {
             <div className="mt-5 flex flex-wrap gap-2">
               <a
                 href={`tel:${lead.phone.replace(/\s+/g, '')}`}
-                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
+                className="inline-flex items-center gap-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition"
               >
                 <Icon path="M3 5a2 2 0 012-2h2.5a1 1 0 011 .76l1 4a1 1 0 01-.27.95l-1.5 1.5a11 11 0 005 5l1.5-1.5a1 1 0 01.95-.27l4 1a1 1 0 01.76 1V19a2 2 0 01-2 2A18 18 0 013 5z" />
                 Call
