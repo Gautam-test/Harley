@@ -27,7 +27,7 @@ export function HomePage() {
       <div className="bg-hd-white py-14 text-center">
         <Link
           to="/search"
-          className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
+          className="inline-flex items-center gap-3 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
         >
           <span>View All Approved Used Stock</span>
           <span aria-hidden className="text-lg leading-none">&rsaquo;</span>

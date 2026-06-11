@@ -1147,7 +1147,7 @@ export function InfoGateModal({
                 // red errors. The non-buyer (general/trade-in) collect
                 // path keeps its own handling and isn't gated here.
                 disabled={busy || (isBuyerEnquiry && (!isValid || !termsAccepted))}
-                className={`bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-8 py-2.5 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed ${isBuyerEnquiry ? '' : 'w-full'}`}
+                className={`bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-8 py-2.5 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed ${isBuyerEnquiry ? '' : 'w-full'}`}
               >
                 {busy ? 'SENDING OTP…' : isBuyerEnquiry ? 'SEND ENQUIRY' : 'CONTINUE'}
               </button>

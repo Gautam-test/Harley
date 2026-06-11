@@ -382,7 +382,7 @@ function OrderResult({ order }: { order: OrderTrackResult }) {
           <div className="md:text-right">
             <p className="font-body text-[12px] text-gray-500">Current Status</p>
             {/* Sharp 0px badge corners per Figma. */}
-            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-4 py-2">
+            <span className="inline-flex mt-2 items-center bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-4 py-2">
               {order.currentLabel}
             </span>
           </div>
@@ -462,7 +462,7 @@ function LeadResult({ lead, id }: { lead: LeadTrackResult; id: string }) {
                   ? 'bg-danger text-hd-white'
                   : lead.status === 'SUCCESS' || lead.status === 'CONVERTED'
                   ? 'bg-success text-hd-white'
-                  : 'bg-hd-orange text-hd-black'
+                  : 'bg-hd-orange text-hd-white'
               }`}
             >
               {lead.status.replace(/_/g, ' ')}

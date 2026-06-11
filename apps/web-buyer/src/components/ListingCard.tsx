@@ -149,9 +149,12 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           {listing.modelName}
         </h3>
 
-        {/* QA latest: pin glyph swapped to the brand-supplied
-            map-pin.svg (outline teardrop with center dot, both
-            strokes in #FF6600). Was a solid orange disc. */}
+        {/* Price in orange directly below name — matches NZ reference layout */}
+        <p className="font-subhead font-bold text-lg text-hd-orange tracking-subhead mt-1.5">
+          ₹ {listing.price.toLocaleString('en-IN')}
+        </p>
+
+        {/* Dealer row */}
         <p className="flex items-center gap-1.5 text-[12px] text-gray-600 mt-2">
           <img
             src="/brand/map-pin.svg"
@@ -165,41 +168,36 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           <span className="truncate">{listing.dealerName}</span>
         </p>
 
-        {/* QA latest: metadata row breathes — wider gap between
-            tokens (gap-x-2 inline-flex) so "C2UUC · 2023 · 8,240 KM ·
-            METALLIC BLUE" doesn't compress into a single dense
-            run-on line at narrow card widths. Wrap behaviour
-            preserved so long colour names still drop to a second
-            row instead of overflowing. */}
-        <p className="text-[11px] text-gray-600 mt-2 leading-relaxed inline-flex flex-wrap gap-x-2 gap-y-0.5">
-          {[
-            stockCode || null,
-            listing.year,
-            `${listing.kmsDriven.toLocaleString('en-IN')} KM`,
-            listing.colour ? listing.colour.toUpperCase() : null,
-          ]
-            .filter(Boolean)
-            .map((token, i, arr) => (
-              <span key={`${token}-${i}`} className="inline-flex items-center gap-x-2">
-                <span>{token}</span>
-                {i < arr.length - 1 && <span aria-hidden>·</span>}
-              </span>
-            ))}
-        </p>
+        {/* Labeled detail rows — matches NZ card layout */}
+        <div className="mt-3 space-y-1 text-[12px]">
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500">Year:</span>
+            <span className="text-gray-800 font-medium">{listing.year}</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500">Mileage:</span>
+            <span className="text-gray-800 font-medium">{listing.kmsDriven.toLocaleString('en-IN')} KM</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-gray-500">Location:</span>
+            <span className="text-gray-800 font-medium">{listing.city}</span>
+          </div>
+          {listing.colour && (
+            <div className="flex justify-between gap-2">
+              <span className="text-gray-500">Colour:</span>
+              <span className="text-gray-800 font-medium text-right">{listing.colour}</span>
+            </div>
+          )}
+        </div>
 
-        {/* Horizontal separator + price row. mt-auto pushes this
-            block to the bottom of the flex column so cards align
-            their price baselines regardless of title-wrap height. */}
-        <div className="mt-auto pt-4 border-t border-gray-200 flex items-baseline justify-between gap-2">
-          <span className="font-subhead font-bold text-xl text-text-on-light tracking-subhead">
-            ₹ {listing.price.toLocaleString('en-IN')}
-          </span>
-          {!isSold && (
+        {/* View Details pinned to bottom */}
+        {!isSold && (
+          <div className="mt-auto pt-3">
             <span className="font-body text-[12px] text-hd-orange group-hover:underline">
               View Details &gt;
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Tag>
 
@@ -251,7 +249,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             <Link
               to="/search"
               onClick={() => setShowSoldModal(false)}
-              className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
+              className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
             >
               Browse Stock →
             </Link>

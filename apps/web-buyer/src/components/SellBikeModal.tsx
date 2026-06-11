@@ -341,7 +341,7 @@ export function SellBikeModal() {
               <div className="bg-hd-orange/10 border border-hd-orange/40 p-4 flex items-start gap-3">
                 <span
                   aria-hidden
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-hd-orange text-hd-black font-bold shrink-0"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-hd-orange text-hd-white font-bold shrink-0"
                 >
                   ✓
                 </span>
@@ -376,7 +376,7 @@ export function SellBikeModal() {
                 <Link
                   to={`/track?id=${formatLeadId('trade-in', submitted.id)}`}
                   onClick={handleClose}
-                  className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
+                  className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
                 >
                   Track Enquiry →
                 </Link>
@@ -711,7 +711,7 @@ export function SellBikeModal() {
                 <button
                   type="submit"
                   disabled={!isValid || submitting}
-                  className="bg-hd-orange text-hd-black px-8 py-2.5 font-subhead font-bold uppercase tracking-subhead text-xs hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-hd-orange text-hd-white px-8 py-2.5 font-subhead font-bold uppercase tracking-subhead text-xs hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {submitting ? 'Submitting…' : 'Send Enquiry'}
                 </button>

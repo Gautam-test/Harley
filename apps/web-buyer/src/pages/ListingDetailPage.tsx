@@ -329,7 +329,7 @@ export function ListingDetailPage() {
                   <a
                     href={`/api/v1/listings/${data.slug}/certificate.pdf`}
                     download
-                    className="inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition border border-hd-orange"
+                    className="inline-flex items-center gap-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition border border-hd-orange"
                   >
                     <svg
                       className="w-4 h-4"
@@ -360,7 +360,7 @@ export function ListingDetailPage() {
       <div className="bg-hd-white py-6 text-center border-t border-gray-200">
         <Link
           to="/search"
-          className="inline-flex items-center gap-3 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
+          className="inline-flex items-center gap-3 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead px-7 py-3 hover:brightness-110 transition"
         >
           <span>View All Approved Used Stock</span>
           <span aria-hidden className="text-lg leading-none">&rsaquo;</span>
@@ -395,7 +395,7 @@ export function ListingDetailPage() {
               .getElementById('enquire-sidebar')
               ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
-          className="shrink-0 bg-hd-orange text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-5 py-3 hover:brightness-110 transition"
+          className="shrink-0 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-5 py-3 hover:brightness-110 transition"
         >
           Enquire Now
         </a>

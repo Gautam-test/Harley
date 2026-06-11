@@ -251,7 +251,7 @@ export function SearchPage() {
                 <button
                   type="button"
                   onClick={() => setParams({})}
-                  className="mt-5 inline-flex items-center gap-2 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 rounded-card hover:brightness-110 transition"
+                  className="mt-5 inline-flex items-center gap-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 rounded-card hover:brightness-110 transition"
                 >
                   Clear all filters
                 </button>
@@ -381,7 +381,7 @@ function Pagination({
   const cls = (active: boolean) =>
     `min-w-[2.25rem] h-9 px-3 inline-flex items-center justify-center font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
       active
-        ? 'bg-hd-orange text-hd-black'
+        ? 'bg-hd-orange text-hd-white'
         : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
     }`;
   // Render at most 3 numeric pages around the current.

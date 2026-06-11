@@ -252,7 +252,7 @@ export function ListingSidebarCard({
                   setModalOpen(true);
                 }}
                 disabled={submitting}
-                className="w-full bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[12px] py-3 hover:brightness-110 transition disabled:opacity-60"
+                className="w-full bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[12px] py-3 hover:brightness-110 transition disabled:opacity-60"
               >
                 {/* Client feedback #15: label changed to "Request a Call Back" */}
                 {submitting ? 'Sending…' : 'Request a Call Back'}
@@ -318,7 +318,7 @@ export function ListingSidebarCard({
 
                 <Link
                   to={`/track?id=${formatLeadId('buyer', submitted.id)}`}
-                  className="block text-center mt-4 bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
+                  className="block text-center mt-4 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] py-2.5 hover:brightness-110 transition"
                 >
                   Track Your Enquiry →
                 </Link>
@@ -472,7 +472,7 @@ export function ListingSidebarCard({
               <button
                 type="button"
                 onClick={() => setDealerDetailsOpen(false)}
-                className="bg-hd-orange text-hd-black font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
+                className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-xs px-5 py-2.5 hover:brightness-110 transition"
               >
                 Close
               </button>
