@@ -29,6 +29,7 @@ interface ExistingListing {
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
   adminFeedback: string | null;
   registrationNumber: string | null;
+  cpoDocs: Record<string, string> | null;
   /** Post-audit: used as a cache-buster on certificate URLs so a dealer
    *  who edits inspectedBy / registrationNumber / certifiedOn sees the
    *  fresh PNG + PDF immediately instead of the 1-hour-cached one. */
@@ -75,14 +76,11 @@ function clearLegacyDraft() {
 //   STEP 1 — ENTER VIN              (pull vehicle from Torque DMS)
 //   STEP 2 — DEALER INPUT           (price, KMs, owners, description, photos)
 //   STEP 3 — INSPECTION & CERTIFICATION (PDF upload + CPO/As-Is toggle)
-//   STEP 4 — CPO KIT DOCUMENTS      (auto-fetched from Torque, read-only status)
+//   STEP 4 — CPO KIT DOCUMENTS      (manual upload by dealer)
 //
 // Submit For Approval is enabled once the form is complete; until VIN is
 // fetched, Steps 2-4 stay greyed-out so the dealer knows what to do first.
 
-// Mirrors `packages/torque-client/src/types.ts` — the seven canonical Torque
-// data fields (VIN, ENGINE, MODEL NAME, MODEL FAMILY, COLOR, CUSTOMER NAME,
-// DATE OF INVOICE) plus operational dealer/status metadata.
 interface TorqueVehicle {
   vin: string;
   engine: string;
@@ -95,16 +93,17 @@ interface TorqueVehicle {
   status: string;
 }
 
-interface TorqueCpoKit {
-  cpoCertUrl?: string;
-  rsaUrl?: string;
-  espUrl?: string;
-  serviceHistoryUrl?: string;
-  rcUrl?: string;
-  deliveryNoteUrl?: string;
-  hogUrl?: string;
-  insuranceUrl?: string;
-}
+// The 8 CPO kit document types — dealer uploads one PDF per slot.
+const CPO_DOC_FIELDS = [
+  { key: 'cpoCertUrl', label: 'CPO Certificate' },
+  { key: 'rsaUrl', label: 'RSA Documents' },
+  { key: 'espUrl', label: 'ESP Documents' },
+  { key: 'serviceHistoryUrl', label: 'Service History' },
+  { key: 'rcUrl', label: 'RC Copy' },
+  { key: 'insuranceUrl', label: 'Insurance' },
+  { key: 'deliveryNoteUrl', label: 'Delivery Note' },
+  { key: 'hogUrl', label: 'HOG Membership' },
+] as const;
 
 interface FormState {
   vin: string;
@@ -127,6 +126,7 @@ interface FormState {
   inspectionMeta: { originalName: string; size: number } | null;
   certificationStatus: 'CPO' | 'AS_IS';
   registrationNumber: string;
+  cpoDocs: Record<string, string>;
 }
 
 const initial: FormState = {
@@ -146,6 +146,7 @@ const initial: FormState = {
   inspectionMeta: null,
   certificationStatus: 'CPO',
   registrationNumber: '',
+  cpoDocs: {},
 };
 
 // Mileage round-trip helpers — until the API gets a first-class column,
@@ -248,6 +249,7 @@ export function AddListingPage() {
       inspectionMeta: null,
       certificationStatus: e.certificationStatus,
       registrationNumber: e.registrationNumber ?? '',
+      cpoDocs: e.cpoDocs ?? {},
     });
     // Re-fetch from Torque so Engine, Customer Name and Date of Invoice
     // populate in the read-only "Fetched from Torque DMS" card — the
@@ -313,15 +315,6 @@ export function AddListingPage() {
     },
   });
 
-  // CPO Kit auto-fetched as soon as Torque returns a vehicle AND the dealer
-  // has tagged the listing as CPO. As-Is bikes don't carry the kit.
-  const cpoKit = useQuery({
-    queryKey: ['torque-cpo-kit', s.vin],
-    queryFn: () =>
-      api<TorqueCpoKit>(`/torque/vehicles/${encodeURIComponent(s.vin)}/cpo-kit`),
-    enabled: Boolean(s.torque) && s.certificationStatus === 'CPO',
-  });
-
   const create = useMutation({
     mutationFn: () => {
       if (isEditMode && editId) {
@@ -343,7 +336,9 @@ export function AddListingPage() {
             inspectionReportUrl:
               s.certificationStatus === 'CPO' ? s.inspectionUrl || null : null,
             cpoDocs:
-              s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+              s.certificationStatus === 'CPO' && Object.keys(s.cpoDocs).length > 0
+                ? s.cpoDocs
+                : null,
             registrationNumber: s.registrationNumber || null,
             // Dealer-internal pricing — send null when blank so the server
             // stores NULL (not 0) and old listings don't get phantom zeros.
@@ -368,7 +363,9 @@ export function AddListingPage() {
           inspectionReportUrl: s.inspectionUrl || null,
           certificationStatus: s.certificationStatus,
           cpoDocs:
-            s.certificationStatus === 'CPO' ? cpoKit.data ?? null : null,
+            s.certificationStatus === 'CPO' && Object.keys(s.cpoDocs).length > 0
+              ? s.cpoDocs
+              : null,
           registrationNumber: s.registrationNumber || null,
           purchasePrice: s.purchasePrice ? Number(s.purchasePrice) : null,
           refurbishmentPrice: s.refurbishmentPrice ? Number(s.refurbishmentPrice) : null,
@@ -964,7 +961,7 @@ export function AddListingPage() {
         <Section
           number={4}
           title="CPO Kit Documents"
-          eyebrow="Auto-fetched from Torque DMS"
+          eyebrow="Upload documents for this VIN"
           dim={torqueLocked || s.certificationStatus !== 'CPO'}
         >
           {s.certificationStatus === 'AS_IS' ? (
@@ -975,52 +972,23 @@ export function AddListingPage() {
           ) : (
             <>
               <p className="text-[11px] text-gray-500 mb-3">
-                Tap any document below to preview the file Torque returned for
-                this VIN.
+                Upload a PDF for each document type. All fields are optional — upload only what applies.
               </p>
-              <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                <KitDoc
-                  label="CPO Certificate"
-                  url={cpoKit.data?.cpoCertUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="RSA Documents"
-                  url={cpoKit.data?.rsaUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="ESP Documents"
-                  url={cpoKit.data?.espUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="Service History"
-                  url={cpoKit.data?.serviceHistoryUrl}
-                  loading={cpoKit.isPending}
-                  value={cpoKit.data?.serviceHistoryUrl ? '✓ 3 records' : undefined}
-                />
-                <KitDoc
-                  label="RC Copy"
-                  url={cpoKit.data?.rcUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="Insurance"
-                  url={cpoKit.data?.insuranceUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="Delivery Note"
-                  url={cpoKit.data?.deliveryNoteUrl}
-                  loading={cpoKit.isPending}
-                />
-                <KitDoc
-                  label="HOG Membership"
-                  url={cpoKit.data?.hogUrl}
-                  loading={cpoKit.isPending}
-                  value={cpoKit.data?.hogUrl ? '✓ Active' : undefined}
-                />
+              <div className="grid sm:grid-cols-3 gap-3">
+                {CPO_DOC_FIELDS.map(({ key, label }) => (
+                  <CpoDocTile
+                    key={key}
+                    label={label}
+                    url={s.cpoDocs[key]}
+                    disabled={torqueLocked}
+                    onUploaded={(url) =>
+                      setS((prev) => ({
+                        ...prev,
+                        cpoDocs: { ...prev.cpoDocs, [key]: url },
+                      }))
+                    }
+                  />
+                ))}
               </div>
             </>
           )}
@@ -1214,81 +1182,104 @@ function CertToggle({
   );
 }
 
-// CPO kit document tile. When Torque returns a URL, the whole tile becomes a
-// clickable link that opens the document in a new tab so the dealer can
-// inspect the actual PDF (RC copy, HOG membership certificate, etc.) and
-// not just trust a "✓ Fetched" badge. Missing docs render as a non-clickable
-// placeholder so the dealer can see what Torque didn't return.
-function KitDoc({
+function CpoDocTile({
   label,
   url,
-  loading,
-  value,
+  disabled,
+  onUploaded,
 }: {
   label: string;
   url: string | undefined;
-  loading: boolean;
-  value?: string;
+  disabled?: boolean;
+  onUploaded: (url: string) => void;
 }) {
-  if (loading) {
-    return (
-      <div className="border border-gray-200 rounded p-3 bg-gray-50/50">
-        <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-600">
-          {label}
-        </p>
-        <p className="mt-1 font-subhead uppercase tracking-subhead text-xs text-gray-400">
-          Loading…
-        </p>
-      </div>
-    );
-  }
-  if (!url) {
-    return (
-      <div className="border border-gray-200 rounded p-3 bg-gray-50/50">
-        <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-600">
-          {label}
-        </p>
-        <p className="mt-1 font-subhead uppercase tracking-subhead text-xs text-warning">
-          Missing
-        </p>
-      </div>
-    );
-  }
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onFile = async (file: File) => {
+    setUploading(true);
+    setError(null);
+    try {
+      if (file.size > 10 * 1024 * 1024) throw new Error('Max 10 MB');
+      if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+        throw new Error('PDF only');
+      }
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api<{ url: string; originalName: string; size: number }>(
+        '/inspection/upload',
+        { method: 'POST', body: fd, formData: true },
+      );
+      onUploaded(res.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="block border border-gray-200 rounded p-3 hover:border-hd-orange hover:bg-orange-50/30 transition group"
-      title={`View ${label}`}
+    <div
+      className={`border rounded p-3 ${
+        url ? 'border-success bg-success/5' : 'border-gray-200 bg-gray-50/50'
+      }`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-600">
-            {label}
-          </p>
-          <p className="mt-1 font-subhead uppercase tracking-subhead text-xs text-hd-orange">
-            {value ?? '✓ Fetched'}
-          </p>
+      <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-600 mb-2">
+        {label}
+      </p>
+      {uploading ? (
+        <p className="font-subhead uppercase tracking-subhead text-xs text-hd-orange">
+          Uploading…
+        </p>
+      ) : url ? (
+        <div className="flex items-center justify-between gap-2">
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="font-subhead uppercase tracking-subhead text-xs text-hd-orange hover:underline"
+          >
+            ✓ View
+          </a>
+          <label
+            className={`text-[10px] text-gray-500 hover:text-hd-orange cursor-pointer underline ${
+              disabled ? 'pointer-events-none opacity-50' : ''
+            }`}
+          >
+            Replace
+            <input
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              disabled={disabled}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onFile(f);
+              }}
+            />
+          </label>
         </div>
-        {/* External-link glyph — signals "click to open in new tab" */}
-        <svg
-          className="w-3.5 h-3.5 text-gray-400 group-hover:text-hd-orange shrink-0 mt-0.5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
+      ) : (
+        <label
+          className={`inline-flex items-center gap-1 text-xs font-subhead uppercase tracking-subhead text-gray-400 hover:text-hd-orange cursor-pointer transition ${
+            disabled ? 'pointer-events-none opacity-50' : ''
+          }`}
         >
-          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-          <polyline points="15 3 21 3 21 9" />
-          <line x1="10" y1="14" x2="21" y2="3" />
-        </svg>
-      </div>
-      <p className="text-[10px] text-gray-500 mt-1 truncate">View document</p>
-    </a>
+          + Upload PDF
+          <input
+            type="file"
+            accept=".pdf,application/pdf"
+            className="hidden"
+            disabled={disabled}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onFile(f);
+            }}
+          />
+        </label>
+      )}
+      {error && <p className="text-[10px] text-danger mt-1">{error}</p>}
+    </div>
   );
 }
 
