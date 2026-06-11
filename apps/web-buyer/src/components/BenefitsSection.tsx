@@ -178,20 +178,6 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         ))}
       </div>
 
-      {/* "View All Approved Stock" CTA — shown only on the home page
-          (compact = false). The PDP already has its own CTA below the
-          BenefitsSection block. */}
-      {!compact && (
-        <div className="py-12 text-center" style={{ backgroundColor: FEATURES.length % 2 === 0 ? '#FFFFFF' : '#EBEBEB' }}>
-          <a
-            href="/search"
-            className="inline-flex items-center gap-3 bg-hd-orange text-hd-white font-bold uppercase tracking-widest text-sm px-10 py-4 hover:brightness-110 transition"
-          >
-            View All Approved Stock
-            <span aria-hidden className="text-lg leading-none">→</span>
-          </a>
-        </div>
-      )}
     </>
   );
 }
