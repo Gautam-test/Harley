@@ -33,7 +33,7 @@ const FEATURES: FeatureRow[] = [
   {
     title: '110 Point Pre-Delivery Check',
     iconSrc: '/brand/benefits/1.svg',
-    image: '/brand/benefits/feature-images/1.png',
+    image: '/brand/benefits/feature-images/1.jpg',
     bullets: [
       'Inspection of the technical condition of the motorcycle is the same for all authorised dealers.',
       'It amounts to a check of 110 points covering the whole operation of the machine.',
