@@ -176,12 +176,10 @@ export function ListingSidebarCard({
           <p className="font-subhead uppercase tracking-subhead text-[10px] text-hd-orange">
             {dealerName.toUpperCase()}
           </p>
-          <p className="text-xs text-gray-600 mt-1">
-            Authorised H-D dealer · {dealerCity}
-          </p>
           {/* Client feedback #13: dealer mobile + email always visible on PDP */}
           {(dealerPhone || dealerEmail) && (
-            <div className="mt-2 space-y-1">
+            <div className="mt-3 space-y-1">
+              <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1.5">Dealer Contact</p>
               {dealerPhone && (
                 <a
                   href={`tel:${dealerPhone.replace(/\s+/g, '')}`}
