@@ -42,9 +42,7 @@ export function NotFoundPage() {
           </Link>
         </div>
 
-        {/* Client feedback #7: "Find a Dealer" quicklink dropped — grid
-            collapsed from 4-col to 3-col (Sell / Track / Contact). */}
-        <div className="mt-10 pt-6 border-t border-gray-200 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+        <div className="mt-10 pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <Link
             to="/sell-bike"
             className="font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition"
@@ -52,16 +50,10 @@ export function NotFoundPage() {
             Sell Your Bike
           </Link>
           <Link
-            to="/track"
+            to="/search"
             className="font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition"
           >
-            Track Enquiry
-          </Link>
-          <Link
-            to="/contact"
-            className="font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition"
-          >
-            Contact Us
+            Search Stock
           </Link>
         </div>
       </div>

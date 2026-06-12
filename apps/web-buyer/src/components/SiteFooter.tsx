@@ -1,31 +1,11 @@
 import { Link } from 'react-router-dom';
 
-// BUG_UI_010 rebuild — the Figma footer is a minimalist single horizontal
-// inline bar (NOT the multi-column fat footer the earlier BUG_UI_007
-// iteration produced). This version supersedes that one:
-//
-//   Layout : flex row — brand wordmark on the far left, 4 pipe-separated
-//            links on the right ("Privacy Policy | Cookie Policy |
-//            About us | Contact Us"). Wraps to a stack on mobile so the
-//            links don't overflow.
-//   Brand  : "H-D CERTIFIED" in 1903 Sans (wide), solid white, with a
-//            single orange dash glyph between "H" and "D" — no
-//            "CERTIFIED" recolor.
-//   Drops  : the entire copyright/trademark sub-bar (not in the Figma
-//            spec per BUG_UI_010 #4).
-//   Drops  : the "Cookie Policy" link was missing from the previous
-//            build — added here. "About us" stays lowercase 'u'.
-//   Drops  : the previous Search Stock / Sell Your Bike / Track
-//            Enquiry / FAQ / Terms & Conditions links — not in the
-//            Figma spec per BUG_UI_010 #3.
 const LINKS: { to: string; label: string }[] = [
   { to: '/privacy', label: 'Privacy Policy' },
   { to: '/cookies', label: 'Cookie Policy' },
   // Client feedback #8: Terms & Conditions link added. /terms route
   // is already wired in App.tsx to StaticPage contentKey="terms".
   { to: '/terms', label: 'Terms & Conditions' },
-  { to: '/about', label: 'About us' },
-  { to: '/contact', label: 'Contact Us' },
 ];
 
 export function SiteFooter() {

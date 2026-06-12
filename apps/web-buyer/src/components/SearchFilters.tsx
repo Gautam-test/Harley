@@ -683,7 +683,8 @@ function SliderField({
   rangeLabels?: [string, string];
 }) {
   const numericValue = Number(value);
-  const pct = max > min ? ((numericValue - min) / (max - min)) * 100 : 0;
+  const rawPct = max > min ? ((numericValue - min) / (max - min)) * 100 : 0;
+  const pct = Math.min(100, Math.max(0, rawPct));
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
