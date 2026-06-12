@@ -24,6 +24,8 @@ interface ApiOptions extends RequestInit {
   /** Set true when sending FormData; we omit Content-Type so the browser
    *  emits the correct multipart boundary header. */
   formData?: boolean;
+  /** Override the default 10s timeout. Use a higher value for file uploads. */
+  timeoutMs?: number;
   /** Internal — set when retrying after a silent refresh, so we never loop. */
   _retried?: boolean;
 }
@@ -43,9 +45,9 @@ const FETCH_TIMEOUT_MS = 10_000;
 
 /** fetch wrapper with abort-on-timeout. Throws ApiError(504, TIMEOUT) on
  *  cap exceeded, ApiError(0, NETWORK_ERROR) on raw network failure. */
-async function fetchWithTimeout(input: string, init?: RequestInit): Promise<Response> {
+async function fetchWithTimeout(input: string, init?: RequestInit, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(input, { ...init, signal: init?.signal ?? controller.signal });
   } catch (e) {
@@ -112,10 +114,11 @@ function buildHeaders(init: ApiOptions | undefined, token: string | null): Recor
 
 export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
   const token = useAuthStore.getState().accessToken;
+  const timeout = init?.timeoutMs ?? FETCH_TIMEOUT_MS;
   const res = await fetchWithTimeout(`${API_BASE}${path}`, {
     ...init,
     headers: buildHeaders(init, token),
-  });
+  }, timeout);
 
   if (res.status === 401 && !init?._retried) {
     const newToken = await refreshAccessTokenOnce();
@@ -123,7 +126,7 @@ export async function api<T>(path: string, init?: ApiOptions): Promise<T> {
       const retry = await fetchWithTimeout(`${API_BASE}${path}`, {
         ...init,
         headers: buildHeaders(init, newToken),
-      });
+      }, timeout);
       if (retry.ok) return (await retry.json()) as T;
       if (retry.status === 401) {
         useAuthStore.getState().clear();

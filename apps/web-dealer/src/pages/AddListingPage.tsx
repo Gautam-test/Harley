@@ -1208,7 +1208,7 @@ function CpoDocTile({
       fd.append('file', file);
       const res = await api<{ url: string; originalName: string; size: number }>(
         '/inspection/upload',
-        { method: 'POST', body: fd, formData: true },
+        { method: 'POST', body: fd, formData: true, timeoutMs: 60_000 },
       );
       onUploaded(res.url);
     } catch (e) {
@@ -1328,7 +1328,7 @@ function InspectionUploader(props: {
       fd.append('file', file);
       const res = await api<{ url: string; originalName: string; size: number }>(
         '/inspection/upload',
-        { method: 'POST', body: fd, formData: true },
+        { method: 'POST', body: fd, formData: true, timeoutMs: 60_000 },
       );
       props.onUploaded(res.url, { originalName: res.originalName, size: res.size });
     } catch (e) {
@@ -1692,6 +1692,7 @@ function ListingImagePicker({
           method: 'POST',
           body: fd,
           formData: true,
+          timeoutMs: 60_000,
         });
         uploaded.push(res.url);
         // Mint a blob URL pointing at the original File so the picker
