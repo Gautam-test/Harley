@@ -1098,7 +1098,7 @@ export function InfoGateModal({
             )}
             {/* QA latest (Compliance): controlled checkbox — loads
                 UNCHECKED, requires a deliberate click. Checked state
-                fills brand orange #ff5500 with a white tick (was a
+                fills brand orange #FF6600 with a white tick (was a
                 white fill with black tick), matching the seller
                 enquiry form's accent token. */}
             <p className="text-xs text-gray-500">
@@ -1106,7 +1106,7 @@ export function InfoGateModal({
                 type="checkbox"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-[#ff5500] checked:border-[#ff5500] checked:after:content-['✓'] checked:after:text-white checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
+                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-hd-orange checked:border-hd-orange checked:after:content-['✓'] checked:after:text-white checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
                 aria-label="I have read and understood the Terms and Conditions and Privacy Policy"
               />
               I have read &amp; understood the{' '}

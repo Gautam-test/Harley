@@ -514,7 +514,7 @@ function FaqItem({
 }) {
   const [open, setOpen] = useState(Boolean(defaultOpen));
   return (
-    // QA latest: active accordion frame = 1.5px solid #FF5500 with
+    // QA latest: active accordion frame = 1.5px solid #FF6600 with
     // absolute sharp corners (was 1px border-hd-orange). The closed
     // state keeps a thin grey separator. Inline style for the
     // expanded border because Tailwind doesn't ship a 1.5px utility
@@ -524,7 +524,7 @@ function FaqItem({
       className="transition rounded-none"
       style={
         open
-          ? { border: '1.5px solid #FF5500', backgroundColor: 'rgba(255, 85, 0, 0.05)' }
+          ? { border: '1.5px solid #FF6600', backgroundColor: 'rgba(255, 102, 0, 0.05)' }
           : { border: '1px solid #E5E7EB' }
       }
     >
