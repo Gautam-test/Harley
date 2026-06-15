@@ -297,7 +297,7 @@ export function TrackPage() {
       {!result && !errorMsg && (
         <section className="bg-hd-white py-16">
           <div className="max-w-5xl mx-auto px-6">
-            <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
+            <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
               {/* QA NEW: heading per Figma — "Track Your Enquiry". */}
               Track Your Enquiry
             </h2>

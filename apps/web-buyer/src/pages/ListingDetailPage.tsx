@@ -215,7 +215,7 @@ export function ListingDetailPage() {
                   </span>
                 </div>
               )}
-              <h1 className="font-subhead font-bold tracking-subhead uppercase text-3xl md:text-4xl text-text-on-light mt-4 leading-tight">
+              <h1 className="font-headline tracking-headline uppercase text-3xl md:text-4xl text-text-on-light mt-4 leading-tight">
                 {heading}
               </h1>
               <p className="font-subhead uppercase tracking-subhead text-[13px] text-gray-600 mt-3">
@@ -560,7 +560,7 @@ function DetailSkeleton() {
 function NotFound() {
   return (
     <div className="max-w-container mx-auto px-6 py-24 text-center">
-      <h1 className="font-subhead font-bold text-5xl tracking-subhead uppercase text-text-on-light">Listing Not Available</h1>
+      <h1 className="font-headline tracking-headline text-5xl uppercase text-text-on-light">Listing Not Available</h1>
       <p className="text-gray-600 mt-4">
         This motorcycle has been sold or removed. Browse other approved used motorcycles.
       </p>

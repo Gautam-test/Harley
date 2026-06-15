@@ -164,7 +164,7 @@ export function SearchPage() {
             <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
               {/* QA latest: heading locked to exactly 24px per spec
                   (was scaling up to 28px on lg). */}
-              <h2 className="font-subhead font-bold tracking-subhead uppercase text-[24px] text-text-on-light leading-tight">
+              <h2 className="font-headline tracking-headline uppercase text-[24px] text-text-on-light leading-tight">
                 H-D Certified&trade; Used Motorcycle Stocklist
               </h2>
               <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ export function SearchPage() {
             />
 
             {isError && (
-              <div className="text-danger bg-danger/10 border border-danger px-4 py-3 rounded-card">
+              <div className="text-danger bg-danger/10 border border-danger px-4 py-3">
                 Could not load listings. Please try again.
               </div>
             )}
@@ -214,7 +214,7 @@ export function SearchPage() {
                 proximity is obvious (e.g. "no bikes for 122004 — showing
                 nearest from 122001"). */}
             {data?.meta?.pincodeFallback && (
-              <div className="mb-4 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[13px] rounded-card">
+              <div className="mb-4 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-900 text-[13px]">
                 No motorcycles available for pincode{' '}
                 <strong>{data.meta.pincodeFallback.searchedPincode}</strong> — showing nearest
                 results from pincode <strong>{data.meta.pincodeFallback.nearestPincode}</strong>.
@@ -237,7 +237,7 @@ export function SearchPage() {
               // When a pincode IS in the URL we lead with the pincode-
               // specific copy so the buyer immediately sees why the grid
               // is empty; otherwise we keep the original generic message.
-              <div className="bg-hd-white border border-gray-200 p-10 text-center rounded-card">
+              <div className="bg-hd-white border border-gray-200 p-10 text-center">
                 <p className="font-subhead text-lg text-text-on-light">
                   {params.get('pincode')
                     ? `No motorcycles available for pincode ${params.get('pincode')}.`
@@ -251,7 +251,7 @@ export function SearchPage() {
                 <button
                   type="button"
                   onClick={() => setParams({})}
-                  className="mt-5 inline-flex items-center gap-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 rounded-card hover:brightness-110 transition"
+                  className="mt-5 inline-flex items-center gap-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2.5 hover:brightness-110 transition"
                 >
                   Clear all filters
                 </button>
@@ -379,7 +379,7 @@ function Pagination({
 }) {
   const [jump, setJump] = useState('');
   const cls = (active: boolean) =>
-    `min-w-[2.25rem] h-9 px-3 inline-flex items-center justify-center font-subhead uppercase tracking-subhead text-[11px] rounded-card transition ${
+    `min-w-[2.25rem] h-9 px-3 inline-flex items-center justify-center font-subhead uppercase tracking-subhead text-[11px] transition ${
       active
         ? 'bg-hd-orange text-hd-white'
         : 'bg-hd-white text-text-on-light border border-gray-300 hover:border-hd-orange'
@@ -419,7 +419,7 @@ function Pagination({
           value={jump}
           onChange={(e) => setJump(e.target.value)}
           placeholder={String(page)}
-          className="w-16 h-9 border border-gray-300 rounded-card px-2 text-sm text-center"
+          className="w-16 h-9 border border-gray-300 px-2 text-sm text-center"
         />
       </form>
     </div>

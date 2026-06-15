@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { SiteHeader } from './components/SiteHeader';
 import { SiteFooter } from './components/SiteFooter';
 import { CookieBanner } from './components/CookieBanner';
@@ -67,7 +67,8 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/listings/:slug" element={<ListingDetailPage />} />
-          <Route path="/sell-bike" element={<SellBikePage />} />
+          <Route path="/sell-motorcycle" element={<SellBikePage />} />
+          <Route path="/sell-bike" element={<Navigate to="/sell-motorcycle" replace />} />
           <Route path="/track" element={<TrackPage />} />
           {/* Client feedback #7: /dealers route removed. */}
           <Route path="/finance" element={<InfoPage variant="finance" />} />

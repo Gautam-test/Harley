@@ -17,7 +17,7 @@ interface StaticContentResponse {
 const ABOUT_FAQ: { q: string; a: string }[] = [
   {
     q: 'What does H-D Certified mean?',
-    a: 'Each Certified Motorcycle is inspected against Harley-Davidson\'s 110-Point Checklist by an Authorised Dealer. A CPO Certificate, Verified Service History, and Roadside Assistance documents are included with every listing.',
+    a: 'Each Certified Motorcycle is inspected against the Harley-Davidson® 110-Point Checklist by an Authorised Dealer. A CPO Certificate, Verified Service History, and Roadside Assistance documents are included with every listing.',
   },
   {
     q: 'Is the EMI calculator a financing offer?',
@@ -455,7 +455,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         {contentKey === 'about' && (
           <>
             <section className="mt-14 pt-10 border-t border-gray-200">
-              <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
+              <h2 className="text-center font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
                 Frequently Asked
               </h2>
               <div className="mt-8 space-y-3">
@@ -466,7 +466,7 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
             </section>
 
             <section className="mt-14 pt-10 border-t border-gray-200">
-              <h2 className="font-subhead font-bold tracking-subhead uppercase text-2xl md:text-3xl text-text-on-light">
+              <h2 className="font-headline tracking-headline uppercase text-2xl md:text-3xl text-text-on-light">
                 Contact
               </h2>
               <dl className="mt-5 space-y-2 text-sm">

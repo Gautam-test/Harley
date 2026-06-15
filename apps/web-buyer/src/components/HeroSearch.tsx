@@ -184,7 +184,7 @@ export function HeroSearch() {
                 the 34px wide-1903-Sans Bold glyphs without clipping
                 ascenders/descenders. */}
             <h1
-              className="font-subhead font-bold tracking-subhead text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
+              className="font-headline tracking-headline text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
             >
               H-D Certified
               {/* Client feedback #2: ™ symbol must be white (matches the
