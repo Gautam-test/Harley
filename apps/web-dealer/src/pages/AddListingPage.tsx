@@ -437,8 +437,7 @@ export function AddListingPage() {
     missing.push(`Description needs ${20 - s.description.length} more characters (Step 2)`);
   if (s.images.length < 5)
     missing.push(`Add ${5 - s.images.length} more photo${5 - s.images.length === 1 ? '' : 's'} (Step 2 — minimum 5)`);
-  if (s.certificationStatus === 'CPO' && !s.registrationNumber)
-    missing.push('Enter the Registration Number (Step 3)');
+
   if (s.certificationStatus === 'CPO' && !s.inspectionUrl)
     missing.push('Upload the 110-point inspection PDF (Step 3)');
   const formValid = missing.length === 0;
@@ -803,30 +802,15 @@ export function AddListingPage() {
             />
           </div>
 
-          {/* Registration Number — required for CPO certificate generation.
-              QA BUG-002: once saved, this field is locked forever. The
-              certificate PDF and 110-point inspection report both bake the
-              registration number into their rendered output; allowing edits
-              after creation would silently desync those artefacts from the
-              listing record. Dealers must contact admin to correct typos. */}
-          {s.certificationStatus === 'CPO' && (
-            <Field label="Registration Number *">
-              <Input
-                placeholder="e.g. ABC123Y"
-                value={s.registrationNumber}
-                onChange={(e) => update({ registrationNumber: e.target.value.toUpperCase() })}
-                maxLength={20}
-                disabled={torqueLocked || (isEditMode && Boolean(existing.data?.registrationNumber))}
-              />
-              {isEditMode && (
-                <p className="mt-1 text-[11px] text-gray-500">
-                  Registration number is locked after listing creation to keep
-                  the certificate and inspection report in sync. Contact admin
-                  to request a correction.
-                </p>
-              )}
-            </Field>
-          )}
+          <Field label="Registration Number">
+            <Input
+              placeholder="e.g. HR26AK1234"
+              value={s.registrationNumber}
+              onChange={(e) => update({ registrationNumber: e.target.value.toUpperCase() })}
+              maxLength={20}
+              disabled={torqueLocked}
+            />
+          </Field>
 
           {/* Inspection PDF — visible for CPO; hidden for As-Is.
               Always-visible "Download Sample Format" button on the left,
