@@ -25,6 +25,7 @@ import {
   listBuyerEnquiries,
   listTradeInLeads,
   updateLeadStatus,
+  updateTradeInAccessories,
 } from './leads.service.js';
 import { trackLead } from './leads.track.js';
 
@@ -321,6 +322,36 @@ dealerLeadsRouter.patch(
         });
       }
       res.json({ id, status: updated.toStatus });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// Dealer records accessories installed on a seller's trade-in motorcycle.
+// Stored in notes JSON so no schema migration is needed. Optional field —
+// dealers can skip or clear it at any time.
+dealerLeadsRouter.patch(
+  '/trade-in/:id/accessories',
+  validate(z.object({ id: z.string().min(1) }), 'params'),
+  validate(z.object({
+    accessoriesInstalled: z.boolean(),
+    accessories: z.array(z.string().min(1).max(200)).max(50),
+  })),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params as { id: string };
+      const { accessoriesInstalled, accessories } = req.body as {
+        accessoriesInstalled: boolean;
+        accessories: string[];
+      };
+      const result = await updateTradeInAccessories(
+        req.auth!.sub,
+        id,
+        accessoriesInstalled,
+        accessories,
+      );
+      res.json(result);
     } catch (e) {
       next(e);
     }

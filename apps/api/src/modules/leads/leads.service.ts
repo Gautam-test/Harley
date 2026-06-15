@@ -734,6 +734,12 @@ export async function getLeadDetail(
     reasonForSelling: pick('reasonForSelling'),
     mileage,
     message: cleanMessage,
+    accessoriesInstalled: typeof notes['accessoriesInstalled'] === 'boolean'
+      ? notes['accessoriesInstalled']
+      : null,
+    accessories: Array.isArray(notes['accessories'])
+      ? (notes['accessories'] as string[])
+      : [],
   };
 }
 
@@ -878,6 +884,31 @@ export async function dealerCreateBuyerEnquiry(
     }),
   );
   return { id: enquiry.id };
+}
+
+export async function updateTradeInAccessories(
+  dealerId: string,
+  id: string,
+  accessoriesInstalled: boolean,
+  accessories: string[],
+) {
+  const row = await prisma.tradeInLead.findFirst({
+    where: { id, dealerId },
+    select: { notes: true },
+  });
+  if (!row) throw new HttpError(404, 'NOT_FOUND', 'Lead not found');
+  const prevNotes = (row.notes as Record<string, unknown> | null) ?? {};
+  await prisma.tradeInLead.update({
+    where: { id },
+    data: {
+      notes: {
+        ...prevNotes,
+        accessoriesInstalled,
+        accessories: accessoriesInstalled ? accessories : [],
+      },
+    },
+  });
+  return { id, accessoriesInstalled, accessories: accessoriesInstalled ? accessories : [] };
 }
 
 export async function dealerCreateTradeInLead(

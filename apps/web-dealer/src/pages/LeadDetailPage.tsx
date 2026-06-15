@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button } from '@hd-cpo/ui';
@@ -50,6 +50,8 @@ interface LeadDetail {
   modifications?: string | number | null;
   reasonForSelling?: string | number | null;
   mileage?: string | number | null;
+  accessoriesInstalled?: boolean | null;
+  accessories?: string[];
   listing?: {
     id: string;
     slug: string;
@@ -141,6 +143,41 @@ export function LeadDetailPage() {
       // reflects in the nav immediately.
       qc.invalidateQueries({ queryKey: ['dealer-leads', 'buyer', 'sidebar'] });
       qc.invalidateQueries({ queryKey: ['dealer-leads', 'trade-in', 'sidebar'] });
+    },
+  });
+
+  // ── Accessories state (seller leads only) ─────────────────────────────
+  // Seeded from the lead detail once it loads; kept in component state so
+  // the dealer can edit without re-fetching. `null` means "not yet answered".
+  const [accInstalled, setAccInstalled] = useState<boolean | null>(null);
+  const [accList, setAccList] = useState<string[]>([]);
+  const [accInput, setAccInput] = useState('');
+  const accInputRef = useRef<HTMLInputElement>(null);
+  const [accSaved, setAccSaved] = useState(false);
+  useEffect(() => {
+    if (detail.data && detail.data.kind === 'trade-in') {
+      setAccInstalled(detail.data.accessoriesInstalled ?? null);
+      setAccList(detail.data.accessories ?? []);
+    }
+  }, [detail.data]);
+  useEffect(() => {
+    if (!accSaved) return;
+    const t = window.setTimeout(() => setAccSaved(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [accSaved]);
+
+  const saveAccessories = useMutation({
+    mutationFn: () =>
+      api(`/dealer/leads/trade-in/${id}/accessories`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          accessoriesInstalled: accInstalled ?? false,
+          accessories: accList,
+        }),
+      }),
+    onSuccess: () => {
+      setAccSaved(true);
+      qc.invalidateQueries({ queryKey: ['lead', kind, id] });
     },
   });
 
@@ -338,6 +375,130 @@ export function LeadDetailPage() {
               For BUYER leads: contact + location + qualifying answers.
               For SELLER leads: also adds bike condition + commercials. */}
           <CustomerDetailsPanel lead={lead} kind={kind} />
+
+          {/* Accessories — dealer-side section, seller leads only.
+              Optional: dealers record whether accessories are installed
+              and list them. Saved into lead notes JSON via PATCH. */}
+          {kind === 'trade-in' && (
+            <section className="bg-hd-white border border-gray-200 p-6">
+              {accSaved && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="fixed bottom-6 right-6 z-50 bg-hd-black text-hd-white px-4 py-3 shadow-lg font-subhead uppercase tracking-subhead text-xs flex items-center gap-2"
+                >
+                  <Icon path="M5 12l5 5L20 7" />
+                  Accessories saved
+                </div>
+              )}
+              <h2 className="font-headline tracking-headline uppercase text-lg">Accessories</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Dealer assessment — are any accessories installed on this motorcycle?
+              </p>
+
+              {/* Yes / No toggle */}
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAccInstalled(true)}
+                  className={`px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] border transition ${
+                    accInstalled === true
+                      ? 'bg-hd-orange border-hd-orange text-hd-white'
+                      : 'border-gray-300 text-gray-700 hover:border-hd-black hover:text-hd-black'
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccInstalled(false);
+                    setAccList([]);
+                  }}
+                  className={`px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] border transition ${
+                    accInstalled === false
+                      ? 'bg-hd-black border-hd-black text-hd-white'
+                      : 'border-gray-300 text-gray-700 hover:border-hd-black hover:text-hd-black'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+
+              {/* Accessories list — shown only when installed = Yes */}
+              {accInstalled === true && (
+                <div className="mt-4 space-y-3">
+                  {/* Add row */}
+                  <form
+                    className="flex gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const val = accInput.trim();
+                      if (!val || accList.includes(val)) return;
+                      setAccList((prev) => [...prev, val]);
+                      setAccInput('');
+                      accInputRef.current?.focus();
+                    }}
+                  >
+                    <input
+                      ref={accInputRef}
+                      type="text"
+                      value={accInput}
+                      onChange={(e) => setAccInput(e.target.value)}
+                      placeholder="e.g. Saddlebags, Windshield, Exhaust upgrade…"
+                      maxLength={200}
+                      className="flex-1 border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!accInput.trim()}
+                      className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition disabled:opacity-40"
+                    >
+                      Add
+                    </button>
+                  </form>
+
+                  {/* Tag list */}
+                  {accList.length > 0 && (
+                    <ul className="flex flex-wrap gap-2 mt-2">
+                      {accList.map((item) => (
+                        <li
+                          key={item}
+                          className="flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-3 py-1 text-xs font-subhead"
+                        >
+                          <span>{item}</span>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${item}`}
+                            onClick={() => setAccList((prev) => prev.filter((a) => a !== item))}
+                            className="text-gray-400 hover:text-danger transition leading-none"
+                          >
+                            ✕
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {accList.length === 0 && (
+                    <p className="text-xs text-gray-400">No accessories added yet.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Save button — only visible once an answer is selected */}
+              {accInstalled !== null && (
+                <div className="mt-5 flex justify-end">
+                  <Button
+                    size="sm"
+                    disabled={saveAccessories.isPending}
+                    onClick={() => saveAccessories.mutate()}
+                  >
+                    {saveAccessories.isPending ? 'Saving…' : 'Save Accessories'}
+                  </Button>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Pipeline */}
           <section className="bg-hd-white border border-gray-200 p-6">
