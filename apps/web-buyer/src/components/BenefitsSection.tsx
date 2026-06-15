@@ -120,7 +120,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // screens. Heading size dropped to 26px per Figma spec.
         <section className="py-20 md:py-24 lg:py-28" style={{ backgroundColor: '#EEECEB' }}>
           <div className="max-w-[1241px] mx-auto px-6 sm:px-8">
-            <h2 className="text-center font-headline tracking-headline uppercase text-[32px] text-text-on-light leading-tight">
+            <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
               What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
             <p className="mt-5 text-[18px] text-gray-600 leading-relaxed text-left">
@@ -142,7 +142,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
                 left-aligned within the same 1241px content frame so
                 bullet markers sit flush with the body paragraphs' left
                 edge. */}
-            <h3 className="text-center font-headline tracking-headline uppercase text-[32px] text-text-on-light leading-tight">
+            <h3 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
               Overview Of H-D Certified&trade; - Ride With Confidence
             </h3>
             <p className="mt-5 text-[18px] text-gray-600 leading-relaxed text-left">

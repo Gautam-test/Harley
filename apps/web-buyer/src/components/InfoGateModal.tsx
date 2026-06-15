@@ -760,7 +760,7 @@ export function InfoGateModal({
         } w-full p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto`}
       >
         <div className="flex items-baseline justify-between">
-          <h2 className="font-headline tracking-headline uppercase text-text-on-light text-xl">
+          <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
             {step === 'collect'
               ? isBuyerEnquiry
                 ? 'Buyer Enquiry'

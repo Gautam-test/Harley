@@ -11,7 +11,7 @@ const ITEMS = [
 export function WhyCertified() {
   return (
     <section className="mt-10 border-t border-gray-200 pt-8">
-      <div className="bg-surface-light border border-gray-200 p-6 lg:p-7">
+      <div className="bg-surface-light border border-gray-200 rounded-card p-6 lg:p-7">
         <div className="flex items-baseline gap-3 flex-wrap">
           <span className="font-subhead uppercase tracking-subhead text-xs text-hd-orange">
             Why H-D Certified
@@ -29,7 +29,7 @@ export function WhyCertified() {
           {ITEMS.map((it) => (
             <li
               key={it.l}
-              className="bg-hd-white border border-gray-200 px-3 py-3 text-center"
+              className="bg-hd-white border border-gray-200 px-3 py-3 text-center rounded-card"
             >
               <div className="font-headline text-2xl text-hd-orange">{it.v}</div>
               <div className="font-subhead text-[10px] uppercase tracking-subhead text-gray-600 mt-1 leading-tight">

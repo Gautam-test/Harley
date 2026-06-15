@@ -324,7 +324,7 @@ export function SellBikeModal() {
       <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-3 sm:px-4 py-6">
         <div className="bg-hd-white border-t-4 border-hd-orange max-w-2xl w-full p-4 sm:p-6 md:p-7 shadow-xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-baseline justify-between">
-            <h2 className="font-headline tracking-headline uppercase text-text-on-light text-xl">
+            <h2 className="font-subhead uppercase tracking-subhead text-text-on-light text-xl">
               Tell Us About Your Motorcycle
             </h2>
             <button

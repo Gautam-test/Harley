@@ -145,7 +145,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           handles the outer height equalisation; the flex-1 spacer
           here absorbs any extra slack inside. */}
       <div className="p-5 flex flex-col flex-1">
-        <h3 className="font-headline tracking-headline uppercase text-base text-text-on-light leading-tight">
+        <h3 className="font-subhead font-bold uppercase tracking-subhead text-base text-text-on-light leading-tight">
           {listing.modelName}
         </h3>
 
@@ -216,7 +216,7 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
         onClick={() => setShowSoldModal(false)}
       >
         <div
-          className="bg-hd-white border-t-4 border-hd-orange max-w-sm w-full p-5 sm:p-6 shadow-xl my-auto"
+          className="bg-hd-white border-t-4 border-hd-orange max-w-sm w-full p-5 sm:p-6 rounded-card shadow-xl my-auto"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-baseline justify-between">
@@ -244,14 +244,14 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
             <button
               type="button"
               onClick={() => setShowSoldModal(false)}
-              className="border border-gray-300 px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition"
+              className="border border-gray-300 px-5 py-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-700 hover:border-hd-black hover:text-hd-black transition rounded-card"
             >
               OK
             </button>
             <Link
               to="/search"
               onClick={() => setShowSoldModal(false)}
-              className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 hover:brightness-110 transition"
+              className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-5 py-2 rounded-card hover:brightness-110 transition"
             >
               Browse Stock →
             </Link>

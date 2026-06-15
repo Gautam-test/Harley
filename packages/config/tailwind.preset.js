@@ -52,7 +52,7 @@ module.exports = {
         success: '#16A34A',
         warning: '#FACC15',
         danger: '#DC2626',
-        info: '#555555',
+        info: '#2563EB',
       },
 
       fontFamily: {
