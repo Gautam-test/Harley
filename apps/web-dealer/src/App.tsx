@@ -105,12 +105,15 @@ export function App() {
           <Route path="/settings" element={<Navigate to="/profile" replace />} />
         </Route>
       ) : null}
-      {/* BUG-057: catch-all renders the 404 page as a STANDALONE
-          layout (no DealerShell sidebar / profile chip). NotFoundPage
-          branches on auth — authed dealer sees "Back to Dashboard"
-          + quick-jump; unauthed visitor sees only "Go to Dealer
-          Login" so no protected route names or layout chrome leak. */}
-      <Route path="*" element={<NotFoundPage />} />
+      {/* When authed: unknown paths → 404 (standalone, no shell).
+          When NOT authed: any non-/login path redirects to /login so
+          the "Session expired" banner on LoginPage is always seen after
+          an auto-logout (previously clear() fired but the catch-all
+          rendered NotFoundPage, swallowing the sessionStorage flag). */}
+      <Route
+        path="*"
+        element={isAuthed ? <NotFoundPage /> : <Navigate to="/login" replace />}
+      />
     </Routes>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DealersPage } from './pages/DealersPage';
@@ -50,15 +50,15 @@ export function App() {
           <Route path="/profile" element={<ProfilePage />} />
         </Route>
       ) : null}
-      {/* BUG-057: catch-all renders the 404 page as a STANDALONE
-          layout (own header + footer, no AdminShell sidebar / profile
-          chip). NotFoundPage internally branches on the auth store —
-          authed admin sees "Back to Dashboard" + quick-jump links;
-          unauthed visitor sees only "Go to Admin Login" so no
-          protected route names or layout chrome are disclosed. The
-          rule applies whether or not the visitor is authed, which is
-          why it lives outside the shell block. */}
-      <Route path="*" element={<NotFoundPage />} />
+      {/* When authed: unknown paths → 404 (standalone, no shell).
+          When NOT authed: any non-/login path redirects to /login so
+          the "Session expired" banner on LoginPage is always seen after
+          an auto-logout (previously clear() fired but the catch-all
+          rendered NotFoundPage, swallowing the sessionStorage flag). */}
+      <Route
+        path="*"
+        element={isAuthed ? <NotFoundPage /> : <Navigate to="/login" replace />}
+      />
     </Routes>
   );
 }
