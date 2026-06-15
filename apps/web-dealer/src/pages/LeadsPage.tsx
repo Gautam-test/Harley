@@ -1001,6 +1001,12 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
 function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const currentYear = new Date().getFullYear();
+  // Accessories toggle + list — separate from main form state so the
+  // multi-entry UX doesn't conflict with the controlled-input pattern
+  // used for all the other fields. Joined into `modifications` on submit.
+  const [accInstalled, setAccInstalled] = useState<boolean | null>(null);
+  const [accList, setAccList] = useState<string[]>([]);
+  const [accInput, setAccInput] = useState('');
   const [form, setForm] = useState({
     username: '',
     bikeModel: '',
@@ -1025,7 +1031,6 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
     serviceHistoryAvailable: false,
     insuranceValidUntil: '',
     loanOutstanding: false,
-    modifications: '',
     reasonForSelling: '',
     message: '',
   });
@@ -1038,7 +1043,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
   // Per-field validation. Required: username + phone + email + city +
   // bikeModel + vin + source. Year / kms / owner / asking-price are
   // optional with numeric range checks; pincode optional with format
-  // check; message / colour / modifications / reasonForSelling
+  // check; message / colour / reasonForSelling
   // optional with trim + max-length checks.
   const fieldErrors = useMemo(() => {
     const currentYearLocal = new Date().getFullYear();
@@ -1069,7 +1074,6 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       askingPrice: validators.intInRange(0, 100_000_000, 'Asking price'),
       colour: validators.optionalCity, // letters + spaces only
       message: validators.message,
-      modifications: validators.message,
       reasonForSelling: validators.message,
     });
   }, [form]);
@@ -1100,7 +1104,10 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       if (form.askingPrice) body.askingPrice = Number(form.askingPrice);
       if (form.bestTimeToCall) body.bestTimeToCall = form.bestTimeToCall;
       if (form.insuranceValidUntil) body.insuranceValidUntil = form.insuranceValidUntil;
-      if (form.modifications.trim()) body.modifications = form.modifications.trim();
+      // Accessories: join tag list into modifications string
+      if (accInstalled === true && accList.length > 0) {
+        body.modifications = accList.join(', ');
+      }
       if (form.reasonForSelling.trim()) body.reasonForSelling = form.reasonForSelling.trim();
       // Mileage isn't yet a first-class column on the seller lead model;
       // until that migration ships, prepend it to the freeform message so
@@ -1441,15 +1448,90 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
               label="Loan outstanding on the motorcycle"
             />
           </div>
-          <Field label="Accessories / modifications (optional)" error={errFor('modifications')}>
-            <Input
-              value={form.modifications}
-              onChange={(e) => setForm((f) => ({ ...f, modifications: e.target.value }))}
-              maxLength={500}
-              placeholder="HOG sticker, V&H exhaust, panniers, top-box…"
-              aria-invalid={Boolean(errFor('modifications'))}
-            />
-          </Field>
+          {/* Accessories installed — Yes/No toggle + tag list */}
+          <div>
+            <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-2">
+              Accessories installed? (optional)
+            </p>
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setAccInstalled(true)}
+                className={`px-4 py-1.5 font-subhead uppercase tracking-subhead text-[11px] border transition ${
+                  accInstalled === true
+                    ? 'bg-hd-orange border-hd-orange text-hd-white'
+                    : 'border-gray-300 text-gray-700 hover:border-hd-black hover:text-hd-black'
+                }`}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAccInstalled(false); setAccList([]); }}
+                className={`px-4 py-1.5 font-subhead uppercase tracking-subhead text-[11px] border transition ${
+                  accInstalled === false
+                    ? 'bg-hd-black border-hd-black text-hd-white'
+                    : 'border-gray-300 text-gray-700 hover:border-hd-black hover:text-hd-black'
+                }`}
+              >
+                No
+              </button>
+            </div>
+            {accInstalled === true && (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={accInput}
+                    onChange={(e) => setAccInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = accInput.trim();
+                        if (val && !accList.includes(val)) {
+                          setAccList((p) => [...p, val]);
+                          setAccInput('');
+                        }
+                      }
+                    }}
+                    placeholder="e.g. Saddlebags, V&H exhaust… (Enter to add)"
+                    maxLength={200}
+                    className="flex-1 border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const val = accInput.trim();
+                      if (val && !accList.includes(val)) {
+                        setAccList((p) => [...p, val]);
+                        setAccInput('');
+                      }
+                    }}
+                    className="bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] px-4 py-2 hover:brightness-110 transition disabled:opacity-40"
+                  >
+                    Add
+                  </button>
+                </div>
+                {accList.length > 0 && (
+                  <ul className="flex flex-wrap gap-2">
+                    {accList.map((item) => (
+                      <li key={item} className="flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-3 py-1 text-xs font-subhead">
+                        <span>{item}</span>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${item}`}
+                          onClick={() => setAccList((p) => p.filter((a) => a !== item))}
+                          className="text-gray-400 hover:text-danger transition leading-none"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
           <Field label="Reason for selling (optional)" error={errFor('reasonForSelling')}>
             <Input
               value={form.reasonForSelling}
