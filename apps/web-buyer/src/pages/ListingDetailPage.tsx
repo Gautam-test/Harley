@@ -90,7 +90,7 @@ export function ListingDetailPage() {
     const sidebar = sidebarRef.current;
     if (!sidebar) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      ([entry]) => setShowStickyBar(!entry?.isIntersecting),
       { threshold: 0, rootMargin: '0px' }
     );
     observer.observe(sidebar);
