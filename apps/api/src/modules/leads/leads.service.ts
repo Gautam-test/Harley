@@ -403,6 +403,8 @@ export async function createTradeInLead(input: TradeInLeadInput) {
       city: input.city,
       // Client feedback #16: upgrade interest timeline.
       upgradeTimeline: input.upgradeTimeline ?? null,
+      // Store owner number in notes JSON (migration-free).
+      ...(input.owners != null ? { notes: { owners: input.owners } } : {}),
     },
   });
   const ok = await notifyDealer(

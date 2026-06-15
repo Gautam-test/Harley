@@ -194,6 +194,8 @@ export const tradeInLeadInput = z.object({
   // string (one of: 'not-now', 'within-6-months', 'within-12-months',
   // 'immediately'). Surfaced in dealer + admin lead detail.
   upgradeTimeline: z.string().max(50).optional(),
+  /** Which owner the seller is: 1 = 1st owner, 2 = 2nd, etc. */
+  owners: z.number().int().min(1).max(20).optional(),
 });
 export type TradeInLeadInput = z.infer<typeof tradeInLeadInput>;
 

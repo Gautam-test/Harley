@@ -48,6 +48,8 @@ interface FormValues {
   dealerId: string;
   // Client feedback #16: "Looking for upgrade?" field.
   upgradeTimeline: string;
+  /** Which owner the seller is — '' = not answered (optional). */
+  owners: string;
   acceptedTerms: boolean;
 }
 
@@ -92,6 +94,7 @@ export function SellBikeModal() {
         pincode: '',
         dealerId: '',
         upgradeTimeline: '',
+        owners: '',
         acceptedTerms: false,
       },
       mode: 'onChange',
@@ -257,6 +260,8 @@ export function SellBikeModal() {
         dealerId: v.dealerId || undefined,
         // Client feedback #16: upgrade timeline captured in notes.
         ...(v.upgradeTimeline ? { upgradeTimeline: v.upgradeTimeline } : {}),
+        // Owner number — optional, send only when the customer answered.
+        ...(v.owners ? { owners: Number(v.owners) } : {}),
       };
       const res = await api<{ id: string }>('/leads/trade-in', {
         method: 'POST',
@@ -450,6 +455,18 @@ export function SellBikeModal() {
                   />
                 </Labelled>
               </div>
+
+              {/* Owner number — optional; tells the dealer whether this is a
+                  first-hand or previously-resold motorcycle. */}
+              <Labelled label="Which owner are you?">
+                <Select {...register('owners')}>
+                  <option value="">— Select (optional) —</option>
+                  <option value="1">1st Owner</option>
+                  <option value="2">2nd Owner</option>
+                  <option value="3">3rd Owner</option>
+                  <option value="4">4th Owner or more</option>
+                </Select>
+              </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Phone Number" required error={errors.phone?.message}>
