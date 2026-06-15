@@ -14,7 +14,7 @@ export function Badge({
   ...rest
 }: BadgeProps) {
   const base =
-    'inline-flex items-center text-xs font-subhead uppercase tracking-subhead px-2 py-1';
+    'inline-flex items-center whitespace-nowrap text-xs font-subhead uppercase tracking-subhead px-2 py-1';
   if (variant === 'cpo') {
     return (
       <span className={cn(base, 'bg-hd-orange text-hd-black', className)} {...rest}>
