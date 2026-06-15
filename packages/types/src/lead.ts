@@ -39,21 +39,19 @@ export const BUYER_LEAD_PIPELINE = [
   'SUCCESS',
 ] as const satisfies readonly LeadStatus[];
 
-// Seller / trade-in 7-stage forward pipeline (QA round 3 — expanded
-// from the earlier 4-stage version). Walks a trade-in lead from initial
-// enquiry through documentation, inspection, valuation, negotiation,
-// legal transfer, and final close-out. The old 4-stage statuses
-// (CONTACTED, IN_PROGRESS, CLOSED) stay in the leadStatus enum so
-// legacy rows still parse, but the dealer dropdown only offers the new
-// stages — canTransitionLead's off-pipeline branch lets a legacy lead
-// move onto the new pipeline at any point.
+// Seller / trade-in pipeline — aligned with buyer pipeline stages so the
+// dealer CRM shows a consistent 6-step flow for both kinds of leads.
+// The only difference from the buyer pipeline is the terminal step:
+// TRADE_IN_FINALIZED instead of SUCCESS. The old 7-stage statuses
+// (DOCUMENTATION_VERIFICATION … LEGAL_TRANSFER) stay in the leadStatus
+// enum so legacy rows still parse; canTransitionLead lets a legacy lead
+// move onto this pipeline at any point.
 export const SELLER_LEAD_PIPELINE = [
   'NEW',
-  'DOCUMENTATION_VERIFICATION',
-  'TECHNICAL_INSPECTION',
-  'VALUATION_OFFER',
-  'NEGOTIATION_ACCEPTANCE',
-  'LEGAL_TRANSFER',
+  'CONTACTED',
+  'ON_SITE_VISIT',
+  'LOAN_APPROVAL',
+  'CLOSED',
   'TRADE_IN_FINALIZED',
 ] as const satisfies readonly LeadStatus[];
 

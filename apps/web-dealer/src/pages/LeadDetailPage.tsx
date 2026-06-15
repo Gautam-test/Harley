@@ -6,7 +6,6 @@ import {
   BUYER_LEAD_PIPELINE,
   SELLER_LEAD_PIPELINE,
   LEAD_STAGE_LABELS,
-  ALT_TERMINAL_STATUS,
   type LeadStatus,
 } from '@hd-cpo/types';
 import { useAuthStore } from '../store/auth';
@@ -205,21 +204,16 @@ export function LeadDetailPage() {
   const currentIdx = isTerminal
     ? (frozenStatus ? basePipeline.indexOf(frozenStatus as never) : -1)
     : basePipeline.indexOf(lead.status as never);
-  // Dropdown offers every stage on the pipeline plus the single Not
-  // Interested alt-terminal. Dealers routinely walk a lead backwards
-  // ("buyer ghosted, then came back", "Closed by mistake, reopen at Loan
-  // Approval") so earlier stages are no longer hidden — the API allows
-  // any transition within the kind's pipeline. Current status sits first
-  // so the select reads "<current>" by default and a cancelled change
-  // reverts cleanly. Legacy LOST rows still display as "Not Interested"
-  // (via LEAD_STAGE_LABELS) but writing LOST from the UI is no longer
-  // possible — DEAD is the only alt-terminal we offer.
+  // Dropdown offers every stage on the pipeline. Dealers can walk a lead
+  // backwards ("buyer came back after ghosting", "Closed by mistake") —
+  // the API allows any transition within the kind's pipeline. Current
+  // status sits first so the select reads "<current>" by default and a
+  // cancelled change reverts cleanly. Legacy DEAD/LOST rows keep their
+  // status displayed (the badge still renders) but the UI no longer
+  // offers them as new options.
   const dropdownStatuses: LeadStatus[] = [
     lead.status,
     ...basePipeline.filter((s) => s !== lead.status),
-    ...(lead.status === ALT_TERMINAL_STATUS || lead.status === 'LOST'
-      ? []
-      : [ALT_TERMINAL_STATUS]),
   ];
 
   return (
@@ -431,7 +425,7 @@ export function LeadDetailPage() {
                   // reason so managers always have an audit trail; an
                   // empty / cancelled prompt aborts the whole transition
                   // (previously the status flipped anyway).
-                  if (next === 'LOST' || next === 'DEAD' || next === 'CLOSED') {
+                  if (next === 'CLOSED') {
                     const why = window.prompt(
                       `Mark this lead as ${LEAD_STAGE_LABELS[next]}? This is a terminal status — write a short reason for the audit log.`,
                       '',
