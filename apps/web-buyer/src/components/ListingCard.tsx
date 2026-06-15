@@ -168,24 +168,26 @@ export function ListingCardItem({ listing }: { listing: ListingCardData }) {
           <span className="truncate">{listing.dealerName}</span>
         </p>
 
-        {/* Labeled detail rows — matches NZ card layout */}
-        <div className="mt-3 space-y-1 text-[12px]">
+        {/* Labeled detail rows — font-subhead sets 1903 Sans Condensed
+            (same family as title/price). Labels drop to font-normal (400)
+            for visual contrast; values stay bold (700) via font-subhead. */}
+        <div className="mt-3 space-y-1 text-[12px] font-subhead">
           <div className="flex justify-between gap-2">
-            <span className="text-gray-500">Year:</span>
-            <span className="text-gray-800 font-medium">{listing.year}</span>
+            <span className="text-gray-500 font-normal">Year:</span>
+            <span className="text-gray-800">{listing.year}</span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-gray-500">Mileage:</span>
-            <span className="text-gray-800 font-medium">{listing.kmsDriven.toLocaleString('en-IN')} KM</span>
+            <span className="text-gray-500 font-normal">Mileage:</span>
+            <span className="text-gray-800">{listing.kmsDriven.toLocaleString('en-IN')} KM</span>
           </div>
           <div className="flex justify-between gap-2">
-            <span className="text-gray-500">Location:</span>
-            <span className="text-gray-800 font-medium">{listing.city}</span>
+            <span className="text-gray-500 font-normal">Location:</span>
+            <span className="text-gray-800">{listing.city}</span>
           </div>
           {listing.colour && (
             <div className="flex justify-between gap-2">
-              <span className="text-gray-500">Colour:</span>
-              <span className="text-gray-800 font-medium text-right">{listing.colour}</span>
+              <span className="text-gray-500 font-normal">Colour:</span>
+              <span className="text-gray-800 text-right">{listing.colour}</span>
             </div>
           )}
         </div>
