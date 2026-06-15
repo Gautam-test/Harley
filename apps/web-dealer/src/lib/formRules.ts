@@ -115,6 +115,16 @@ export const validators = {
     return null;
   }) as FieldValidator,
 
+  /** VIN validation for seller enquiry forms — matches buyer portal
+   *  behaviour where VIN is optional (client feedback #17). Only
+   *  validates format when a value is actually provided. */
+  vinOptional: ((v: unknown): string | null => {
+    if (typeof v !== 'string' || !v.trim()) return null;
+    if (!VIN_REGEX.test(v))
+      return 'VIN must be 17 characters: A-Z (no I, O, Q) or 0-9';
+    return null;
+  }) as FieldValidator,
+
   requiredSelect:
     (label: string): FieldValidator =>
     (v: unknown): string | null => {

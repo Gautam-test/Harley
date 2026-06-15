@@ -1060,7 +1060,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
       location: validators.requiredSelect('a location'),
       pincode: validators.optionalPincode,
       bikeModel: validators.requiredSelect('the motorcycle model'),
-      vin: validators.vin,
+      vin: validators.vinOptional,
       source: validators.requiredSelect('a lead source'),
       year: validators.intInRange(1903, currentYearLocal, 'Year'),
       kmsDriven: validators.intInRange(0, 500_000, 'KMs driven'),
@@ -1294,19 +1294,15 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 ))}
               </datalist>
             </Field>
-            <Field label="VIN" required error={errFor('vin')}>
+            <Field label="VIN Number" error={errFor('vin')}>
               <Input
                 value={form.vin.toUpperCase()}
                 onChange={(e) => {
-                  // Seller dedup is VIN-based — clear the duplicate-VIN
-                  // banner only when the rep actually changes the VIN.
-                  // Changing the phone (which is the wrong field) keeps
-                  // the banner + disabled Save button until VIN is fixed.
                   setDupError(null);
                   setForm((f) => ({ ...f, vin: e.target.value.toUpperCase() }));
                 }}
                 maxLength={17}
-                placeholder="17-char VIN, no I/O/Q"
+                placeholder="Optional — enter if available"
                 className="font-mono"
                 aria-invalid={Boolean(errFor('vin'))}
               />
