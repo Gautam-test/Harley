@@ -18,6 +18,7 @@ interface AdminListingDetail {
   certificationStatus: 'CPO' | 'AS_IS';
   inspectionReportUrl: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'SOLD' | 'REMOVED' | 'DEACTIVATED';
+  adminFeedback: string | null;
   publishedAt: string | null;
   createdAt: string;
   dealer: {
@@ -157,7 +158,13 @@ function DrawerBody({ listing }: { listing: AdminListingDetail }) {
           </h3>
           <StatusBadge status={listing.status} />
         </div>
-        <p className="text-sm text-gray-600">
+        {listing.status === 'REMOVED' && listing.adminFeedback && (
+          <div className="mt-2 text-[11px] text-danger leading-snug bg-danger/10 border-l-2 border-danger px-3 py-2">
+            <span className="font-subhead uppercase tracking-subhead">Rejection reason:</span>{' '}
+            {listing.adminFeedback}
+          </div>
+        )}
+        <p className="text-sm text-gray-600 mt-2">
           {listing.modelFamily} · {listing.colour} · {listing.kmsDriven.toLocaleString('en-IN')} km
         </p>
         <div className="flex items-center gap-3 mt-2">
@@ -288,7 +295,7 @@ function StatusBadge({ status }: { status: AdminListingDetail['status'] }) {
       : 'danger'; // REMOVED
   return (
     <Badge variant="status" tone={tone}>
-      {status}
+      {status === 'DRAFT' ? 'PENDING' : status === 'REMOVED' ? 'REJECTED' : status}
     </Badge>
   );
 }

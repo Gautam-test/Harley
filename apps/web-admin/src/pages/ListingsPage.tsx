@@ -43,6 +43,7 @@ interface AdminListingRow {
   dealerCity: string;
   /** Dealer's 6-digit PIN code — paired with the city above. */
   dealerPincode: string;
+  adminFeedback: string | null;
 }
 
 // QA: the Removed tab was hidden from the admin UI per ops request, but
@@ -57,7 +58,7 @@ interface AdminListingRow {
 // a stable React key. `''` means no filter (All).
 const TABS: { id: string; label: string; statusFilter: string }[] = [
   { id: 'ACTIVE', label: 'Ongoing', statusFilter: 'ACTIVE' },
-  { id: 'DRAFT', label: 'Drafts', statusFilter: 'DRAFT' },
+  { id: 'DRAFT', label: 'Pending', statusFilter: 'DRAFT' },
   { id: 'SOLD', label: 'Sold', statusFilter: 'SOLD' },
   { id: 'DEACTIVATED', label: 'Deactivated', statusFilter: 'DEACTIVATED,REMOVED' },
   { id: 'ALL', label: 'All', statusFilter: '' },
@@ -308,6 +309,12 @@ export function ListingsPage() {
                       <div className="font-mono text-[10px] text-gray-400 leading-tight mt-1">
                         VIN&hellip;{l.vin.slice(-7)}
                       </div>
+                      {l.status === 'REMOVED' && l.adminFeedback && (
+                        <div className="mt-2 text-[10px] text-danger leading-snug max-w-[260px] bg-danger/10 border-l-2 border-danger px-2 py-1">
+                          <span className="font-subhead uppercase tracking-subhead">Rejection reason:</span>{' '}
+                          {l.adminFeedback}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Td>
@@ -693,7 +700,7 @@ function StatusBadge({ status }: { status: AdminListingRow['status'] }) {
       : 'danger'; // REMOVED
   return (
     <Badge variant="status" tone={tone}>
-      {status}
+      {status === 'DRAFT' ? 'PENDING' : status === 'REMOVED' ? 'REJECTED' : status}
     </Badge>
   );
 }

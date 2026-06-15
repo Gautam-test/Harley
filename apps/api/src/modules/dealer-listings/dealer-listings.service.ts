@@ -289,6 +289,20 @@ export async function updateListing(
       'This listing is marked sold and can no longer be edited or resubmitted.',
     );
   }
+  if (listing.status === 'DRAFT') {
+    throw new HttpError(
+      409,
+      'LISTING_PENDING',
+      'This listing is under admin review. You cannot edit it until the admin returns it for revision.',
+    );
+  }
+  if (listing.status === 'ACTIVE') {
+    throw new HttpError(
+      409,
+      'LISTING_LIVE',
+      'This listing is live. Contact your H-D admin if changes are required.',
+    );
+  }
   // PRD §6.2.4 — only price/description/KMs/images editable; VIN + spec locked.
   // Clear adminFeedback on any dealer edit so the red banner disappears once
   // the dealer has acted on it; the next admin review starts from a clean slate.

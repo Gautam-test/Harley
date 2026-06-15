@@ -84,7 +84,7 @@ const STATUS_TO_LABEL: Record<DealerListingRow['status'], string> = {
   ACTIVE: 'Live',
   DEACTIVATED: 'Off',
   SOLD: 'Sold',
-  REMOVED: 'Removed',
+  REMOVED: 'Rejected by Admin',
 };
 
 export function MyListingsPage() {
@@ -493,7 +493,7 @@ export function MyListingsPage() {
                       {l.status === 'REMOVED' && l.adminFeedback && (
                         <div className="mt-2 text-[10px] text-warning leading-snug max-w-[280px] bg-warning/10 border-l-2 border-warning px-2 py-1">
                           <span className="font-subhead uppercase tracking-subhead">
-                            Removal reason:
+                            Rejection reason:
                           </span>{' '}
                           {l.adminFeedback}
                         </div>

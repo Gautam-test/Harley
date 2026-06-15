@@ -453,6 +453,9 @@ export function AddListingPage() {
   // and even file inputs all freeze together. Cancel/Back link is
   // an <a> tag outside the fieldset, so the dealer can still leave.
   const isSoldReadOnly = isEditMode && existing.data?.status === 'SOLD';
+  const isPendingReadOnly = isEditMode && existing.data?.status === 'DRAFT';
+  const isLiveReadOnly = isEditMode && existing.data?.status === 'ACTIVE';
+  const isReadOnly = isSoldReadOnly || isPendingReadOnly || isLiveReadOnly;
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
@@ -469,24 +472,45 @@ export function AddListingPage() {
         </Link>
       </div>
 
-      {isSoldReadOnly && (
-        // QA BUG-025: the previous banner used bg-surface-2 (#1A1A1A
-        // near-black) with text-text-on-light (#000000 pure black) —
-        // black-on-near-black, completely unreadable. Swap to the
-        // amber attention pattern used elsewhere (matches the "stuck
-        // lead" + "Awaiting Review" treatments): warning-tinted wash,
-        // pure black body copy, hd-black header — WCAG AA on both.
+      {isReadOnly && (
         <div className="mb-5 bg-warning/15 border-l-4 border-hd-orange px-4 py-3 flex items-start gap-3">
           <span aria-hidden className="text-hd-orange text-lg leading-none mt-0.5">●</span>
           <div className="text-sm text-hd-black">
-            <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
-              Listing Sold — Read Only
-            </p>
-            <p className="mt-1 leading-snug text-hd-black">
-              This bike has been marked sold. All fields are locked to
-              preserve historical record. Contact your H-D admin if you
-              need to correct anything on this listing.
-            </p>
+            {isPendingReadOnly && (
+              <>
+                <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+                  Pending Admin Review — Read Only
+                </p>
+                <p className="mt-1 leading-snug text-hd-black">
+                  This listing is in the admin approval queue. All fields are
+                  locked until the admin either approves or returns it for
+                  revision.
+                </p>
+              </>
+            )}
+            {isLiveReadOnly && (
+              <>
+                <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+                  Listing Live — Read Only
+                </p>
+                <p className="mt-1 leading-snug text-hd-black">
+                  This listing is live on the buyer portal. All fields are
+                  locked. Contact your H-D admin if changes are required.
+                </p>
+              </>
+            )}
+            {isSoldReadOnly && (
+              <>
+                <p className="font-subhead uppercase tracking-subhead text-[11px] text-hd-orange">
+                  Listing Sold — Read Only
+                </p>
+                <p className="mt-1 leading-snug text-hd-black">
+                  This bike has been marked sold. All fields are locked to
+                  preserve historical record. Contact your H-D admin if you
+                  need to correct anything on this listing.
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -496,9 +520,9 @@ export function AddListingPage() {
           listing is SOLD. opacity wash + cursor cue applied alongside
           so the read-only state is visually obvious. */}
       <fieldset
-        disabled={isSoldReadOnly}
+        disabled={isReadOnly}
         className={`space-y-5 ${
-          isSoldReadOnly ? 'opacity-75 [&_*]:cursor-not-allowed' : ''
+          isReadOnly ? 'opacity-75 [&_*]:cursor-not-allowed' : ''
         }`}
       >
         {/* ─── STEP 1 — ENTER VIN ─────────────────────────────────────── */}
@@ -1071,10 +1095,15 @@ export function AddListingPage() {
               {discard.isPending ? 'Discarding…' : 'Discard Draft'}
             </button>
           )}
-          {/* QA BUG-005: SOLD is terminal. No Submit/Resubmit affordance —
-              page acts as read-only record. A small inline notice replaces
-              the button so the dealer understands why the action is gone. */}
-          {isEditMode && existing.data?.status === 'SOLD' ? (
+          {isPendingReadOnly ? (
+            <span className="inline-flex items-center px-4 py-2.5 border border-gray-300 bg-surface-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-600">
+              Under Review — locked
+            </span>
+          ) : isLiveReadOnly ? (
+            <span className="inline-flex items-center px-4 py-2.5 border border-gray-300 bg-surface-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-600">
+              Live — locked
+            </span>
+          ) : isSoldReadOnly ? (
             <span className="inline-flex items-center px-4 py-2.5 border border-gray-300 bg-surface-2 font-subhead uppercase tracking-subhead text-[11px] text-gray-600">
               Listing sold — locked from edits
             </span>
