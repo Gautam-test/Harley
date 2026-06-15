@@ -537,9 +537,10 @@ function RemoveModal({
       <div className="bg-hd-white text-text-on-light max-w-md w-full p-6">
         <h2 className="font-headline text-2xl tracking-headline">Remove Listing?</h2>
         <p className="text-sm text-gray-600 mt-3 leading-relaxed">
-          This will take <strong>{listing.year} {listing.modelName}</strong>
-          {' '}off the buyer site and move it into the Deactivated section.
-          The dealer is notified.
+          {listing.status === 'DRAFT'
+            ? <>This will remove <strong>{listing.year} {listing.modelName}</strong> from the review queue. The dealer will be notified.</>
+            : <>This will remove <strong>{listing.year} {listing.modelName}</strong> from the buyer site. The dealer will be notified.</>
+          }
         </p>
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="secondary" onClick={onCancel} disabled={submitting}>
