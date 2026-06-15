@@ -89,7 +89,7 @@ export function SiteHeader() {
           </NavLink>
           {/* Sell Your Motorcycle opens a modal globally rather than navigating to a
               standalone route — Figma /Customer/Frame 28.png shows it as a
-              popup. The /sell-bike route is preserved as a deep-link fallback. */}
+              popup. The /sell-motorcycle route is the deep-link; /sell-bike redirects to it. */}
           <button
             type="button"
             onClick={openSellBike}

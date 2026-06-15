@@ -44,10 +44,10 @@ export function NotFoundPage() {
 
         <div className="mt-10 pt-6 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <Link
-            to="/sell-bike"
+            to="/sell-motorcycle"
             className="font-subhead uppercase tracking-subhead text-gray-600 hover:text-hd-orange transition"
           >
-            Sell Your Bike
+            Sell Your Motorcycle
           </Link>
           <Link
             to="/search"
