@@ -137,21 +137,22 @@ enum ListingStatus {
 // ─────────────────────────────────────────────────────────────
 
 model Enquiry {
-  id        String     @id @default(cuid())
-  listingId String
-  listing   Listing    @relation(fields: [listingId], references: [id])
-  dealerId  String
-  dealer    Dealer     @relation(fields: [dealerId], references: [id])
-  name      String
-  phoneEnc  String     // PII — encrypted at rest (PRD §9.3)
-  emailEnc  String     // PII — encrypted at rest
-  city      String?
-  pincode   String?
-  message   String?    @db.Text
-  status    LeadStatus @default(NEW)
-  notes     Json?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id          String        @id @default(cuid())
+  listingId   String
+  listing     Listing       @relation(fields: [listingId], references: [id])
+  dealerId    String
+  dealer      Dealer        @relation(fields: [dealerId], references: [id])
+  name        String
+  phoneEnc    String        // PII — encrypted at rest (PRD §9.3)
+  emailEnc    String        // PII — encrypted at rest
+  city        String?
+  pincode     String?
+  message     String?       @db.Text
+  status      LeadStatus    @default(NEW)
+  entrySource EnquirySource @default(PORTAL)
+  notes       Json?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@index([dealerId, status])
   @@index([createdAt])
@@ -222,6 +223,11 @@ enum LeadStatus {
   NEGOTIATION_ACCEPTANCE
   LEGAL_TRANSFER
   TRADE_IN_FINALIZED
+}
+
+enum EnquirySource {
+  PORTAL        // customer submitted via the buyer portal (InfoGateModal / OTP flow)
+  DEALER        // dealer rep logged manually (phone call / walk-in)
 }
 
 // Free-form thread on any lead (Enquiry / GeneralLead / TradeInLead).

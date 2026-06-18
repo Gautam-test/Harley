@@ -1085,14 +1085,14 @@ export function InfoGateModal({
                   placeholder="Add description here…"
                   maxLength={1000}
                   aria-invalid={Boolean(errors.description)}
-                  className="w-full bg-hd-white border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
+                  className="w-full bg-hd-white border border-gray-300 rounded-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
                   {...register('description', messageRules)}
                 />
               </Labelled>
             )}
 
             {error && (
-              <div className="text-danger text-sm bg-danger/10 border border-danger px-3 py-2 rounded">
+              <div className="text-danger text-sm bg-danger/10 border border-danger px-3 py-2 rounded-none">
                 {error}
               </div>
             )}
@@ -1106,7 +1106,7 @@ export function InfoGateModal({
                 type="checkbox"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-hd-orange checked:border-hd-orange checked:after:content-['✓'] checked:after:text-white checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
+                className="mr-1.5 align-middle h-4 w-4 appearance-none border-[1.5px] border-hd-black checked:bg-hd-orange checked:border-hd-orange checked:after:content-['✓'] checked:after:text-hd-white checked:after:text-xs checked:after:leading-none checked:after:flex checked:after:items-center checked:after:justify-center"
                 aria-label="I have read and understood the Terms and Conditions and Privacy Policy"
               />
               I have read &amp; understood the{' '}
@@ -1224,8 +1224,8 @@ export function InfoGateModal({
                 green box + the Resend button below carry the full
                 guidance. */}
             {!error && justSent && (
-              <div className="text-emerald-900 text-[13px] bg-emerald-50 border border-emerald-200 px-3 py-2.5 leading-relaxed flex items-center gap-2 transition-opacity">
-                <span aria-hidden className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-white text-[11px] font-bold">
+              <div className="text-success text-[13px] bg-success/10 border border-success/30 px-3 py-2.5 leading-relaxed flex items-center gap-2 transition-opacity">
+                <span aria-hidden className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-success text-hd-white text-[11px] font-bold">
                   &#10003;
                 </span>
                 <span>
@@ -1235,7 +1235,7 @@ export function InfoGateModal({
               </div>
             )}
             {error && (
-              <div className="text-danger text-sm bg-danger/10 border border-danger px-3 py-2 rounded">
+              <div className="text-danger text-sm bg-danger/10 border border-danger px-3 py-2 rounded-none">
                 {error}
               </div>
             )}

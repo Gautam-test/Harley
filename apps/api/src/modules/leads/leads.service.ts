@@ -322,6 +322,7 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
       city: input.city,
       pincode: input.pincode,
       message: input.message,
+      entrySource: 'PORTAL',
     },
   });
   const ok = await notifyDealer(
@@ -450,6 +451,7 @@ interface LeadDbRow {
   listingId?: string;
   /** Populated for buyer enquiries via the joined listing — `${year} ${modelName}`. */
   listing?: { year: number; modelName: string } | null;
+  entrySource?: string | null;
   /** JSON column on Enquiry / TradeInLead — currently used for dealer-side
       qualification answers + the notificationFailed flag. */
   notes?: { notificationFailed?: boolean } | null;
@@ -479,6 +481,7 @@ function toLeadView(row: LeadDbRow) {
         dealer/admin queue surfaces a small badge so reps know to follow up
         manually instead of expecting an email. */
     notificationFailed: row.notes?.notificationFailed === true,
+    entrySource: (row.entrySource as string | null) ?? 'PORTAL',
     bikeModel,
     vin: row.vin,
     status: row.status,
@@ -663,6 +666,7 @@ export async function getLeadDetail(
       // highlighted on the pipeline bar instead of showing all stages grey.
       frozenStatus:
         (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
+      entrySource: row.entrySource ?? 'PORTAL',
       createdAt: row.createdAt.toISOString(),
       // Customer-side qualifying answers from notes JSON. All nullable so
       // older rows that don't carry them just render "—" client-side.
@@ -850,6 +854,7 @@ export async function dealerCreateBuyerEnquiry(
       city: input.city,
       pincode: input.pincode,
       message: input.message,
+      entrySource: 'DEALER',
       notes: buyerEnquiryNotes(input),
     },
   });

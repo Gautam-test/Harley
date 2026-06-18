@@ -118,12 +118,12 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         // gets explicit side-padding gutters (px-8 md:px-12 lg:px-16)
         // so the body copy can't bleed edge-to-edge on ultra-wide
         // screens. Heading size dropped to 26px per Figma spec.
-        <section className="py-20 md:py-24 lg:py-28" style={{ backgroundColor: '#EEECEB' }}>
+        <section className="py-20 md:py-24 lg:py-28 bg-surface-light">
           <div className="max-w-[1241px] mx-auto px-6 sm:px-8">
             <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
               What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
             </h2>
-            <p className="mt-5 text-[18px] text-gray-600 leading-relaxed text-left">
+            <p className="mt-5 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               When you own any Harley-Davidson&reg; motorcycle the expectations are sky high,
               justifiably of course. Choose a H-D Certified&trade; Approved Used
               Harley-Davidson&reg; and you can rest assured they have been rigorously checked
@@ -145,20 +145,20 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
             <h3 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
               Overview Of H-D Certified&trade; - Ride With Confidence
             </h3>
-            <p className="mt-5 text-[18px] text-gray-600 leading-relaxed text-left">
+            <p className="mt-5 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               The desire of H-D Certified&trade; is to become the go to place for all customers
               wanting to purchase a pre-owned Harley-Davidson&reg; motorcycle. The program provides
               customers with the confidence that the pre-owned Motorcycle they purchase is of high
               standard and quality. It is also backed with comprehensive part and labour warranty
               which includes roadside assistance and many other benefits.
             </p>
-            <p className="mt-4 text-[18px] text-gray-600 leading-relaxed text-left">
+            <p className="mt-4 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               An H-D Certified&trade; Approved Used motorcycle can be a fantastic first entry
               point to the Harley-Davidson&reg; brand or a cost-effective donor Motorcycle for a custom
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
-            <ul className="mt-3 text-[18px] text-gray-600 leading-relaxed space-y-1.5 list-disc pl-5 marker:text-hd-orange text-left">
+            <ul className="mt-3 text-[18px] text-text-secondary-on-light leading-relaxed space-y-1.5 list-disc pl-5 marker:text-hd-orange text-left">
               {OVERVIEW_BULLETS.map((b) => (
                 <li key={b} className="pl-1">
                   {b}
@@ -191,7 +191,7 @@ function FeatureSection({
   reverse: boolean;
   index: number;
 }) {
-  const rowBg = index % 2 === 0 ? '#FFFFFF' : '#EBEBEB';
+  const rowBg = index % 2 === 0 ? '#FFFFFF' : '#F5F5F5';
 
   return (
     <section style={{ backgroundColor: rowBg }}>
@@ -244,17 +244,17 @@ function FeatureSection({
           {/* Body / bullet list */}
           {feature.bullets && feature.bullets.length > 0 ? (
             <>
-              <ul className="mt-5 text-[15px] text-gray-700 leading-relaxed space-y-3 list-disc pl-4 marker:text-hd-orange">
+              <ul className="mt-5 text-[15px] text-text-secondary-on-light leading-relaxed space-y-3 list-disc pl-4 marker:text-hd-orange">
                 {feature.bullets.map((b) => (
                   <li key={b} className="pl-1">{b}</li>
                 ))}
               </ul>
               {feature.extra && (
-                <p className="mt-4 text-[15px] text-gray-700 leading-relaxed">{feature.extra}</p>
+                <p className="mt-4 text-[15px] text-text-secondary-on-light leading-relaxed">{feature.extra}</p>
               )}
             </>
           ) : feature.body ? (
-            <p className="mt-5 text-[15px] text-gray-700 leading-relaxed">{feature.body}</p>
+            <p className="mt-5 text-[15px] text-text-secondary-on-light leading-relaxed">{feature.body}</p>
           ) : null}
 
           {/* Optional CTA — e.g. HOG Benefits */}
@@ -263,7 +263,7 @@ function FeatureSection({
               href={feature.cta.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 mt-6 bg-hd-orange text-hd-white font-bold uppercase tracking-widest text-xs px-6 py-3 hover:brightness-110 transition w-fit"
+              className="inline-flex items-center gap-2 mt-6 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-6 py-3 hover:brightness-110 transition w-fit"
             >
               {feature.cta.label}
               <span aria-hidden>→</span>

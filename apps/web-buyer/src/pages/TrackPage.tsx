@@ -223,7 +223,7 @@ export function TrackPage() {
   return (
     <>
       <Helmet>
-        <title>Track Your Harley — H-D Certified</title>
+        <title>Track Your Harley-Davidson — H-D Certified</title>
         <meta
           name="description"
           content="Track an H-D Certified order or enquiry — from confirmation through to delivery."
@@ -285,8 +285,7 @@ export function TrackPage() {
           <button
             type="submit"
             disabled={!orderId.trim() || lookup.isPending}
-            style={{ backgroundColor: '#FF5500' }}
-            className="h-12 text-hd-black font-subhead font-bold uppercase tracking-subhead text-xs px-6 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
+            className="h-12 bg-hd-orange text-hd-white font-subhead font-bold uppercase tracking-subhead text-xs px-6 hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap"
           >
             {lookup.isPending ? 'Looking up…' : 'Track Your Harley-Davidson®'}
           </button>

@@ -63,10 +63,6 @@ export function SiteHeader() {
           per Figma "sleek narrow navigation". Logo size scaled down
           to h-4 (16px) so it sits cleanly inside the slimmer bar. */}
       <div className="max-w-container mx-auto px-6 h-14 flex items-center justify-between">
-        {/* QA latest: logo scaled down to h-4 (16px tall) so it
-            sits proportionally inside the slimmer h-14 bar. Width
-            ≈ 225px from the 295×21 natural aspect — fits the left
-            without crowding the right-hand nav. */}
         <Link to="/" className="flex items-center group" aria-label="H-D Certified — home">
           <img
             src="/brand/hd-certified-wordmark-light.svg"

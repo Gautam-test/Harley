@@ -103,7 +103,7 @@ export function ImageGallery({
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
-          <span className="absolute bottom-3 right-3 z-10 bg-hd-black/70 text-hd-white text-[11px] font-subhead uppercase tracking-wide px-2.5 py-1">
+          <span className="absolute bottom-3 right-3 z-10 bg-hd-black/70 text-hd-white text-[11px] font-subhead uppercase tracking-subhead px-2.5 py-1">
             {active + 1} / {safe.length}
           </span>
         </>

@@ -46,6 +46,7 @@ module.exports = {
           primary: '#FFFFFF', // text on dark surfaces
           secondary: '#B3B3B3',
           'on-light': '#000000', // text on light surfaces
+          'secondary-on-light': '#555555', // body copy on light surfaces (brand-governed dark grey)
         },
 
         // ─── Semantic UI states (not brand colours; restricted to status messages) ───

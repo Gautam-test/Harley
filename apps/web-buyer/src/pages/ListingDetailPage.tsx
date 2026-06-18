@@ -422,7 +422,7 @@ export function ListingDetailPage() {
           <p className="font-subhead font-bold tracking-subhead text-lg text-text-on-light leading-none">
             ₹ {data.price.toLocaleString('en-IN')}
           </p>
-          <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-wide truncate">
+          <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-subhead truncate">
             EMI from ₹ {emiFrom.toLocaleString('en-IN')}/Mo
           </p>
         </div>

@@ -27,6 +27,7 @@ interface LeadDetail {
   vin?: string;
   status: LeadStatus;
   frozenStatus?: string | null;
+  entrySource?: 'PORTAL' | 'DEALER' | null;
   createdAt: string;
   // QA: customer-submitted qualifying answers. Buyer-only fields:
   state?: string | number | null;
@@ -288,6 +289,22 @@ export function LeadDetailPage() {
                 {KIND_LABEL[kind]}
               </span>
               <StatusBadge status={lead.status} />
+              {kind === 'buyer' && (
+                <span
+                  className={`inline-block px-2 py-0.5 text-[10px] font-subhead uppercase tracking-subhead border ${
+                    (lead.entrySource ?? 'PORTAL') === 'PORTAL'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                  title={
+                    (lead.entrySource ?? 'PORTAL') === 'PORTAL'
+                      ? 'Customer submitted via buyer portal'
+                      : 'Dealer logged manually (phone / walk-in)'
+                  }
+                >
+                  {(lead.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                </span>
+              )}
             </div>
             <h1 className="font-headline text-3xl tracking-headline uppercase mt-3">
               {lead.name}

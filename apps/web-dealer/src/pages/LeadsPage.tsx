@@ -33,6 +33,8 @@ interface LeadRow {
   /** True when the dealer-notification email couldn't be sent; rep needs
       to follow up manually since they won't get the usual inbox heads-up. */
   notificationFailed?: boolean;
+  /** PORTAL = customer submitted via buyer portal; DEALER = manually logged by dealer rep */
+  entrySource?: 'PORTAL' | 'DEALER';
   createdAt: string;
 }
 
@@ -255,6 +257,7 @@ export function LeadsPage() {
               </Th>
               <Th>Location</Th>
               {tab === 'all' && <Th>Kind</Th>}
+              {tab !== 'trade-in' && <Th>Entry</Th>}
               <Th>Status</Th>
               <Th className="text-right pr-4">
                 <span className="sr-only">Open</span>
@@ -264,14 +267,14 @@ export function LeadsPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading && (
               <tr>
-                <td colSpan={tab === 'all' ? 7 : 6} className="text-center py-8 text-gray-500">
+                <td colSpan={tab === 'trade-in' ? 6 : tab === 'all' ? 8 : 7} className="text-center py-8 text-gray-500">
                   Loading…
                 </td>
               </tr>
             )}
             {data?.length === 0 && (
               <tr>
-                <td colSpan={tab === 'all' ? 7 : 6} className="text-center py-12 text-gray-500">
+                <td colSpan={tab === 'trade-in' ? 6 : tab === 'all' ? 8 : 7} className="text-center py-12 text-gray-500">
                   No{' '}
                   {tab === 'buyer'
                     ? 'buyer'
@@ -347,6 +350,25 @@ export function LeadsPage() {
                     </span>
                   </Td>
                 )}
+                {tab !== 'trade-in' && l.kind === 'buyer' && (
+                  <Td>
+                    <span
+                      className={`inline-block px-2 py-0.5 text-[10px] font-subhead uppercase tracking-subhead border ${
+                        (l.entrySource ?? 'PORTAL') === 'PORTAL'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                      title={
+                        (l.entrySource ?? 'PORTAL') === 'PORTAL'
+                          ? 'Customer submitted via buyer portal'
+                          : 'Dealer logged manually (phone / walk-in)'
+                      }
+                    >
+                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                    </span>
+                  </Td>
+                )}
+                {tab !== 'trade-in' && l.kind === 'trade-in' && <Td />}
                 <Td>
                   <StatusBadge status={l.status} />
                   {l.notificationFailed && (

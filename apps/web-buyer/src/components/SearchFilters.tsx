@@ -280,8 +280,7 @@ export function SearchFilters() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="border border-gray-200 overflow-hidden"
-      style={{ backgroundColor: '#F6F6F6' }}
+      className="bg-surface-light border border-gray-200 overflow-hidden"
     >
       <div className="px-5 pt-5">
         {/* QA BUG-008: persistent top-of-sidebar Reset link so the buyer
