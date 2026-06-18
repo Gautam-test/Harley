@@ -619,7 +619,12 @@ export function MyListingsPage() {
                       <IconButton
                         label="Turn On"
                         tone="primary"
-                        onClick={() => turnOn.mutate(l.id)}
+                        onClick={() => {
+                          const msg = l.publishedAt
+                            ? `Turn on "${l.year} ${l.modelName}"? It will go live on the marketplace.`
+                            : `Re-submit "${l.year} ${l.modelName}" for admin approval? It will move to Pending Approval.`;
+                          if (window.confirm(msg)) turnOn.mutate(l.id);
+                        }}
                         disabled={turnOn.isPending}
                       >
                         <PowerIcon />
@@ -647,16 +652,18 @@ export function MyListingsPage() {
                         <PowerIcon />
                       </IconButton>
                     )}
-                    {l.status !== 'REMOVED' && l.status !== 'SOLD' && (
+                    {l.status !== 'REMOVED' && l.status !== 'SOLD' && l.status !== 'DEACTIVATED' && (
                       <IconButton
-                        label="Remove"
+                        label="Mark Inactive"
                         onClick={() => {
                           if (
                             window.confirm(
-                              `Permanently remove "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? This cannot be undone.`,
+                              l.status === 'DRAFT'
+                                ? `Withdraw "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) from review? It will move to Inactive.`
+                                : `Mark "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) as Inactive?`,
                             )
                           ) {
-                            remove.mutate(l.id);
+                            turnOff.mutate(l.id);
                           }
                         }}
                         tone="danger"

@@ -469,7 +469,7 @@ function CreateDealerModal({
           </span>
           <Input
             type="email"
-            placeholder="dealer@example.com"
+            placeholder="Email address"
             aria-invalid={Boolean(errors.email)}
             {...register('email', {
               required: 'Email is required',
@@ -490,7 +490,7 @@ function CreateDealerModal({
               +91
             </span>
             <Input
-              placeholder="9876543210"
+              placeholder="XXXXX XXXXX"
               inputMode="numeric"
               maxLength={10}
               aria-invalid={Boolean(errors.phone)}
@@ -559,7 +559,7 @@ function CreateDealerModal({
               Pincode <span className="text-danger">*</span>
             </span>
             <Input
-              placeholder="122001"
+              placeholder="6-digit pincode"
               maxLength={6}
               inputMode="numeric"
               aria-invalid={Boolean(errors.pincode)}

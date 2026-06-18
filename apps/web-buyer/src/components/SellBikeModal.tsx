@@ -395,43 +395,62 @@ export function SellBikeModal() {
               // don't have to override every Input className individually.
               className="mt-5 space-y-4 [&_input]:!border-2 [&_input]:!border-hd-black [&_select]:!border-2 [&_select]:!border-hd-black"
             >
-              <Labelled label="Your Name" required error={errors.username?.message}>
-                <Input
-                  placeholder="Mohd Tai"
-                  maxLength={100}
-                  aria-invalid={Boolean(errors.username)}
-                  {...(() => {
-                    const r = register('username', nameRules);
-                    // BUG-032: real-time strip non-letter chars.
-                    return {
-                      ...r,
-                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                        e.target.value = sanitizeAlpha(e.target.value);
-                        void r.onChange(e);
-                      },
-                    };
-                  })()}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Labelled label="Your Name" required error={errors.username?.message}>
+                  <Input
+                    maxLength={100}
+                    placeholder="Full name"
+                    aria-invalid={Boolean(errors.username)}
+                    {...(() => {
+                      const r = register('username', nameRules);
+                      // BUG-032: real-time strip non-letter chars.
+                      return {
+                        ...r,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.target.value = sanitizeAlpha(e.target.value);
+                          void r.onChange(e);
+                        },
+                      };
+                    })()}
+                  />
+                </Labelled>
+                {/* QA RE-OPEN: Email is REQUIRED by the trade-in lead API
+                    (tradeInLeadInput uses z.string().email()). Removing
+                    this field previously caused the post-OTP submit to
+                    fail with "Invalid request payload" + "email: Invalid
+                    email" because the form was sending email: ''. Field
+                    restored so the dealer can also reach the seller by
+                    email. */}
+                <Labelled label="Email" required error={errors.email?.message}>
+                  <Input
+                    type="email"
+                    maxLength={254}
+                    placeholder="Email address"
+                    aria-invalid={Boolean(errors.email)}
+                    {...register('email', emailRules)}
+                  />
+                </Labelled>
+              </div>
+
+              <Labelled label="Motorcycle Model" required error={errors.bikeModel?.message}>
+                <Select
+                  aria-invalid={Boolean(errors.bikeModel)}
+                  {...register('bikeModel', requiredSelect('a motorcycle model'))}
+                >
+                  <option value="">Choose motorcycle model</option>
+                  {HD_MODEL_CATALOG.map((g) => (
+                    <optgroup key={g.family} label={g.family}>
+                      {g.models.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
               </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Labelled label="Motorcycle Model" required error={errors.bikeModel?.message}>
-                  <Select
-                    aria-invalid={Boolean(errors.bikeModel)}
-                    {...register('bikeModel', requiredSelect('a motorcycle model'))}
-                  >
-                    <option value="">Choose motorcycle model</option>
-                    {HD_MODEL_CATALOG.map((g) => (
-                      <optgroup key={g.family} label={g.family}>
-                        {g.models.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </Select>
-                </Labelled>
                 {/* Client feedback #17: VIN Number is no longer mandatory.
                     Validation only runs when a value is provided. */}
                 <Labelled label="VIN Number" error={errors.vin?.message}>
@@ -454,26 +473,23 @@ export function SellBikeModal() {
                     })}
                   />
                 </Labelled>
+                <Labelled label="Which owner are you?">
+                  <Select {...register('owners')}>
+                    <option value="">— Select (optional) —</option>
+                    <option value="1">1st Owner</option>
+                    <option value="2">2nd Owner</option>
+                    <option value="3">3rd Owner</option>
+                    <option value="4">4th Owner or more</option>
+                  </Select>
+                </Labelled>
               </div>
-
-              {/* Owner number — optional; tells the dealer whether this is a
-                  first-hand or previously-resold motorcycle. */}
-              <Labelled label="Which owner are you?">
-                <Select {...register('owners')}>
-                  <option value="">— Select (optional) —</option>
-                  <option value="1">1st Owner</option>
-                  <option value="2">2nd Owner</option>
-                  <option value="3">3rd Owner</option>
-                  <option value="4">4th Owner or more</option>
-                </Select>
-              </Labelled>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Labelled label="Phone Number" required error={errors.phone?.message}>
                   <Input
                     inputMode="tel"
                     maxLength={14}
-                    placeholder="Enter phone number"
+                    placeholder="+91 XXXXX XXXXX"
                     aria-invalid={Boolean(errors.phone)}
                     {...register('phone', {
                       ...phoneRules,
@@ -601,7 +617,7 @@ export function SellBikeModal() {
                   <Input
                     inputMode="numeric"
                     maxLength={6}
-                    placeholder="110053"
+                    placeholder="6-digit pincode"
                     aria-invalid={Boolean(errors.pincode || pincodeMatchError)}
                     {...(() => {
                       const r = register('pincode', optionalPincodeRules);
@@ -632,23 +648,6 @@ export function SellBikeModal() {
                   </Select>
                 </Labelled>
               </div>
-
-              {/* QA RE-OPEN: Email is REQUIRED by the trade-in lead API
-                  (tradeInLeadInput uses z.string().email()). Removing
-                  this field previously caused the post-OTP submit to
-                  fail with "Invalid request payload" + "email: Invalid
-                  email" because the form was sending email: ''. Field
-                  restored so the dealer can also reach the seller by
-                  email. */}
-              <Labelled label="Email" required error={errors.email?.message}>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  maxLength={254}
-                  aria-invalid={Boolean(errors.email)}
-                  {...register('email', emailRules)}
-                />
-              </Labelled>
 
               {/* "Are you looking for an upgrade?" — simple Yes / No */}
               <div>

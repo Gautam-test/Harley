@@ -437,12 +437,17 @@ export async function setActiveToggle(dealerId: string, listingId: string, on: b
   if (!listing || listing.dealerId !== dealerId) {
     throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
   }
-  const next = on ? 'ACTIVE' : 'DEACTIVATED';
+  // If the listing was never published (publishedAt null) it hasn't gone
+  // through admin review yet — turning it on must re-enter the review queue
+  // (DRAFT) not bypass straight to ACTIVE.
+  const next = on
+    ? (listing.publishedAt ? 'ACTIVE' : 'DRAFT')
+    : 'DEACTIVATED';
   if (on && listing.status !== 'DEACTIVATED') {
     throw new HttpError(409, 'INVALID_STATE', 'Only deactivated listings can be turned back on');
   }
-  if (!on && listing.status !== 'ACTIVE') {
-    throw new HttpError(409, 'INVALID_STATE', 'Only active listings can be turned off');
+  if (!on && listing.status !== 'ACTIVE' && listing.status !== 'DRAFT') {
+    throw new HttpError(409, 'INVALID_STATE', 'Only active or pending listings can be deactivated');
   }
 
   // QA Turn-On VIN guard: when bringing DEACTIVATED → ACTIVE, replay
@@ -454,7 +459,7 @@ export async function setActiveToggle(dealerId: string, listingId: string, on: b
   // `removed:<id>:<root>`) so prior-prefixed rows are caught too.
   // Error code + copy mirror createListing's so client + admin paths
   // see the identical message verbatim. Turn-Off skips this branch.
-  if (on) {
+  if (on && next === 'ACTIVE') {
     const originalVin = rootVin(listing.vin);
     const conflict = await prisma.listing.findFirst({
       where: {

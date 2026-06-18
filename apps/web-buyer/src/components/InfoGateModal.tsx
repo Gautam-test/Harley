@@ -803,7 +803,7 @@ export function InfoGateModal({
           >
             <Labelled label="Full Name" required error={errors.name?.message} show={isBuyerEnquiry}>
               <Input
-                placeholder={isBuyerEnquiry ? 'Mohit Tai' : 'Full name'}
+                placeholder="Full name"
                 aria-invalid={Boolean(errors.name)}
                 maxLength={100}
                 {...(() => {
@@ -831,7 +831,7 @@ export function InfoGateModal({
                     <Input
                       inputMode="tel"
                       maxLength={14}
-                      placeholder="+91XXXXXXXXXX"
+                      placeholder="+91 XXXXX XXXXX"
                       aria-invalid={Boolean(errors.phone)}
                       value={field.value}
                       onBlur={field.onBlur}
@@ -845,7 +845,7 @@ export function InfoGateModal({
                 <Labelled label="Email ID" required error={errors.email?.message} show>
                   <Input
                     type="email"
-                    placeholder="Enter email id"
+                    placeholder="Email address"
                     aria-invalid={Boolean(errors.email)}
                     maxLength={254}
                     {...register('email', emailRules)}
@@ -858,7 +858,7 @@ export function InfoGateModal({
               <Labelled label="Email ID" required error={errors.email?.message} show={false}>
                 <Input
                   type="email"
-                  placeholder="Email"
+                  placeholder="Email address"
                   aria-invalid={Boolean(errors.email)}
                   maxLength={254}
                   {...register('email', emailRules)}
@@ -970,7 +970,7 @@ export function InfoGateModal({
                   </Labelled>
                   <Labelled label="Pin Code" error={errors.pincode?.message} show>
                     <Input
-                      placeholder="110053"
+                      placeholder="6-digit pincode"
                       inputMode="numeric"
                       maxLength={6}
                       aria-invalid={Boolean(errors.pincode)}

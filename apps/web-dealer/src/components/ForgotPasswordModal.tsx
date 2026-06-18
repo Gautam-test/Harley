@@ -241,7 +241,7 @@ export function ForgotPasswordModal({ open, onClose, apiPathPrefix, apiBase }: P
                 // correcting the typo.
                 if (error) setError(null);
               }}
-              placeholder="you@example.in"
+              placeholder="Email address"
               autoComplete="off"
               autoFocus
               aria-invalid={Boolean(error)}
@@ -286,7 +286,7 @@ export function ForgotPasswordModal({ open, onClose, apiPathPrefix, apiBase }: P
               maxLength={6}
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="123456"
+              placeholder="6-digit code"
               autoComplete="one-time-code"
               className="font-mono text-center text-lg tracking-[0.5em]"
               onKeyDown={(e) => {

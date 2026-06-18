@@ -886,7 +886,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}
                 maxLength={6}
                 inputMode="numeric"
-                placeholder="122001"
+                placeholder="6-digit pincode"
                 aria-invalid={Boolean(errFor('pincode'))}
               />
             </Field>
@@ -1259,7 +1259,7 @@ function AddSellerEnquiryModal({ onClose }: { onClose: () => void }) {
                 onChange={(e) => setForm((f) => ({ ...f, pincode: sanitizeDigits(e.target.value, 6) }))}
                 maxLength={6}
                 inputMode="numeric"
-                placeholder="122001"
+                placeholder="6-digit pincode"
                 aria-invalid={Boolean(errFor('pincode'))}
               />
             </Field>
