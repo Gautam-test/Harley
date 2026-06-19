@@ -57,24 +57,19 @@ module.exports = {
       },
 
       fontFamily: {
-        // The licensed "1903" family is proprietary (PRD Open Question 9). When the
-        // foundry-supplied web fonts arrive, drop them into apps/web-*/public/fonts/
-        // and add the @font-face declarations in packages/ui/src/styles.css under
-        // the `1903 Sans Condensed`, `1903 Sans`, `1903 Serif` family names — this
-        // cascade picks them up automatically. Until then, Bebas Neue (display) and
-        // Inter (body) are the documented fallbacks.
-        headline: ['"1903 Sans Condensed"', '"Bebas Neue"', 'Oswald', 'Impact', 'sans-serif'],
-        subhead: ['"1903 Sans"', '"1903 Sans Condensed"', '"Bebas Neue"', 'Inter', 'sans-serif'],
-        body: ['"1903 Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        // The licensed "1903" family ships as @font-face in packages/ui/src/styles.css.
+        // Fallbacks use only system fonts — no third-party display fonts (Bebas Neue,
+        // Oswald, Inter) per the 2026 Brand Guidelines (p.70) which authorise 1903
+        // exclusively. Impact is the closest system condensed for headline fallback.
+        headline: ['"1903 Sans Condensed"', 'Impact', 'sans-serif'],
+        subhead: ['"1903 Sans"', '"1903 Sans Condensed"', 'sans-serif'],
+        body: ['"1903 Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         serif: ['"1903 Serif"', 'Georgia', '"Times New Roman"', 'serif'],
         // QA BUG-021: override Tailwind's default `sans` so the preflight
         // cascade (`html { font-family: theme('fontFamily.sans') }`) and
         // any accidental `font-sans` utility use lands on the brand body
-        // chain — NOT the OS sans stack. Form controls inherit from this
-        // via Tailwind's `font-family: inherit` preflight on buttons/
-        // inputs/selects/textareas, so the whole UI stays on 1903 Sans
-        // without per-component declarations.
-        sans: ['"1903 Sans"', 'Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        // chain — NOT the OS sans stack.
+        sans: ['"1903 Sans"', 'system-ui', '-apple-system', 'sans-serif'],
       },
 
       letterSpacing: {

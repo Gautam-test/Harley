@@ -22,6 +22,27 @@ export function HomePage() {
         />
       </Helmet>
       <HeroSearch />
+
+      {/* Brand Guidelines p.58, 63-65: the RIDE wordmark is "the central
+          expression of our brand platform" and must appear on brand
+          communications. Rendered as a bold typographic band between the
+          hero and the benefits content. "RIDE" is always orange, ALL CAPS,
+          followed by a period per p.63. */}
+      <section className="bg-hd-black py-10 md:py-14 text-center" aria-label="RIDE brand statement">
+        <div className="max-w-container mx-auto px-6">
+          <p
+            className="font-headline font-bold uppercase tracking-headline leading-headline text-hd-orange select-none"
+            style={{ fontSize: 'clamp(5rem, 14vw, 10rem)' }}
+            aria-hidden="true"
+          >
+            RIDE.
+          </p>
+          <p className="font-subhead font-bold uppercase tracking-subhead text-hd-white text-sm md:text-base mt-2 opacity-70">
+            Harley-Davidson&reg; Certified Pre-Owned
+          </p>
+        </div>
+      </section>
+
       <BenefitsSection />
 
       <div className="bg-hd-white py-14 text-center">

@@ -40,7 +40,7 @@ const FEATURES: FeatureRow[] = [
       'A detailed record signed by the performing technician is available to the customer from each inspection.',
     ],
     extra:
-      'Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used Motorcycles.',
+      'Only once this has been done can a machine earn the right to be classed as H-D Certified™ and qualify for the other benefits associated with these premium used motorcycles.',
   },
   {
     // Client feedback #5: replace placeholder copy with client-approved copy.
@@ -54,7 +54,7 @@ const FEATURES: FeatureRow[] = [
     title: 'Kilometer Verification Check',
     iconSrc: '/brand/benefits/3.svg',
     body:
-      'An online check is performed to verify from records that the KM declared on the Motorcycle is correct and confirmed in writing.',
+      'An online check is performed to verify from records that the KM declared on the motorcycle is correct and confirmed in writing.',
     image: '/brand/benefits/feature-images/3.jpg',
   },
   {
@@ -121,7 +121,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
         <section className="py-20 md:py-24 lg:py-28 bg-surface-light">
           <div className="max-w-[1241px] mx-auto px-6 sm:px-8">
             <h2 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
-              What Are The Benefits Of H-D Certified&trade; Approved Used Motorcycles?
+              WHAT ARE THE BENEFITS OF H-D CERTIFIED&trade; APPROVED USED MOTORCYCLES?
             </h2>
             <p className="mt-5 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               When you own any Harley-Davidson&reg; motorcycle the expectations are sky high,
@@ -130,7 +130,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
               and certified to earn the honour of being called a H-D Certified&trade; machine.
               You can only purchase H-D Certified&trade; Approved Used Harley-Davidson&reg; machines
               from an authorized Harley-Davidson&reg; dealer. This provides you with 100% certainty and
-              the promise that you not only know the difference with your new Motorcycle, but feel it
+              the promise that you not only know the difference with your new motorcycle, but feel it
               too. Your purchase is backed with a comprehensive guarantee and assistance
               package. Please explore below to see the full range of benefits on these
               machines.
@@ -143,18 +143,18 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
                 bullet markers sit flush with the body paragraphs' left
                 edge. */}
             <h3 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
-              Overview Of H-D Certified&trade; - Ride With Confidence
+              OVERVIEW OF H-D CERTIFIED&trade; - <span className="text-hd-orange">RIDE</span> WITH CONFIDENCE
             </h3>
             <p className="mt-5 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               The desire of H-D Certified&trade; is to become the go to place for all customers
               wanting to purchase a pre-owned Harley-Davidson&reg; motorcycle. The program provides
-              customers with the confidence that the pre-owned Motorcycle they purchase is of high
+              customers with the confidence that the pre-owned motorcycle they purchase is of high
               standard and quality. It is also backed with comprehensive part and labour warranty
               which includes roadside assistance and many other benefits.
             </p>
             <p className="mt-4 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               An H-D Certified&trade; Approved Used motorcycle can be a fantastic first entry
-              point to the Harley-Davidson&reg; brand or a cost-effective donor Motorcycle for a custom
+              point to the Harley-Davidson&reg; brand or a cost-effective donor motorcycle for a custom
               project. Buying an H-D Certified&trade; Approved Used motorcycle also comes with
               several great customer benefits, including:
             </p>
@@ -236,7 +236,7 @@ function FeatureSection({
               height={72}
               decoding="async"
             />
-            <h3 className="font-subhead font-bold normal-case tracking-normal text-[20px] md:text-[24px] text-text-on-light leading-snug">
+            <h3 className="font-subhead font-bold uppercase tracking-subhead text-[20px] md:text-[24px] text-text-on-light leading-snug">
               {feature.title}
             </h3>
           </div>

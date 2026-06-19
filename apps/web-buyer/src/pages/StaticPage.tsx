@@ -371,10 +371,6 @@ export function StaticPage({ contentKey }: { contentKey: string }) {
         // "Cookie Notice as of October 2020" subtitle under the
         // main heading.
         solidBlack={isLegal}
-        // Client feedback #9: breadcrumbs removed from customer portal —
-        // the prior cookies/privacy/about crumbs (HOME / COOKIE, etc.)
-        // are no longer rendered. PageHero just shows the title +
-        // subtitle without a crumb row.
         subtitle={
           isCookies
             ? 'Cookie Notice as of October 2020'

@@ -303,7 +303,7 @@ export function ListingSidebarCard({
               </div>
               <div className="px-4 py-4">
                 <p className="font-subhead font-bold tracking-subhead uppercase text-base leading-tight">
-                  Thank you. <span className="text-hd-orange">Ride With Confidence.</span>
+                  Thank you. <span className="text-hd-orange">RIDE With Confidence.</span>
                 </p>
                 <p className="text-sm text-text-secondary mt-2 leading-relaxed">
                   {dealerName} will reach out within 48 hours.

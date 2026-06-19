@@ -255,7 +255,6 @@ export function TrackPage() {
         size="sm"
         heightPx={380}
         titlePx={56}
-        /* Client feedback #9: breadcrumbs removed from customer portal. */
       >
         {/* QA latest Track Enquiry search container:
             • Input field gets a 1.5px solid #000000 black border + sharp

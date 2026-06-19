@@ -115,9 +115,6 @@ export function SearchPage() {
         <meta name="description" content="Search Certified Pre-Owned Harley-Davidson motorcycles from authorised Indian dealers." />
       </Helmet>
 
-      {/* Client feedback #9: breadcrumbs removed from customer portal.
-          Hero title + subtitle stay; the breadcrumbs prop is omitted so
-          PageHero renders no crumb row above the headline. */}
       <PageHero
         title="Search"
         emphasis="Stock"

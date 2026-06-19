@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 
 // Reusable dark-with-photo hero band used across the buyer site so every page
 // banner shares the same visual language (orange-emphasis headline, gradient
@@ -54,12 +53,6 @@ export const HERO = {
   iron883: 'https://images.medialinksonline.com/8374923x2200x1100xFFFFFFxH.jpg',
 } as const;
 
-interface BreadcrumbItem {
-  label: string;
-  /** Route path. When omitted, renders as the current (terminal) crumb. */
-  to?: string;
-}
-
 interface PageHeroProps {
   /** Words rendered in white before the orange emphasis word. */
   title: string;
@@ -73,9 +66,6 @@ interface PageHeroProps {
   image?: string;
   /** Vertical scale: tighter for utility pages, taller for marketing. */
   size?: 'sm' | 'md' | 'lg';
-  /** Optional breadcrumb trail rendered above the headline. Last item is
-   *  always the current page (orange + non-link). */
-  breadcrumbs?: BreadcrumbItem[];
   /** Optional content rendered below the headline (e.g. a search form). */
   children?: ReactNode;
   /** Optional desktop pixel height override (Figma-spec heroes that
@@ -97,7 +87,6 @@ export function PageHero({
   subtitle,
   image = HERO.streetGlide,
   size = 'md',
-  breadcrumbs,
   children,
   heightPx,
   titlePx,
@@ -162,33 +151,6 @@ export function PageHero({
           heightPx ? 'h-full flex flex-col items-center justify-center py-8' : padY
         }`}
       >
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          // QA latest: tight breadcrumb — no space gap around the
-          // slash element ("HOME/TRACK") per Figma. Current page
-          // label in brand orange, others white with hover-orange.
-          <nav
-            aria-label="Breadcrumb"
-            className="font-subhead font-medium uppercase tracking-[0.18em] text-[11px] md:text-xs mb-8"
-          >
-            <ol className="inline-flex items-center justify-center flex-wrap text-hd-white">
-              {breadcrumbs.map((bc, i) => {
-                const isLast = i === breadcrumbs.length - 1;
-                return (
-                  <li key={`${bc.label}-${i}`} className="inline-flex items-center">
-                    {bc.to && !isLast ? (
-                      <Link to={bc.to} className="hover:text-hd-orange transition">
-                        {bc.label}
-                      </Link>
-                    ) : (
-                      <span className={isLast ? 'text-hd-orange' : ''}>{bc.label}</span>
-                    )}
-                    {!isLast && <span aria-hidden className="mx-1 text-hd-orange">/</span>}
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        )}
         <h1
           className={`font-subhead font-bold ${titleSize} tracking-subhead uppercase text-hd-white leading-[0.95]`}
           // Apply the lg+ pixel override via inline media-query-free

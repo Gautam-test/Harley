@@ -163,8 +163,6 @@ export function ListingDetailPage() {
           read as elevated white blocks layered on top of it. */}
       <div className="bg-surface-light text-text-on-light">
         <div className="max-w-container mx-auto px-6 py-6">
-          {/* Client feedback #9: breadcrumb removed from customer portal. */}
-
           {/* Top section — gallery left, price/dealer card right */}
           <div className="grid lg:grid-cols-[1fr_360px] gap-8">
             <div>

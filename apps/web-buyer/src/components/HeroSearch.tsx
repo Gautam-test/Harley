@@ -184,7 +184,7 @@ export function HeroSearch() {
                 the 34px wide-1903-Sans Bold glyphs without clipping
                 ascenders/descenders. */}
             <h1
-              className="font-subhead font-bold tracking-subhead text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[34px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
+              className="font-subhead font-bold tracking-subhead text-hd-white uppercase text-[22px] sm:text-2xl md:text-[28px] lg:text-[36px] lg:whitespace-nowrap lg:w-[990px] lg:max-w-full lg:h-[56px] lg:leading-[56px] leading-[1.05]"
             >
               H-D Certified
               {/* Client feedback #2: ™ symbol must be white (matches the
@@ -192,10 +192,10 @@ export function HeroSearch() {
               <span className="text-hd-white align-super text-[0.55em] ml-0.5">&trade;</span>
               <span className="ml-0.5">Approved Used Motorcycles</span>
             </h1>
-            {/* QA latest: subhead 22px per Figma, font-weight 500
-                (Medium), Title Case. */}
+            {/* Brand Guidelines p.58+63: "RIDE" must always be ALL CAPS
+                and Harley-Davidson Orange (#FF6600). */}
             <p className="font-subhead font-medium text-hd-white mt-5 text-[16px] sm:text-lg md:text-[20px] lg:text-[22px]">
-              Ride With Confidence
+              <span className="text-hd-orange">RIDE</span> With Confidence
             </p>
           </div>
         </div>
