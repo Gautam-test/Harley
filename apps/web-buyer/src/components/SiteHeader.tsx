@@ -59,29 +59,12 @@ export function SiteHeader() {
 
   return (
     <header className="bg-hd-black border-b border-surface-2 sticky top-0 z-40">
-      {/* Brand Guidelines p.43-54: Bar & Shield is the primary brand mark
-          and must be present. Minimum digital size 65px. H-D Certified
-          program wordmark displayed alongside at a legible size. Header
-          height increased to h-[72px] to accommodate compliant logo sizes. */}
-      <div className="max-w-container mx-auto px-6 h-[72px] flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group" aria-label="H-D Certified — home">
-          {/* Bar & Shield mark — 96×72 viewBox, rendered at h-[44px] */}
-          <img
-            src="/brand/hd-bar-shield.svg"
-            alt="Harley-Davidson"
-            className="h-[44px] w-auto shrink-0"
-            width={59}
-            height={44}
-            decoding="async"
-          />
-          {/* H-D Certified program wordmark — 295×21 viewBox, at h-[28px]
-              gives a rendered width of ~393px which fits within the container */}
+      <div className="max-w-container mx-auto px-6 h-14 flex items-center justify-between">
+        <Link to="/" className="flex items-center group" aria-label="H-D Certified — home">
           <img
             src="/brand/hd-certified-wordmark-light.svg"
             alt="H-D Certified"
-            className="h-[28px] w-auto"
-            width={373}
-            height={28}
+            className="h-4 w-auto"
             decoding="async"
           />
         </Link>
@@ -155,9 +138,9 @@ export function SiteHeader() {
             type="button"
             aria-label="Close menu backdrop"
             onClick={() => setDrawerOpen(false)}
-            className="fixed inset-0 top-[72px] z-30 bg-hd-black/60 lg:hidden"
+            className="fixed inset-0 top-14 z-30 bg-hd-black/60 lg:hidden"
           />
-          <nav className="lg:hidden fixed inset-x-0 top-[72px] z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
+          <nav className="lg:hidden fixed inset-x-0 top-14 z-40 bg-hd-black border-b border-surface-2 py-2 shadow-2xl">
             <NavLink to="/" className={drawerLinkClasses} end>
               Home
             </NavLink>
