@@ -143,7 +143,7 @@ export function BenefitsSection({ compact = false }: BenefitsSectionProps) {
                 bullet markers sit flush with the body paragraphs' left
                 edge. */}
             <h3 className="text-center font-subhead font-bold tracking-subhead uppercase text-[32px] text-text-on-light leading-tight">
-              OVERVIEW OF H-D CERTIFIED&trade; - <span className="text-hd-orange">RIDE</span> WITH CONFIDENCE
+              OVERVIEW OF H-D CERTIFIED&trade; - RIDE WITH CONFIDENCE
             </h3>
             <p className="mt-5 text-[18px] text-text-secondary-on-light leading-relaxed text-left">
               The desire of H-D Certified&trade; is to become the go to place for all customers

@@ -192,10 +192,8 @@ export function HeroSearch() {
               <span className="text-hd-white align-super text-[0.55em] ml-0.5">&trade;</span>
               <span className="ml-0.5">Approved Used Motorcycles</span>
             </h1>
-            {/* Brand Guidelines p.58+63: "RIDE" must always be ALL CAPS
-                and Harley-Davidson Orange (#FF6600). */}
             <p className="font-subhead font-medium text-hd-white mt-5 text-[16px] sm:text-lg md:text-[20px] lg:text-[22px]">
-              <span className="text-hd-orange">RIDE</span> With Confidence
+              Ride With Confidence
             </p>
           </div>
         </div>
