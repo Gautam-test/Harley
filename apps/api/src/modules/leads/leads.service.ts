@@ -289,8 +289,22 @@ export async function checkTradeInVinGate(
 export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInput) {
   const listing = (await prisma.listing.findUnique({
     where: { slug: listingSlug },
-    select: { id: true, dealerId: true, modelName: true, year: true, status: true },
-  })) as { id: string; dealerId: string; modelName: string; year: number; status: string } | null;
+    select: {
+      id: true,
+      dealerId: true,
+      modelName: true,
+      year: true,
+      status: true,
+      dealer: { select: { name: true, phone: true, city: true } },
+    },
+  })) as {
+    id: string;
+    dealerId: string;
+    modelName: string;
+    year: number;
+    status: string;
+    dealer: { name: string; phone: string; city: string } | null;
+  } | null;
   if (!listing || listing.status !== 'ACTIVE') {
     throw new HttpError(404, 'NOT_FOUND', 'Listing not available');
   }
@@ -336,14 +350,9 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     formatLeadId('buyer', enquiry.id, enquiry.createdAt),
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
-  // Fetch dealer contact info for the confirmation email (F1).
-  const dealerForEmail = (await prisma.dealer.findUnique({
-    where: { id: listing.dealerId },
-    select: { name: true, phone: true, city: true },
-  })) as { name: string; phone: string; city: string } | null;
-  // Buyer confirmation email (trigger: buyer enquiry submission). The
-  // buyer's plaintext email is in scope here at create time. Fire-and-
-  // forget so a mail failure never fails the enquiry submit.
+  // Buyer confirmation email (trigger: buyer enquiry submission). Dealer
+  // info comes from the listing relation fetched above — no extra query.
+  // Fire-and-forget so a mail failure never fails the enquiry submit.
   void sendBuyerEmail(
     input.email,
     buyerEnquiryConfirmationEmail({
@@ -353,9 +362,9 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
       // success modal (B-YYYY-XXXX) so the email matches the on-screen
       // confirmation. The /leads/track API accepts this format directly.
       referenceId: formatLeadId('buyer', enquiry.id, enquiry.createdAt),
-      dealerName: dealerForEmail?.name,
-      dealerPhone: dealerForEmail?.phone,
-      dealerCity: dealerForEmail?.city,
+      dealerName: listing.dealer?.name,
+      dealerPhone: listing.dealer?.phone,
+      dealerCity: listing.dealer?.city,
     }),
   );
   return { id: enquiry.id };
@@ -499,7 +508,7 @@ function toLeadView(row: LeadDbRow) {
         dealer/admin queue surfaces a small badge so reps know to follow up
         manually instead of expecting an email. */
     notificationFailed: row.notes?.notificationFailed === true,
-    entrySource: (row.entrySource as string | null) ?? 'PORTAL',
+    entrySource: (row.entrySource as string | null) ?? null,
     employmentType: row.employmentType ?? null,
     bikeModel,
     vin: row.vin,
