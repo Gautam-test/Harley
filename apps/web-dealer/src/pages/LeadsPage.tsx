@@ -24,12 +24,14 @@ interface LeadRow {
     | 'CONTACTED'
     | 'ON_SITE_VISIT'
     | 'LOAN_APPROVAL'
+    | 'CASH'
     | 'IN_PROGRESS'
     | 'CONVERTED'
     | 'SUCCESS'
     | 'LOST'
     | 'DEAD'
-    | 'CLOSED';
+    | 'CLOSED'
+    | 'DROPPED';
   /** True when the dealer-notification email couldn't be sent; rep needs
       to follow up manually since they won't get the usual inbox heads-up. */
   notificationFailed?: boolean;
@@ -113,6 +115,9 @@ export function LeadsPage() {
   // tiny chooser; on the kind-specific tabs it jumps straight in.
   const [formMode, setFormMode] = useState<Kind | null>(null);
   const [chooserOpen, setChooserOpen] = useState(false);
+  // F6: channel filter — client-side since all data is already fetched.
+  // Only applies to buyer rows (trade-in has no entrySource).
+  const [channelFilter, setChannelFilter] = useState<'' | 'PORTAL' | 'DEALER'>('');
 
   // Each tab keys its own query so React Query caches the lists
   // independently — switching tabs is instant after the first load. The
@@ -130,8 +135,12 @@ export function LeadsPage() {
     enabled: tab === 'all' || tab === 'trade-in',
   });
   const data: MergedLead[] | undefined = useMemo(() => {
+    const matchChannel = (l: MergedLead) =>
+      !channelFilter || l.kind !== 'buyer' || (l.entrySource ?? 'PORTAL') === channelFilter;
     if (tab === 'buyer') {
-      return buyerQuery.data?.map((l) => ({ ...l, kind: 'buyer' as const }));
+      return buyerQuery.data
+        ?.map((l) => ({ ...l, kind: 'buyer' as const }))
+        .filter(matchChannel);
     }
     if (tab === 'trade-in') {
       return sellerQuery.data?.map((l) => ({ ...l, kind: 'trade-in' as const }));
@@ -144,8 +153,8 @@ export function LeadsPage() {
     merged.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-    return merged;
-  }, [tab, buyerQuery.data, sellerQuery.data]);
+    return merged.filter(matchChannel);
+  }, [tab, buyerQuery.data, sellerQuery.data, channelFilter]);
   const isLoading =
     tab === 'all'
       ? buyerQuery.isLoading || sellerQuery.isLoading
@@ -234,6 +243,30 @@ export function LeadsPage() {
           );
         })}
       </nav>
+
+      {/* F6: Channel filter — only surfaces on Buyer / All tabs where
+          entrySource is meaningful. Hides on the Seller tab. */}
+      {tab !== 'trade-in' && (
+        <div className="flex items-center gap-3 mt-4">
+          <span className="text-[11px] font-subhead uppercase tracking-subhead text-gray-500 shrink-0">
+            Channel:
+          </span>
+          {(['', 'PORTAL', 'DEALER'] as const).map((v) => (
+            <button
+              key={v || 'all'}
+              type="button"
+              onClick={() => setChannelFilter(v)}
+              className={`px-3 py-1 text-[11px] font-subhead uppercase tracking-subhead border transition ${
+                channelFilter === v
+                  ? 'bg-hd-black border-hd-black text-hd-white'
+                  : 'border-gray-300 text-gray-600 hover:border-hd-black hover:text-hd-black'
+              }`}
+            >
+              {v === '' ? 'All' : v === 'PORTAL' ? 'Online' : 'Walk-in'}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Layout collapses 9 cols → 5 by stacking related fields:
             Lead    = ID (caption) + name (heading)
@@ -368,7 +401,7 @@ export function LeadsPage() {
                     </span>
                   </Td>
                 )}
-                {tab !== 'trade-in' && l.kind === 'trade-in' && <Td />}
+                {tab !== 'trade-in' && l.kind === 'trade-in' && <Td><span className="text-[11px] text-gray-400">—</span></Td>}
                 <Td>
                   <StatusBadge status={l.status} />
                   {l.notificationFailed && (
@@ -643,6 +676,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
     bestTimeToCall: '',
     financingNeeded: false,
     tradeInInterest: false,
+    employmentType: '',
     message: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -726,6 +760,7 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
       if (form.budget) body.budget = Number(form.budget);
       if (form.visitPreference) body.visitPreference = form.visitPreference;
       if (form.bestTimeToCall) body.bestTimeToCall = form.bestTimeToCall;
+      if (form.employmentType.trim()) body.employmentType = form.employmentType.trim();
       if (form.message.trim()) body.message = form.message.trim();
       return api<{ id: string }>('/dealer/leads/buyer', {
         method: 'POST',
@@ -981,6 +1016,21 @@ function AddBuyerEnquiryModal({ onClose }: { onClose: () => void }) {
               label="Has a motorcycle to trade in"
             />
           </div>
+          <Field label="Employment Type (optional)">
+            <Select
+              value={form.employmentType}
+              onChange={(e) => setForm((f) => ({ ...f, employmentType: e.target.value }))}
+            >
+              <option value="">— Not specified —</option>
+              <option value="Salaried">Salaried</option>
+              <option value="Self-Employed">Self-Employed</option>
+              <option value="Business Owner">Business Owner</option>
+              <option value="Professional">Professional (Doctor / Lawyer / CA)</option>
+              <option value="Retired">Retired</option>
+              <option value="Student">Student</option>
+              <option value="Other">Other</option>
+            </Select>
+          </Field>
         </FormSection>
 
         <FormSection kicker="4" label="Notes">
@@ -1737,12 +1787,12 @@ function StatusBadge({ status }: { status: LeadRow['status'] }) {
       ? 'info'
       : status === 'CONVERTED' || status === 'SUCCESS'
       ? 'success'
-      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD'
+      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD' || status === 'DROPPED'
       ? 'danger'
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {LEAD_STAGE_LABELS[status]}
+      {LEAD_STAGE_LABELS[status as keyof typeof LEAD_STAGE_LABELS] ?? status.replace(/_/g, ' ')}
     </Badge>
   );
 }

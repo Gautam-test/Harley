@@ -7,11 +7,18 @@ import { logger } from '../../config/logger.js';
 // nodemailer (Gmail / any SMTP server). SendGrid / SES could slot in
 // here too but aren't wired yet.
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+}
+
 export interface EmailMessage {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailProvider {
@@ -54,6 +61,11 @@ class SmtpEmailProvider implements EmailProvider {
       subject: msg.subject,
       html: msg.html,
       text: msg.text,
+      attachments: msg.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        contentType: a.contentType,
+      })),
     });
     logger.info({ to: msg.to, subject: msg.subject }, '✉️ [SMTP] sent');
   }
@@ -136,7 +148,16 @@ export function buyerEnquiryConfirmationEmail(opts: {
   buyerName: string;
   bikeLabel: string;
   referenceId: string;
+  dealerName?: string;
+  dealerPhone?: string;
+  dealerCity?: string;
 }): EmailMessage {
+  const dealerBlock = opts.dealerName
+    ? para(
+        `Your assigned dealer is <strong>${opts.dealerName}</strong>${opts.dealerCity ? ` (${opts.dealerCity})` : ''}` +
+          (opts.dealerPhone ? ` &mdash; you can reach them at <strong>${opts.dealerPhone}</strong>.` : '.'),
+      )
+    : '';
   return {
     to: '',
     subject: 'We received your enquiry — H-D Certified',
@@ -144,9 +165,10 @@ export function buyerEnquiryConfirmationEmail(opts: {
       'We received your enquiry',
       para(`Hi ${opts.buyerName},`) +
         para(`Thanks for your interest in the <strong>${opts.bikeLabel}</strong>. Your enquiry has been routed to an authorised Harley-Davidson&reg; dealer who will reach out shortly.`) +
+        dealerBlock +
         para(`Reference ID: <strong>${opts.referenceId}</strong>`),
     ),
-    text: `Hi ${opts.buyerName}, thanks for your enquiry on the ${opts.bikeLabel}. A dealer will reach out shortly. Reference ID: ${opts.referenceId}`,
+    text: `Hi ${opts.buyerName}, thanks for your enquiry on the ${opts.bikeLabel}. A dealer will reach out shortly.${opts.dealerName ? ` Dealer: ${opts.dealerName}${opts.dealerPhone ? `, ${opts.dealerPhone}` : ''}.` : ''} Reference ID: ${opts.referenceId}`,
   };
 }
 
@@ -159,9 +181,18 @@ export function sellerTradeInConfirmationEmail(opts: {
   bikeLabel: string;
   vin?: string;
   referenceId: string;
+  dealerName?: string;
+  dealerPhone?: string;
+  dealerCity?: string;
 }): EmailMessage {
   const vinLine = opts.vin
     ? para(`VIN on file: <strong style="font-family:monospace">${opts.vin}</strong> — please reply if this looks wrong.`)
+    : '';
+  const dealerBlock = opts.dealerName
+    ? para(
+        `Your assigned dealer is <strong>${opts.dealerName}</strong>${opts.dealerCity ? ` (${opts.dealerCity})` : ''}` +
+          (opts.dealerPhone ? ` &mdash; you can reach them at <strong>${opts.dealerPhone}</strong>.` : '.'),
+      )
     : '';
   return {
     to: '',
@@ -171,9 +202,10 @@ export function sellerTradeInConfirmationEmail(opts: {
       para(`Hi ${opts.sellerName},`) +
         para(`Thanks for letting us know about your <strong>${opts.bikeLabel}</strong>. Your trade-in enquiry has been routed to an authorised Harley-Davidson&reg; dealer who will reach out shortly to schedule a valuation.`) +
         vinLine +
+        dealerBlock +
         para(`Reference ID: <strong>${opts.referenceId}</strong>`),
     ),
-    text: `Hi ${opts.sellerName}, thanks for your trade-in enquiry on your ${opts.bikeLabel}${opts.vin ? ` (VIN ${opts.vin})` : ''}. A dealer will reach out shortly. Reference ID: ${opts.referenceId}`,
+    text: `Hi ${opts.sellerName}, thanks for your trade-in enquiry on your ${opts.bikeLabel}${opts.vin ? ` (VIN ${opts.vin})` : ''}. A dealer will reach out shortly.${opts.dealerName ? ` Dealer: ${opts.dealerName}${opts.dealerPhone ? `, ${opts.dealerPhone}` : ''}.` : ''} Reference ID: ${opts.referenceId}`,
   };
 }
 
@@ -182,7 +214,15 @@ export function buyerDealerUpdateEmail(opts: {
   buyerName: string;
   bikeLabel: string;
   updateText: string;
+  dealerName?: string;
+  dealerPhone?: string;
 }): EmailMessage {
+  const dealerLine = opts.dealerName
+    ? para(
+        `Your dealer: <strong>${opts.dealerName}</strong>` +
+          (opts.dealerPhone ? ` &mdash; ${opts.dealerPhone}` : ''),
+      )
+    : '';
   return {
     to: '',
     subject: 'Update on your enquiry — H-D Certified',
@@ -190,9 +230,37 @@ export function buyerDealerUpdateEmail(opts: {
       'Update on your enquiry',
       para(`Hi ${opts.buyerName},`) +
         para(`There's an update on your enquiry for the <strong>${opts.bikeLabel}</strong>:`) +
-        para(`<em>${opts.updateText}</em>`),
+        para(`<em>${opts.updateText}</em>`) +
+        dealerLine,
     ),
-    text: `Hi ${opts.buyerName}, update on your ${opts.bikeLabel} enquiry: ${opts.updateText}`,
+    text: `Hi ${opts.buyerName}, update on your ${opts.bikeLabel} enquiry: ${opts.updateText}${opts.dealerName ? ` Dealer: ${opts.dealerName}${opts.dealerPhone ? `, ${opts.dealerPhone}` : ''}.` : ''}`,
+  };
+}
+
+/** Buyer: post-purchase document notification — sent when a bike is marked sold. */
+export function soldDocumentEmail(opts: {
+  buyerName: string;
+  bikeLabel: string;
+  dealerName?: string;
+  dealerPhone?: string;
+}): EmailMessage {
+  const dealerBlock = opts.dealerName
+    ? para(
+        `If you have any questions regarding your purchase documents, please contact <strong>${opts.dealerName}</strong>` +
+          (opts.dealerPhone ? ` at <strong>${opts.dealerPhone}</strong>` : '') + '.',
+      )
+    : '';
+  return {
+    to: '',
+    subject: 'Your purchase documents — H-D Certified',
+    html: shell(
+      'Your purchase documents are ready',
+      para(`Hi ${opts.buyerName},`) +
+        para(`Congratulations on your new <strong>${opts.bikeLabel}</strong>! Please find your purchase documents attached to this email.`) +
+        para(`Keep these documents safe — they include your sale confirmation and any warranty or certification paperwork relevant to your motorcycle.`) +
+        dealerBlock,
+    ),
+    text: `Hi ${opts.buyerName}, congratulations on your ${opts.bikeLabel}! Your purchase documents are attached.${opts.dealerName ? ` Questions? Contact ${opts.dealerName}${opts.dealerPhone ? ` at ${opts.dealerPhone}` : ''}.` : ''}`,
   };
 }
 

@@ -143,7 +143,7 @@ publicLeadsRouter.get(
           // Once the dealer moves it to any terminal status the buyer is
           // free to enquire again. Must match TERMINAL_LEAD_STATUSES in
           // leads.service.ts — both lists must stay in sync.
-          status: { notIn: ['DEAD', 'LOST', 'CLOSED', 'SUCCESS', 'CONVERTED', 'TRADE_IN_FINALIZED'] },
+          status: { notIn: ['DEAD', 'LOST', 'DROPPED', 'CLOSED', 'SUCCESS', 'CONVERTED', 'TRADE_IN_FINALIZED'] },
         },
         orderBy: { createdAt: 'desc' },
         select: { id: true, status: true, phoneEnc: true },

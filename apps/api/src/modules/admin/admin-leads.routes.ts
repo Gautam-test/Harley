@@ -30,6 +30,8 @@ const listQuery = z.object({
   dealerId: z.string().optional(),
   /** Free-text search across buyer name, model, VIN. */
   q: z.string().max(64).optional(),
+  /** F6: filter buyer enquiries by entry channel (PORTAL = online, DEALER = walk-in). */
+  channel: z.enum(['PORTAL', 'DEALER']).optional(),
 });
 
 interface ListRow {
@@ -46,6 +48,8 @@ interface ListRow {
   context: string;
   createdAt: string;
   updatedAt: string;
+  /** F6: PORTAL = online enquiry, DEALER = walk-in logged by dealer rep. Buyer only. */
+  entrySource?: 'PORTAL' | 'DEALER';
 }
 
 interface BuyerEnquiryRow {
@@ -54,6 +58,7 @@ interface BuyerEnquiryRow {
   phoneEnc: string;
   emailEnc: string;
   status: LeadStatus;
+  entrySource: string | null;
   dealerId: string;
   dealer: { name: string };
   listing: { year: number; modelName: string } | null;
@@ -91,6 +96,7 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
       const data = (await prisma.enquiry.findMany({
         where: {
           ...where,
+          ...(q.channel ? { entrySource: q.channel } : {}),
           ...(q.q
             ? {
                 OR: [
@@ -124,6 +130,7 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
           context: bikeModel,
           createdAt: r.createdAt.toISOString(),
           updatedAt: r.updatedAt.toISOString(),
+          entrySource: (r.entrySource as 'PORTAL' | 'DEALER' | null) ?? 'PORTAL',
         });
       }
     }
@@ -245,6 +252,8 @@ adminLeadsRouter.get(
           visitPreference: pick('visitPreference'),
           bestTimeToCall: pick('bestTimeToCall'),
           lookingFor: pick('lookingFor'),
+          employmentType: (row as unknown as { employmentType?: string | null }).employmentType ?? null,
+          entrySource: (row as unknown as { entrySource?: string | null }).entrySource ?? 'PORTAL',
         });
         return;
       }

@@ -60,7 +60,7 @@ export const HD_MODEL_CATALOG: ModelFamily[] = [
   },
   {
     family: 'Harley-Davidson X',
-    models: ['X 350', 'X 500'],
+    models: ['X440', 'X440T'],
   },
 ];
 

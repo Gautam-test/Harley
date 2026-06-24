@@ -13,6 +13,9 @@ import {
   setActiveToggle,
   softRemove,
   updateListing,
+  addSoldDoc,
+  removeSoldDoc,
+  setRcTransferStatus,
 } from './dealer-listings.service.js';
 
 export const dealerListingsRouter = Router();
@@ -156,3 +159,62 @@ dealerListingsRouter.delete('/:id', validate(idParam, 'params'), async (req, res
     next(e);
   }
 });
+
+// F3: Sold document management — POST adds a doc URL, DELETE removes by doc id.
+const soldDocBody = z.object({
+  url: z.string().url(),
+  label: z.string().min(1).max(200),
+});
+const soldDocParams = z.object({ id: z.string().min(1), docId: z.string().min(1) });
+
+dealerListingsRouter.post(
+  '/:id/sold-docs',
+  validate(idParam, 'params'),
+  validate(soldDocBody, 'body'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params as { id: string };
+      const body = req.body as { url: string; label: string };
+      const updated = await addSoldDoc(req.auth!.sub, id, body);
+      void logDealer(req, 'LISTING_SOLD_DOC_ADDED', id);
+      res.json({ id: updated.id, soldDocs: updated.soldDocs });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+dealerListingsRouter.delete(
+  '/:id/sold-docs/:docId',
+  validate(soldDocParams, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id, docId } = req.params as { id: string; docId: string };
+      const updated = await removeSoldDoc(req.auth!.sub, id, docId);
+      void logDealer(req, 'LISTING_SOLD_DOC_REMOVED', id, { docId });
+      res.json({ id: updated.id, soldDocs: updated.soldDocs });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// F3: RC transfer status update.
+const rcTransferBody = z.object({ status: z.string().min(1).max(100) });
+
+dealerListingsRouter.patch(
+  '/:id/rc-transfer-status',
+  validate(idParam, 'params'),
+  validate(rcTransferBody, 'body'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params as { id: string };
+      const { status } = req.body as { status: string };
+      const updated = await setRcTransferStatus(req.auth!.sub, id, status);
+      void logDealer(req, 'LISTING_RC_TRANSFER_STATUS_UPDATED', id, { status });
+      res.json({ id: (updated as { id: string }).id, rcTransferStatus: status });
+    } catch (e) {
+      next(e);
+    }
+  },
+);

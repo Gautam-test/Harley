@@ -97,6 +97,7 @@ export function ListingSidebarCard({
     lookingFor?: string;
     vin?: string;
     state?: string;
+    employmentType?: string;
   }) => {
     setModalOpen(false);
     setSubmitting(true);
@@ -119,6 +120,7 @@ export function ListingSidebarCard({
           city: data.city,
           pincode: data.pincode,
           message: messageLines.join('\n'),
+          ...(data.employmentType ? { employmentType: data.employmentType } : {}),
         }),
       });
       setSubmitted({ id: res.id });

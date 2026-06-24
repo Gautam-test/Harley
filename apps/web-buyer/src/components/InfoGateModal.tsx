@@ -84,6 +84,7 @@ interface InfoGateModalProps {
     lookingFor?: string;
     description?: string;
     dealerId?: string;
+    employmentType?: string;
   }) => void;
   onClose?: () => void;
 }
@@ -101,6 +102,7 @@ interface Step1Values {
   lookingFor: string;
   description: string;
   dealerId: string;
+  employmentType: string;
 }
 
 // Strip everything that isn't a digit, drop the leading "91" if present, then
@@ -146,6 +148,7 @@ export function InfoGateModal({
           lookingFor: prefilled.bikeModel ?? '',
           description: '',
           dealerId: prefilled.dealerId ?? '',
+          employmentType: '',
         }
       : null,
   );
@@ -585,6 +588,7 @@ export function InfoGateModal({
       lookingFor: '',
       description: '',
       dealerId: context?.preselectDealerId ?? '',
+      employmentType: '',
     },
   });
 
@@ -726,6 +730,7 @@ export function InfoGateModal({
         lookingFor: profile.lookingFor || undefined,
         description: profile.description || undefined,
         dealerId: profile.dealerId || undefined,
+        employmentType: profile.employmentType || undefined,
       });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Verification failed');
@@ -1088,6 +1093,21 @@ export function InfoGateModal({
                   className="w-full bg-hd-white border border-gray-300 rounded-none px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-hd-orange/50"
                   {...register('description', messageRules)}
                 />
+              </Labelled>
+            )}
+
+            {isBuyerEnquiry && (
+              <Labelled label="Employment Type" show>
+                <Select {...register('employmentType')}>
+                  <option value="">— Not specified —</option>
+                  <option value="Salaried">Salaried</option>
+                  <option value="Self-Employed">Self-Employed</option>
+                  <option value="Business Owner">Business Owner</option>
+                  <option value="Professional">Professional (Doctor / Lawyer / CA)</option>
+                  <option value="Retired">Retired</option>
+                  <option value="Student">Student</option>
+                  <option value="Other">Other</option>
+                </Select>
               </Labelled>
             )}
 

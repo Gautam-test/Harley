@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, IconButton } from '@hd-cpo/ui';
@@ -89,6 +89,7 @@ const STATUS_TO_LABEL: Record<DealerListingRow['status'], string> = {
 
 export function MyListingsPage() {
   const [tab, setTab] = useState<TabId>('ALL');
+  const [docsPanel, setDocsPanel] = useState<string | null>(null);
   const qc = useQueryClient();
   const navigate = useNavigate();
 
@@ -436,8 +437,8 @@ export function MyListingsPage() {
               </tr>
             )}
             {filtered.map((l) => (
+              <Fragment key={l.id}>
               <tr
-                key={l.id}
                 onClick={() => navigate(`/listings/${l.id}/edit`)}
                 className="hover:bg-hd-orange/5 transition-colors cursor-pointer"
                 role="link"
@@ -678,10 +679,31 @@ export function MyListingsPage() {
                         <EyeIcon />
                       </IconButton>
                     )}
+                    {/* Docs panel toggle — available on all listings.
+                        Opens inline CPO docs / sold docs / RC transfer section. */}
+                    <IconButton
+                      label={docsPanel === l.id ? 'Close Docs' : 'Manage Docs'}
+                      tone={docsPanel === l.id ? 'primary' : undefined}
+                      onClick={() => setDocsPanel(docsPanel === l.id ? null : l.id)}
+                    >
+                      <DocsIcon />
+                    </IconButton>
                   </div>
                   </div>
                 </Td>
               </tr>
+              {docsPanel === l.id && (
+                <tr>
+                  <td colSpan={4} className="bg-gray-50/70 border-b border-gray-200 px-0 py-0">
+                    <DocsPanel
+                      listingId={l.id}
+                      isSold={l.status === 'SOLD'}
+                      onClose={() => setDocsPanel(null)}
+                    />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -796,5 +818,286 @@ function StatusBadge({ status }: { status: DealerListingRow['status'] }) {
     <Badge variant="status" tone={tone}>
       {STATUS_TO_LABEL[status]}
     </Badge>
+  );
+}
+
+function DocsIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// DocsPanel — F3 (sold docs + RC transfer) and F4 (CPO certification docs)
+// Rendered as a full-width row below the listing row when the dealer clicks
+// the Manage Docs icon.
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface SoldDoc { id: string; url: string; label: string }
+interface ListingDocsDetail {
+  id: string;
+  status: string;
+  cpoDocs: Record<string, string> | null;
+  soldDocs: SoldDoc[] | null;
+  rcTransferStatus: string | null;
+}
+
+const CPO_DOC_TYPES = ['RSA', 'Warranty', 'HOG', 'CPO Certificate'] as const;
+const RC_STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed', 'Not Applicable'];
+
+function DocsPanel({
+  listingId,
+  isSold,
+  onClose,
+}: {
+  listingId: string;
+  isSold: boolean;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['dealer-listing-docs', listingId],
+    queryFn: () => api<ListingDocsDetail>(`/dealer/listings/${listingId}`),
+  });
+
+  // CPO Docs state — local draft of the record map
+  const [cpoDraft, setCpoDraft] = useState<Record<string, string> | null>(null);
+  const cpoDocs: Record<string, string> = cpoDraft ?? (data?.cpoDocs ?? {});
+
+  // New sold doc form
+  const [newDocUrl, setNewDocUrl] = useState('');
+  const [newDocLabel, setNewDocLabel] = useState('');
+
+  // RC Transfer Status local value
+  const [rcValue, setRcValue] = useState<string | null>(null);
+  const currentRc = rcValue ?? data?.rcTransferStatus ?? '';
+
+  const invalidate = () => {
+    void qc.invalidateQueries({ queryKey: ['dealer-listing-docs', listingId] });
+    setCpoDraft(null);
+  };
+
+  const saveCpoDocs = useMutation({
+    mutationFn: () => {
+      const cleaned = Object.fromEntries(
+        Object.entries(cpoDocs).filter(([, v]) => v.trim().length > 0),
+      );
+      return api(`/dealer/listings/${listingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ cpoDocs: Object.keys(cleaned).length > 0 ? cleaned : null }),
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  const addSoldDoc = useMutation({
+    mutationFn: () =>
+      api(`/dealer/listings/${listingId}/sold-docs`, {
+        method: 'POST',
+        body: JSON.stringify({ url: newDocUrl.trim(), label: newDocLabel.trim() }),
+      }),
+    onSuccess: () => {
+      setNewDocUrl('');
+      setNewDocLabel('');
+      invalidate();
+    },
+  });
+
+  const removeSoldDoc = useMutation({
+    mutationFn: (docId: string) =>
+      api(`/dealer/listings/${listingId}/sold-docs/${docId}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  });
+
+  const saveRcStatus = useMutation({
+    mutationFn: () =>
+      api(`/dealer/listings/${listingId}/rc-transfer-status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: currentRc }),
+      }),
+    onSuccess: invalidate,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="px-6 py-4 text-sm text-gray-500">Loading documents…</div>
+    );
+  }
+
+  const soldDocs = Array.isArray(data?.soldDocs) ? (data!.soldDocs as SoldDoc[]) : [];
+
+  return (
+    <div className="px-6 py-5 space-y-6 text-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="font-subhead uppercase tracking-subhead text-[11px] text-gray-500">
+          Document Management
+        </h3>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[11px] font-subhead uppercase tracking-subhead text-gray-400 hover:text-text-on-light transition"
+        >
+          ✕ Close
+        </button>
+      </div>
+
+      {/* F4 — CPO Certification Documents */}
+      <div>
+        <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+          CPO Certification Documents
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {CPO_DOC_TYPES.map((docType) => (
+            <div key={docType}>
+              <label className="block text-[10px] font-subhead uppercase tracking-subhead text-gray-500 mb-1">
+                {docType}
+              </label>
+              <input
+                type="url"
+                placeholder="https://…"
+                value={cpoDocs[docType] ?? ''}
+                onChange={(e) =>
+                  setCpoDraft({ ...cpoDocs, [docType]: e.target.value })
+                }
+                className="w-full border border-gray-300 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-hd-orange"
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            disabled={saveCpoDocs.isPending || cpoDraft === null}
+            onClick={() => saveCpoDocs.mutate()}
+            className="px-4 py-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] hover:brightness-110 disabled:opacity-40 transition"
+          >
+            {saveCpoDocs.isPending ? 'Saving…' : 'Save CPO Docs'}
+          </button>
+          {cpoDraft !== null && (
+            <button
+              type="button"
+              onClick={() => setCpoDraft(null)}
+              className="text-[11px] font-subhead uppercase tracking-subhead text-gray-400 hover:text-text-on-light transition"
+            >
+              Discard
+            </button>
+          )}
+          {saveCpoDocs.isSuccess && cpoDraft === null && (
+            <span className="text-[11px] text-success">Saved</span>
+          )}
+        </div>
+      </div>
+
+      {/* F3 — Sold Documents + RC Transfer (SOLD listings only) */}
+      {isSold && (
+        <>
+          <div className="border-t border-gray-200 pt-5">
+            <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+              Post-Sale Documents
+            </p>
+            {soldDocs.length > 0 && (
+              <ul className="space-y-1.5 mb-4">
+                {soldDocs.map((doc) => (
+                  <li key={doc.id} className="flex items-center gap-3 bg-hd-white border border-gray-200 px-3 py-2">
+                    <span className="flex-1 min-w-0">
+                      <span className="font-subhead text-[11px] text-text-on-light mr-2">{doc.label}</span>
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-[10px] text-hd-orange hover:underline truncate"
+                      >
+                        {doc.url}
+                      </a>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeSoldDoc.mutate(doc.id)}
+                      disabled={removeSoldDoc.isPending}
+                      className="shrink-0 text-danger text-[11px] font-subhead uppercase tracking-subhead hover:underline disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {soldDocs.length === 0 && (
+              <p className="text-[11px] text-gray-400 mb-4">No post-sale documents added yet.</p>
+            )}
+            <div className="flex flex-wrap gap-2 items-end">
+              <div>
+                <label className="block text-[10px] font-subhead uppercase tracking-subhead text-gray-500 mb-1">
+                  Label
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. RC Transfer Receipt"
+                  value={newDocLabel}
+                  onChange={(e) => setNewDocLabel(e.target.value)}
+                  className="border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:border-hd-orange w-48"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-subhead uppercase tracking-subhead text-gray-500 mb-1">
+                  URL
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://…"
+                  value={newDocUrl}
+                  onChange={(e) => setNewDocUrl(e.target.value)}
+                  className="border border-gray-300 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-hd-orange w-64"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={addSoldDoc.isPending || !newDocUrl.trim() || !newDocLabel.trim()}
+                onClick={() => addSoldDoc.mutate()}
+                className="px-4 py-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] hover:brightness-110 disabled:opacity-40 transition"
+              >
+                {addSoldDoc.isPending ? 'Adding…' : '+ Add Document'}
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-5">
+            <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+              RC Transfer Status
+            </p>
+            <div className="flex items-center gap-3">
+              <select
+                value={currentRc}
+                onChange={(e) => setRcValue(e.target.value)}
+                className="border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:border-hd-orange"
+              >
+                <option value="">— Not set —</option>
+                {RC_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={saveRcStatus.isPending || !currentRc || currentRc === (data?.rcTransferStatus ?? '')}
+                onClick={() => saveRcStatus.mutate()}
+                className="px-4 py-1.5 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] hover:brightness-110 disabled:opacity-40 transition"
+              >
+                {saveRcStatus.isPending ? 'Saving…' : 'Save Status'}
+              </button>
+              {saveRcStatus.isSuccess && currentRc === (data?.rcTransferStatus ?? '') && (
+                <span className="text-[11px] text-success">Saved</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

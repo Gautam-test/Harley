@@ -22,6 +22,10 @@ export const leadStatus = z.enum([
   'NEGOTIATION_ACCEPTANCE',
   'LEGAL_TRANSFER',
   'TRADE_IN_FINALIZED',
+  // Cash buyer — skips loan-approval stage, moves directly to booking.
+  'CASH',
+  // Dropped — universal alt-terminal for buyer and seller leads.
+  'DROPPED',
 ]);
 export type LeadStatus = z.infer<typeof leadStatus>;
 
@@ -35,6 +39,7 @@ export const BUYER_LEAD_PIPELINE = [
   'CONTACTED',
   'ON_SITE_VISIT',
   'LOAN_APPROVAL',
+  'CASH',
   'CLOSED',
   'SUCCESS',
 ] as const satisfies readonly LeadStatus[];
@@ -85,6 +90,8 @@ export const LEAD_STAGE_LABELS: Record<LeadStatus, string> = {
   NEGOTIATION_ACCEPTANCE: 'Negotiation & Acceptance',
   LEGAL_TRANSFER: 'Legal Transfer & Documentation',
   TRADE_IN_FINALIZED: 'Trade-In Finalized',
+  CASH: 'Cash Purchase',
+  DROPPED: 'Dropped',
 };
 
 /** Single alt-terminal status the UI now offers. Legacy LOST rows are still
@@ -119,10 +126,10 @@ export function canTransitionLead(
 ): boolean {
   if (from === to) return true;
   const pipe = PIPELINE_BY_KIND[kind];
-  // DEAD / LOST are universal alt-terminals — every lead can be marked as
-  // either, and reset back from either, at any time.
-  if (to === 'DEAD' || to === 'LOST') return true;
-  if (from === 'DEAD' || from === 'LOST') return true;
+  // DEAD / LOST / DROPPED are universal alt-terminals — every lead can be
+  // marked as any of these, and reset back from any of these, at any time.
+  if (to === 'DEAD' || to === 'LOST' || to === 'DROPPED') return true;
+  if (from === 'DEAD' || from === 'LOST' || from === 'DROPPED') return true;
   // Both endpoints must be on the lead's own pipeline. Off-pipeline target
   // (e.g. CONVERTED, or a trade-in stage on a buyer lead) is rejected.
   return pipe.includes(to);
@@ -135,6 +142,7 @@ export const enquiryInput = z.object({
   city: z.string().optional(),
   pincode: pincodeIN.optional(),
   message: z.string().max(1000).optional(),
+  employmentType: z.string().max(100).optional(),
 });
 export type EnquiryInput = z.infer<typeof enquiryInput>;
 

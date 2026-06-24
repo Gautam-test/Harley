@@ -8,7 +8,8 @@ import { HttpError } from '../../middleware/error-handler.js';
 import { torque } from '../torque/torque.module.js';
 import { buildListingSlug } from '../../utils/slug.js';
 import { decodeVinYear } from '../../utils/vinYear.js';
-import { emailProvider, adminListingQueuedEmail } from '../email/email.module.js';
+import { emailProvider, adminListingQueuedEmail, soldDocumentEmail } from '../email/email.module.js';
+import { decryptPii } from '../../utils/crypto.js';
 
 // Short random discriminator used to disambiguate slugs when two listings
 // share year + model + last-6-of-VIN. 4 hex chars = 65k possibilities,
@@ -244,7 +245,76 @@ export async function markSold(dealerId: string, listingId: string) {
   } catch (e) {
     logger.warn({ err: e, vin: listing.vin }, 'Torque sold-status push failed; will retry');
   }
+  // F5: Send sold-document confirmation email to the buyer. Find the most
+  // recently converted/closed buyer enquiry for this listing to get the
+  // buyer's email. Fire-and-forget — a mail failure must not fail the
+  // mark-sold action.
+  void (async () => {
+    try {
+      const enquiry = (await prisma.enquiry.findFirst({
+        where: { listingId, status: { in: ['SUCCESS', 'CLOSED', 'CONVERTED', 'CASH'] } },
+        orderBy: { updatedAt: 'desc' },
+        select: { name: true, emailEnc: true },
+      })) as { name: string; emailEnc: string } | null;
+      if (!enquiry) return;
+      const dealer = (await prisma.dealer.findUnique({
+        where: { id: dealerId },
+        select: { name: true, phone: true },
+      })) as { name: string; phone: string } | null;
+      const bikeLabel = `${listing.year} ${listing.modelName}`;
+      const msg = soldDocumentEmail({
+        buyerName: enquiry.name,
+        bikeLabel,
+        dealerName: dealer?.name,
+        dealerPhone: dealer?.phone,
+      });
+      await emailProvider().send({ ...msg, to: decryptPii(enquiry.emailEnc) });
+      logger.info({ listingId }, 'Sold-document email sent');
+    } catch (e) {
+      logger.warn({ err: e, listingId }, 'Sold-document email failed');
+    }
+  })();
   return updated;
+}
+
+// F3: Append a document URL to the soldDocs JSON array on a listing.
+export async function addSoldDoc(dealerId: string, listingId: string, doc: { url: string; label: string }) {
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing || listing.dealerId !== dealerId) {
+    throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
+  }
+  const existing = (Array.isArray(listing.soldDocs) ? listing.soldDocs : []) as Array<{ id: string; url: string; label: string }>;
+  const newDoc = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, url: doc.url, label: doc.label };
+  return prisma.listing.update({
+    where: { id: listingId },
+    data: { soldDocs: [...existing, newDoc] as never },
+  });
+}
+
+// F3: Remove a document entry from soldDocs by id.
+export async function removeSoldDoc(dealerId: string, listingId: string, docId: string) {
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing || listing.dealerId !== dealerId) {
+    throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
+  }
+  const existing = (Array.isArray(listing.soldDocs) ? listing.soldDocs : []) as Array<{ id: string; url: string; label: string }>;
+  const filtered = existing.filter((d) => d.id !== docId);
+  return prisma.listing.update({
+    where: { id: listingId },
+    data: { soldDocs: filtered as never },
+  });
+}
+
+// F3: Set the RC transfer status on a sold listing.
+export async function setRcTransferStatus(dealerId: string, listingId: string, status: string) {
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing || listing.dealerId !== dealerId) {
+    throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
+  }
+  return (prisma.listing.update as Function)({
+    where: { id: listingId },
+    data: { rcTransferStatus: status },
+  });
 }
 
 // Strip the `removed:<cmid>:` / `sold:<cmid>:` retire-prefix that
@@ -528,6 +598,8 @@ export async function getDealerListing(dealerId: string, listingId: string) {
       status: true,
       adminFeedback: true,
       cpoDocs: true,
+      soldDocs: true,
+      rcTransferStatus: true,
       createdAt: true,
       updatedAt: true,
       // Certificate fields (migration 20260602000000)
@@ -549,6 +621,7 @@ export async function getDealerListing(dealerId: string, listingId: string) {
     owners: number | null; description: string; images: string[];
     inspectionReportUrl: string | null; certificationStatus: 'CPO' | 'AS_IS';
     status: string; adminFeedback: string | null; cpoDocs: unknown;
+    soldDocs: unknown; rcTransferStatus: string | null;
     createdAt: Date; updatedAt: Date;
     registrationNumber: string | null; inspectedBy: string | null; certifiedOn: Date | null;
     purchasePrice: { toString(): string } | null;

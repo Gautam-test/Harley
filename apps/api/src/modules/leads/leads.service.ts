@@ -202,6 +202,7 @@ async function flagNotificationFailed(
 const TERMINAL_LEAD_STATUSES = [
   'DEAD',
   'LOST',
+  'DROPPED',
   'CLOSED',
   'SUCCESS',
   'CONVERTED',
@@ -298,7 +299,7 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
   // Duplicate-enquiry gate per QA spec:
   //   Duplicate = same VIN/listing + same mobile + NON-terminal status
   // Once the dealer moves the lead to any terminal status (DEAD / LOST /
-  // CLOSED / SUCCESS / CONVERTED / TRADE_IN_FINALIZED — see
+  // DROPPED / CLOSED / SUCCESS / CONVERTED / TRADE_IN_FINALIZED — see
   // TERMINAL_LEAD_STATUSES above), the gate clears and the buyer can
   // submit a fresh enquiry on the same bike. Different bikes and
   // different mobiles are always allowed. Notifications + audit only
@@ -323,6 +324,7 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
       pincode: input.pincode,
       message: input.message,
       entrySource: 'PORTAL',
+      ...(input.employmentType ? { employmentType: input.employmentType } : {}),
     },
   });
   const ok = await notifyDealer(
@@ -334,6 +336,11 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
     formatLeadId('buyer', enquiry.id, enquiry.createdAt),
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
+  // Fetch dealer contact info for the confirmation email (F1).
+  const dealerForEmail = (await prisma.dealer.findUnique({
+    where: { id: listing.dealerId },
+    select: { name: true, phone: true, city: true },
+  })) as { name: string; phone: string; city: string } | null;
   // Buyer confirmation email (trigger: buyer enquiry submission). The
   // buyer's plaintext email is in scope here at create time. Fire-and-
   // forget so a mail failure never fails the enquiry submit.
@@ -346,6 +353,9 @@ export async function createBuyerEnquiry(listingSlug: string, input: EnquiryInpu
       // success modal (B-YYYY-XXXX) so the email matches the on-screen
       // confirmation. The /leads/track API accepts this format directly.
       referenceId: formatLeadId('buyer', enquiry.id, enquiry.createdAt),
+      dealerName: dealerForEmail?.name,
+      dealerPhone: dealerForEmail?.phone,
+      dealerCity: dealerForEmail?.city,
     }),
   );
   return { id: enquiry.id };
@@ -418,16 +428,23 @@ export async function createTradeInLead(input: TradeInLeadInput) {
     formatLeadId('trade-in', lead.id, lead.createdAt),
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
+  // Fetch dealer contact info for the confirmation email (F1).
+  const dealerForEmailTI = (await prisma.dealer.findUnique({
+    where: { id: dealerId },
+    select: { name: true, phone: true, city: true },
+  })) as { name: string; phone: string; city: string } | null;
   // Seller confirmation email — same trigger family as the buyer enquiry
   // confirmation (customer submits an enquiry form → confirmation).
   void sendBuyerEmail(
     input.email,
-    buyerEnquiryConfirmationEmail({
-      buyerName: input.username,
+    sellerTradeInConfirmationEmail({
+      sellerName: input.username,
       bikeLabel: input.bikeModel,
-      // S- prefix for trade-in leads — same formatter the customer + dealer
-      // portals use everywhere a lead reference appears.
+      ...(input.vin ? { vin: input.vin } : {}),
       referenceId: formatLeadId('trade-in', lead.id, lead.createdAt),
+      dealerName: dealerForEmailTI?.name,
+      dealerPhone: dealerForEmailTI?.phone,
+      dealerCity: dealerForEmailTI?.city,
     }),
   );
   return { id: lead.id, dealerId };
@@ -452,6 +469,7 @@ interface LeadDbRow {
   /** Populated for buyer enquiries via the joined listing — `${year} ${modelName}`. */
   listing?: { year: number; modelName: string } | null;
   entrySource?: string | null;
+  employmentType?: string | null;
   /** JSON column on Enquiry / TradeInLead — currently used for dealer-side
       qualification answers + the notificationFailed flag. */
   notes?: { notificationFailed?: boolean } | null;
@@ -482,6 +500,7 @@ function toLeadView(row: LeadDbRow) {
         manually instead of expecting an email. */
     notificationFailed: row.notes?.notificationFailed === true,
     entrySource: (row.entrySource as string | null) ?? 'PORTAL',
+    employmentType: row.employmentType ?? null,
     bikeModel,
     vin: row.vin,
     status: row.status,
@@ -538,11 +557,11 @@ export async function updateLeadStatus(
     return { fromStatus: existing.status, toStatus: status, changed: false };
   }
 
-  // QA: when a lead is marked Not Interested (DEAD/LOST), snapshot the
-  // prior pipeline stage in notes.frozenStatus so the detail page's
+  // QA: when a lead is marked Not Interested (DEAD/LOST/DROPPED), snapshot
+  // the prior pipeline stage in notes.frozenStatus so the detail page's
   // pipeline UI can keep the historical progress visually highlighted
   // (instead of going fully grey).
-  const isMovingToTerminal = status === 'DEAD' || status === 'LOST';
+  const isMovingToTerminal = status === 'DEAD' || status === 'LOST' || status === 'DROPPED';
   const dataPatch: Record<string, unknown> = { status };
   if (isMovingToTerminal) {
     const row =
@@ -565,6 +584,11 @@ export async function updateLeadStatus(
   // email + bike label are fetched fresh; emailEnc is decrypted here.
   void (async () => {
     try {
+      // Fetch dealer info once for both email paths (F1).
+      const dealerInfo = (await prisma.dealer.findFirst({
+        where: { id: dealerId },
+        select: { name: true, phone: true },
+      })) as { name: string; phone: string } | null;
       if (kind === 'buyer') {
         const row = await prisma.enquiry.findFirst({
           where,
@@ -583,6 +607,8 @@ export async function updateLeadStatus(
                 ? `${row.listing.year} ${row.listing.modelName}`
                 : 'your enquiry',
               updateText: `Status updated to "${status}".`,
+              dealerName: dealerInfo?.name,
+              dealerPhone: dealerInfo?.phone,
             }),
           );
         }
@@ -598,6 +624,8 @@ export async function updateLeadStatus(
               buyerName: row.username ?? 'there',
               bikeLabel: row.bikeModel ?? 'your trade-in',
               updateText: `Status updated to "${status}".`,
+              dealerName: dealerInfo?.name,
+              dealerPhone: dealerInfo?.phone,
             }),
           );
         }
@@ -667,6 +695,7 @@ export async function getLeadDetail(
       frozenStatus:
         (row.notes as Record<string, unknown> | null)?.frozenStatus ?? null,
       entrySource: row.entrySource ?? 'PORTAL',
+      employmentType: (row as unknown as { employmentType?: string | null }).employmentType ?? null,
       createdAt: row.createdAt.toISOString(),
       // Customer-side qualifying answers from notes JSON. All nullable so
       // older rows that don't carry them just render "—" client-side.
@@ -766,6 +795,7 @@ function buyerEnquiryNotes(input: DealerBuyerEnquiryInput) {
     city: _c,
     pincode: _pin,
     message: _m,
+    employmentType: _et,
     ...rest
   } = input;
   void _l;
@@ -775,6 +805,7 @@ function buyerEnquiryNotes(input: DealerBuyerEnquiryInput) {
   void _c;
   void _pin;
   void _m;
+  void _et;
   return rest;
 }
 function tradeInNotes(input: DealerTradeInLeadInput) {
@@ -855,6 +886,7 @@ export async function dealerCreateBuyerEnquiry(
       pincode: input.pincode,
       message: input.message,
       entrySource: 'DEALER',
+      ...(input.employmentType ? { employmentType: input.employmentType } : {}),
       notes: buyerEnquiryNotes(input),
     },
   });
@@ -875,6 +907,11 @@ export async function dealerCreateBuyerEnquiry(
     refId,
   );
   if (!ok) await flagNotificationFailed('enquiry', enquiry.id, 'send_failed');
+  // Fetch dealer contact info for the confirmation email (F1).
+  const dealerForConf = (await prisma.dealer.findUnique({
+    where: { id: dealerId },
+    select: { name: true, phone: true, city: true },
+  })) as { name: string; phone: string; city: string } | null;
   // BUG-049: dropped the IIFE+dedupe wrapper that was masking failures
   // on demo (QA reported buyer/seller emails never arriving even though
   // dealer emails worked). The IIFE silently swallowed any throw from
@@ -888,6 +925,9 @@ export async function dealerCreateBuyerEnquiry(
       buyerName: input.name,
       bikeLabel,
       referenceId: refId,
+      dealerName: dealerForConf?.name,
+      dealerPhone: dealerForConf?.phone,
+      dealerCity: dealerForConf?.city,
     }),
   );
   return { id: enquiry.id };
@@ -973,6 +1013,11 @@ export async function dealerCreateTradeInLead(
     refId,
   );
   if (!ok) await flagNotificationFailed('tradeInLead', lead.id, 'send_failed');
+  // Fetch dealer contact info for the confirmation email (F1).
+  const dealerForTIConf = (await prisma.dealer.findUnique({
+    where: { id: dealerId },
+    select: { name: true, phone: true, city: true },
+  })) as { name: string; phone: string; city: string } | null;
   // BUG-049: dropped the IIFE+dedupe wrapper — see dealerCreateBuyerEnquiry
   // for the full rationale. Direct fire-and-forget; sendBuyerEmail logs
   // every attempt + outcome to pm2 logs.
@@ -983,6 +1028,9 @@ export async function dealerCreateTradeInLead(
       bikeLabel: input.bikeModel,
       ...(input.vin ? { vin: input.vin } : {}),
       referenceId: refId,
+      dealerName: dealerForTIConf?.name,
+      dealerPhone: dealerForTIConf?.phone,
+      dealerCity: dealerForTIConf?.city,
     }),
   );
   return { id: lead.id };

@@ -47,6 +47,8 @@ interface AdminLeadDetail {
   visitPreference?: string | number | null;
   bestTimeToCall?: string | number | null;
   lookingFor?: string | number | null;
+  employmentType?: string | null;
+  entrySource?: string | null;
   // Trade-in notes-derived fields
   year?: string | number | null;
   kmsDriven?: string | number | null;
@@ -125,6 +127,17 @@ export function EnquiryDetailPage() {
               <Badge variant="status" tone={kind === 'buyer' ? 'info' : 'warning'}>
                 {lead.status.replace(/_/g, ' ')}
               </Badge>
+              {kind === 'buyer' && (
+                <span
+                  className={`inline-block px-2 py-0.5 text-[10px] font-subhead uppercase tracking-subhead border ${
+                    (lead.entrySource ?? 'PORTAL') === 'PORTAL'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  {(lead.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                </span>
+              )}
               <span className="text-[11px] text-gray-500">
                 Created{' '}
                 {new Date(lead.createdAt).toLocaleDateString('en-IN', {
@@ -176,7 +189,8 @@ export function EnquiryDetailPage() {
                   has(lead.financingNeeded) ||
                   has(lead.tradeInInterest) ||
                   has(lead.visitPreference) ||
-                  has(lead.bestTimeToCall)) && (
+                  has(lead.bestTimeToCall) ||
+                  has(lead.employmentType)) && (
                   <div className="mt-6 pt-4 border-t border-gray-100">
                     <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
                       Lead Qualification
@@ -195,6 +209,7 @@ export function EnquiryDetailPage() {
                       {has(lead.tradeInInterest) && <Field label="Trade-In Interest">{fmt(lead.tradeInInterest)}</Field>}
                       {has(lead.visitPreference) && <Field label="Visit Preference">{fmt(lead.visitPreference)}</Field>}
                       {has(lead.bestTimeToCall) && <Field label="Best Time To Call">{fmt(lead.bestTimeToCall)}</Field>}
+                      {has(lead.employmentType) && <Field label="Employment Type">{fmt(lead.employmentType)}</Field>}
                     </div>
                   </div>
                 )}

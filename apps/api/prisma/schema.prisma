@@ -100,6 +100,8 @@ model Listing {
   inspectedBy         String?
   certifiedOn         DateTime?
   cpoDocs             Json?
+  soldDocs            Json?
+  rcTransferStatus    String?
   status              ListingStatus @default(DRAFT)
   // Set when an admin returns a DRAFT to the dealer for revision (PRD §6.3.4
   // gives admin Publish/Remove only — this is the third path so dealers know
@@ -149,8 +151,9 @@ model Enquiry {
   pincode     String?
   message     String?       @db.Text
   status      LeadStatus    @default(NEW)
-  entrySource EnquirySource @default(PORTAL)
-  notes       Json?
+  entrySource    EnquirySource @default(PORTAL)
+  employmentType String?
+  notes          Json?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -223,6 +226,8 @@ enum LeadStatus {
   NEGOTIATION_ACCEPTANCE
   LEGAL_TRANSFER
   TRADE_IN_FINALIZED
+  CASH    // Buyer paid cash — skips loan-approval stage
+  DROPPED // Lead abandoned / disqualified (universal alt-terminal)
 }
 
 enum EnquirySource {

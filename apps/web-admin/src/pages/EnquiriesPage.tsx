@@ -21,12 +21,14 @@ type LeadStatus =
   | 'CONTACTED'
   | 'ON_SITE_VISIT'
   | 'LOAN_APPROVAL'
+  | 'CASH'
   | 'IN_PROGRESS'
   | 'CONVERTED'
   | 'SUCCESS'
   | 'LOST'
   | 'DEAD'
-  | 'CLOSED';
+  | 'CLOSED'
+  | 'DROPPED';
 
 interface AdminLeadRow {
   id: string;
@@ -41,6 +43,8 @@ interface AdminLeadRow {
   context: string;
   createdAt: string;
   updatedAt: string;
+  /** F6: PORTAL = online buyer portal, DEALER = walk-in logged by rep. Buyer only. */
+  entrySource?: 'PORTAL' | 'DEALER';
 }
 
 interface AdminLeadsResponse {
@@ -69,12 +73,14 @@ const STATUS_OPTIONS: ('' | LeadStatus)[] = [
   'CONTACTED',
   'ON_SITE_VISIT',
   'LOAN_APPROVAL',
+  'CASH',
   'IN_PROGRESS',
   'CONVERTED',
   'SUCCESS',
   'LOST',
   'DEAD',
   'CLOSED',
+  'DROPPED',
 ];
 
 export function EnquiriesPage() {
@@ -82,9 +88,7 @@ export function EnquiriesPage() {
   const [kind, setKind] = useState<'all' | Kind>('all');
   const [status, setStatus] = useState<'' | LeadStatus>('');
   const [dealerId, setDealerId] = useState('');
-  // QA decision: drop the "stuck" CTA + filter from admin enquiries.
-  // Admins manage attention via the standard status filter; the stuck
-  // pill was redundant and competed visually with the page header.
+  const [channel, setChannel] = useState<'' | 'PORTAL' | 'DEALER'>('');
   const [q, setQ] = useState('');
 
   // Pull dealers list once to populate the filter dropdown.
@@ -95,12 +99,13 @@ export function EnquiriesPage() {
   });
 
   const leads = useQuery({
-    queryKey: ['admin-leads', kind, status, dealerId, q],
+    queryKey: ['admin-leads', kind, status, dealerId, channel, q],
     queryFn: () => {
       const sp = new URLSearchParams();
       if (kind !== 'all') sp.set('kind', kind);
       if (status) sp.set('status', status);
       if (dealerId) sp.set('dealerId', dealerId);
+      if (channel) sp.set('channel', channel);
       if (q) sp.set('q', q);
       return api<AdminLeadsResponse>(`/admin/leads?${sp.toString()}`);
     },
@@ -153,8 +158,10 @@ export function EnquiriesPage() {
         })}
       </nav>
 
-      {/* Filter row — Kind moved out into the tab nav above; remaining
-          filters (Status / Dealer / Search) stay in the same row layout. */}
+      {/* Filter row — Status / Channel / Dealer / Search. Channel filter is
+          buyer-only (trade-in leads have no entrySource), but showing it on
+          all tabs is safe — selecting PORTAL/Walk-in while on the Seller tab
+          just returns 0 rows as expected. */}
       <div className="bg-hd-white border border-gray-200 p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Select
           value={status}
@@ -162,9 +169,14 @@ export function EnquiriesPage() {
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s || 'all'} value={s}>
-              {s ? s.replace(/_/g, ' ') : 'All Status'}
+              {s ? (LEAD_STAGE_LABELS[s as keyof typeof LEAD_STAGE_LABELS] ?? s.replace(/_/g, ' ')) : 'All Status'}
             </option>
           ))}
+        </Select>
+        <Select value={channel} onChange={(e) => setChannel(e.target.value as '' | 'PORTAL' | 'DEALER')}>
+          <option value="">All Channels</option>
+          <option value="PORTAL">Online (Portal)</option>
+          <option value="DEALER">Walk-In (Dealer)</option>
         </Select>
         <Select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
           <option value="">All Dealers</option>
@@ -178,7 +190,6 @@ export function EnquiriesPage() {
           placeholder="Search name / model / VIN"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="lg:col-span-2"
         />
       </div>
 
@@ -206,6 +217,7 @@ export function EnquiriesPage() {
               <Th>Kind</Th>
               <Th>Lead</Th>
               <Th>Contact</Th>
+              <Th>Channel</Th>
               <Th className="w-full">Dealer</Th>
               <Th className="text-right">Status</Th>
             </tr>
@@ -213,14 +225,14 @@ export function EnquiriesPage() {
           <tbody className="divide-y divide-gray-100">
             {leads.isLoading && (
               <tr>
-                <td colSpan={5} className="text-center text-gray-500 py-8">
+                <td colSpan={6} className="text-center text-gray-500 py-8">
                   Loading…
                 </td>
               </tr>
             )}
             {!leads.isLoading && total === 0 && (
               <tr>
-                <td colSpan={5} className="text-center text-gray-500 py-12">
+                <td colSpan={6} className="text-center text-gray-500 py-12">
                   No enquiries match this filter.
                 </td>
               </tr>
@@ -272,6 +284,21 @@ export function EnquiriesPage() {
                   >
                     {l.email}
                   </a>
+                </Td>
+                <Td>
+                  {l.kind === 'buyer' ? (
+                    <span
+                      className={`inline-block px-2 py-0.5 text-[10px] font-subhead uppercase tracking-subhead border ${
+                        (l.entrySource ?? 'PORTAL') === 'PORTAL'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}
+                    >
+                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-gray-400">—</span>
+                  )}
                 </Td>
                 <Td className="text-xs text-gray-700 w-full">{l.dealerName}</Td>
                 <Td className="text-right">
@@ -325,12 +352,12 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       ? 'info'
       : status === 'CONVERTED' || status === 'SUCCESS'
       ? 'success'
-      : status === 'LOST' || status === 'DEAD' || status === 'CLOSED'
+      : status === 'LOST' || status === 'DEAD' || status === 'CLOSED' || status === 'DROPPED'
       ? 'danger'
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {LEAD_STAGE_LABELS[status] ?? status.replace(/_/g, ' ')}
+      {LEAD_STAGE_LABELS[status as keyof typeof LEAD_STAGE_LABELS] ?? status.replace(/_/g, ' ')}
     </Badge>
   );
 }

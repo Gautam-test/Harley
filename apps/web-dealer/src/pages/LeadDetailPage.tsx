@@ -28,6 +28,7 @@ interface LeadDetail {
   status: LeadStatus;
   frozenStatus?: string | null;
   entrySource?: 'PORTAL' | 'DEALER' | null;
+  employmentType?: string | null;
   createdAt: string;
   // QA: customer-submitted qualifying answers. Buyer-only fields:
   state?: string | number | null;
@@ -232,7 +233,7 @@ export function LeadDetailPage() {
   // them as numbered steps.
   const basePipeline =
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
-  const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST';
+  const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST' || lead.status === 'DROPPED';
   // QA: when the lead is in a terminal state (Not Interested), freeze
   // the pipeline display at the last stage reached BEFORE the terminal
   // transition — `frozenStatus` is captured by updateLeadStatus into
@@ -252,6 +253,7 @@ export function LeadDetailPage() {
   const dropdownStatuses: LeadStatus[] = [
     lead.status,
     ...basePipeline.filter((s) => s !== lead.status),
+    ...(lead.status !== 'DROPPED' ? ['DROPPED' as LeadStatus] : []),
   ];
 
   return (
@@ -603,7 +605,7 @@ export function LeadDetailPage() {
                   // reason so managers always have an audit trail; an
                   // empty / cancelled prompt aborts the whole transition
                   // (previously the status flipped anyway).
-                  if (next === 'CLOSED') {
+                  if (next === 'CLOSED' || next === 'DROPPED') {
                     const why = window.prompt(
                       `Mark this lead as ${LEAD_STAGE_LABELS[next]}? This is a terminal status — write a short reason for the audit log.`,
                       '',
@@ -940,12 +942,12 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       ? 'info'
       : status === 'CONVERTED' || status === 'SUCCESS'
       ? 'success'
-      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD'
+      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD' || status === 'DROPPED'
       ? 'danger'
       : 'warning';
   return (
     <Badge variant="status" tone={tone}>
-      {LEAD_STAGE_LABELS[status]}
+      {LEAD_STAGE_LABELS[status as keyof typeof LEAD_STAGE_LABELS] ?? status.replace(/_/g, ' ')}
     </Badge>
   );
 }
@@ -1021,7 +1023,8 @@ function CustomerDetailsPanel({ lead, kind }: { lead: LeadDetail; kind: Kind }) 
             has(lead.financingNeeded) ||
             has(lead.tradeInInterest) ||
             has(lead.visitPreference) ||
-            has(lead.bestTimeToCall)) && (
+            has(lead.bestTimeToCall) ||
+            has(lead.employmentType)) && (
             <>
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <h3 className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
@@ -1041,6 +1044,7 @@ function CustomerDetailsPanel({ lead, kind }: { lead: LeadDetail; kind: Kind }) 
                   {has(lead.tradeInInterest) && <Field label="Trade-In Interest">{fmt(lead.tradeInInterest)}</Field>}
                   {has(lead.visitPreference) && <Field label="Visit Preference">{fmt(lead.visitPreference)}</Field>}
                   {has(lead.bestTimeToCall) && <Field label="Best Time To Call">{fmt(lead.bestTimeToCall)}</Field>}
+                  {has(lead.employmentType) && <Field label="Employment Type">{fmt(lead.employmentType)}</Field>}
                 </div>
               </div>
             </>
