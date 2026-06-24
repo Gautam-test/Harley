@@ -1102,11 +1102,6 @@ export function InfoGateModal({
                   <option value="">— Not specified —</option>
                   <option value="Salaried">Salaried</option>
                   <option value="Self-Employed">Self-Employed</option>
-                  <option value="Business Owner">Business Owner</option>
-                  <option value="Professional">Professional (Doctor / Lawyer / CA)</option>
-                  <option value="Retired">Retired</option>
-                  <option value="Student">Student</option>
-                  <option value="Other">Other</option>
                 </Select>
               </Labelled>
             )}
