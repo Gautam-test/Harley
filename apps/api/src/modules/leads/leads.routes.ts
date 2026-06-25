@@ -206,6 +206,52 @@ dealerLeadsRouter.get('/trade-in', validate(statusQuery, 'query'), async (req, r
   }
 });
 
+// F6 + F8: CSV export of the dealer's own enquiries (buyer + seller),
+// respecting the same status/channel filters as the list view.
+const exportQuery = z.object({
+  kind: z.enum(['buyer', 'trade-in', 'all']).default('all'),
+  status: leadStatus.optional(),
+  channel: z.enum(['PORTAL', 'DEALER']).optional(),
+});
+dealerLeadsRouter.get('/export', validate(exportQuery, 'query'), async (req, res, next) => {
+  try {
+    const q = req.query as unknown as z.infer<typeof exportQuery>;
+    const dealerId = req.auth!.sub;
+    const out: Array<{ view: Awaited<ReturnType<typeof listBuyerEnquiries>>[number]; kind: 'buyer' | 'trade-in' }> = [];
+    if (q.kind === 'all' || q.kind === 'buyer') {
+      let buyer = await listBuyerEnquiries(dealerId, q.status);
+      if (q.channel) buyer = buyer.filter((b) => (b.entrySource ?? 'PORTAL') === q.channel);
+      out.push(...buyer.map((view) => ({ view, kind: 'buyer' as const })));
+    }
+    if ((q.kind === 'all' || q.kind === 'trade-in') && !q.channel) {
+      const seller = await listTradeInLeads(dealerId, q.status);
+      out.push(...seller.map((view) => ({ view, kind: 'trade-in' as const })));
+    }
+    out.sort((a, b) => b.view.createdAt.localeCompare(a.view.createdAt));
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Reference', 'Name', 'Phone', 'Email', 'Kind', 'Channel', 'Status', 'Employment Type', 'Motorcycle', 'Created At'];
+    const lines = out.map(({ view, kind }) =>
+      [
+        view.id,
+        view.name,
+        view.phone,
+        view.email,
+        kind === 'buyer' ? 'Buyer' : 'Seller',
+        kind === 'buyer' ? ((view.entrySource ?? 'PORTAL') === 'DEALER' ? 'Walk-In' : 'Online') : '',
+        view.status,
+        kind === 'buyer' ? (view.employmentType ?? '') : '',
+        view.bikeModel ?? '',
+        view.createdAt,
+      ].map(esc).join(','),
+    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="my-enquiries.csv"');
+    res.send([header.map(esc).join(','), ...lines].join('\n'));
+  } catch (e) {
+    next(e);
+  }
+});
+
 dealerLeadsRouter.get(
   '/:kind/:id/detail',
   validate(

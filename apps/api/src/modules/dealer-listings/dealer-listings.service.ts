@@ -228,6 +228,49 @@ export async function createListing(dealerId: string, input: CreateListingInput)
 // publishListing intentionally lives in admin-listings.routes.ts — only an admin
 // has the authority to move a DRAFT into ACTIVE (visible to buyers).
 
+// F5: collect every document available for a sold listing — the F3 sold
+// documents (Invoice / RC Transfer / Delivery Note / Customer Agreement /
+// Other) plus the F4 listing documents (RSA / Warranty / HOG / CPO
+// Certificate, stored in cpoDocs). Each URL is fetched into a buffer; any
+// doc that is missing or fails to fetch is skipped so one bad file never
+// blocks the whole email (spec: "attach available, skip unavailable").
+export async function gatherSoldDocAttachments(listing: {
+  soldDocs: unknown;
+  cpoDocs: unknown;
+}): Promise<Array<{ filename: string; content: Buffer }>> {
+  const base = `http://localhost:${getEnv().PORT}`;
+  const items: Array<{ url: string; label: string }> = [];
+  if (Array.isArray(listing.soldDocs)) {
+    for (const d of listing.soldDocs as Array<{ url?: string; label?: string }>) {
+      if (d?.url) items.push({ url: d.url, label: d.label || 'Document' });
+    }
+  }
+  if (listing.cpoDocs && typeof listing.cpoDocs === 'object') {
+    for (const [key, url] of Object.entries(listing.cpoDocs as Record<string, string>)) {
+      if (typeof url === 'string' && url) items.push({ url, label: key });
+    }
+  }
+  const out: Array<{ filename: string; content: Buffer }> = [];
+  for (const { url, label } of items) {
+    try {
+      const abs = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+      const res = await fetch(abs);
+      if (!res.ok) {
+        logger.warn({ url, status: res.status }, 'F5 sold-doc attachment skipped (fetch not ok)');
+        continue;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const extMatch = (url.split('?')[0] ?? url).match(/\.([a-z0-9]{2,5})$/i);
+      const ext = extMatch ? extMatch[1] : 'pdf';
+      const safe = label.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'document';
+      out.push({ filename: `${safe}.${ext}`, content: buf });
+    } catch (e) {
+      logger.warn({ err: e, url }, 'F5 sold-doc attachment fetch failed — skipped');
+    }
+  }
+  return out;
+}
+
 export async function markSold(dealerId: string, listingId: string) {
   const listing = await prisma.listing.findUnique({ where: { id: listingId } });
   if (!listing || listing.dealerId !== dealerId) {
@@ -268,8 +311,10 @@ export async function markSold(dealerId: string, listingId: string) {
         dealerName: dealer?.name,
         dealerPhone: dealer?.phone,
       });
-      await emailProvider().send({ ...msg, to: decryptPii(enquiry.emailEnc) });
-      logger.info({ listingId }, 'Sold-document email sent');
+      // F5: attach every available purchase document (skips missing / failed).
+      const attachments = await gatherSoldDocAttachments(listing);
+      await emailProvider().send({ ...msg, to: decryptPii(enquiry.emailEnc), attachments });
+      logger.info({ listingId, attachments: attachments.length }, 'Sold-document email sent');
     } catch (e) {
       logger.warn({ err: e, listingId }, 'Sold-document email failed');
     }
@@ -284,7 +329,7 @@ export async function addSoldDoc(dealerId: string, listingId: string, doc: { url
     throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
   }
   const existing = (Array.isArray(listing.soldDocs) ? listing.soldDocs : []) as Array<{ id: string; url: string; label: string }>;
-  const newDoc = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, url: doc.url, label: doc.label };
+  const newDoc = { id: crypto.randomUUID(), url: doc.url, label: doc.label };
   return prisma.listing.update({
     where: { id: listingId },
     data: { soldDocs: [...existing, newDoc] as never },
@@ -299,6 +344,9 @@ export async function removeSoldDoc(dealerId: string, listingId: string, docId: 
   }
   const existing = (Array.isArray(listing.soldDocs) ? listing.soldDocs : []) as Array<{ id: string; url: string; label: string }>;
   const filtered = existing.filter((d) => d.id !== docId);
+  if (filtered.length === existing.length) {
+    throw new HttpError(404, 'DOC_NOT_FOUND', 'Document not found');
+  }
   return prisma.listing.update({
     where: { id: listingId },
     data: { soldDocs: filtered as never },
@@ -311,7 +359,9 @@ export async function setRcTransferStatus(dealerId: string, listingId: string, s
   if (!listing || listing.dealerId !== dealerId) {
     throw new HttpError(404, 'LISTING_NOT_FOUND', 'Listing not found');
   }
-  return (prisma.listing.update as Function)({
+  // Cast needed until `prisma generate` picks up the rcTransferStatus column.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (prisma.listing.update as any)({
     where: { id: listingId },
     data: { rcTransferStatus: status },
   });

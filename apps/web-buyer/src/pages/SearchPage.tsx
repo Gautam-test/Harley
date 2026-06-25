@@ -187,7 +187,7 @@ export function SearchPage() {
                 previously rendered AFTER the tabs which inverted the
                 Figma rhythm. */}
             <p className="text-sm text-gray-600 mb-5">
-              Please use the filters on the left to refine the H-D Certified CPO stock and find your
+              Please use the filters on the left to refine the H-D Certified (CPO) stock and find your
               next Harley-Davidson.
             </p>
 

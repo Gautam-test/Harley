@@ -6,6 +6,25 @@ export class ApiError extends Error {
   }
 }
 
+// Some server validation errors (e.g. pincode/city/state mismatch) carry a
+// `{ "fieldErrors": { "<field>": ["<message>"] } }` JSON envelope as the error
+// MESSAGE so the field can be highlighted. Without parsing it, the raw JSON
+// leaks into the UI. This pulls out the first human-readable message; for a
+// plain-text error it just returns the message unchanged.
+export function apiErrorMessage(e: unknown, fallback = 'Something went wrong'): string {
+  if (!(e instanceof ApiError)) return fallback;
+  try {
+    const parsed = JSON.parse(e.message) as { fieldErrors?: Record<string, string[]> };
+    if (parsed?.fieldErrors) {
+      const first = Object.values(parsed.fieldErrors).find((v) => Array.isArray(v) && v[0]);
+      if (first?.[0]) return first[0];
+    }
+  } catch {
+    // message isn't JSON — it's already a plain sentence (e.g. the 409 copy).
+  }
+  return e.message;
+}
+
 interface ApiOptions extends RequestInit {
   /** Send the persisted OTP verified token as Bearer for lead-creation calls. */
   withOtpToken?: boolean;

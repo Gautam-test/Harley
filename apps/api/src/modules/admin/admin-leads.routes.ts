@@ -50,6 +50,8 @@ interface ListRow {
   updatedAt: string;
   /** F6: PORTAL = online enquiry, DEALER = walk-in logged by dealer rep. Buyer only. */
   entrySource?: 'PORTAL' | 'DEALER';
+  /** F8: buyer employment type (Salaried / Self-Employed). Buyer only. */
+  employmentType?: string | null;
 }
 
 interface BuyerEnquiryRow {
@@ -59,6 +61,7 @@ interface BuyerEnquiryRow {
   emailEnc: string;
   status: LeadStatus;
   entrySource: string | null;
+  employmentType: string | null;
   dealerId: string;
   dealer: { name: string };
   listing: { year: number; modelName: string } | null;
@@ -79,9 +82,9 @@ interface TradeInLeadRow {
   updatedAt: Date;
 }
 
-adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) => {
-  try {
-    const q = req.query as unknown as z.infer<typeof listQuery>;
+// Shared row collector — used by both the JSON list (`/`) and the CSV
+// export (`/export`) so they always reflect the same filters + shape.
+async function collectRows(q: z.infer<typeof listQuery>): Promise<ListRow[]> {
     const kindsToFetch =
       q.kind === 'all' ? (['buyer', 'trade-in'] as const) : ([q.kind] as const);
 
@@ -131,6 +134,7 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
           createdAt: r.createdAt.toISOString(),
           updatedAt: r.updatedAt.toISOString(),
           entrySource: (r.entrySource as 'PORTAL' | 'DEALER' | null) ?? 'PORTAL',
+          employmentType: r.employmentType ?? null,
         });
       }
     }
@@ -174,11 +178,58 @@ adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) =
     // Re-sort the unioned rows by createdAt desc (each kind was already
     // sorted, but merging requires a single ordering pass).
     rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return rows;
+}
 
-    res.json({
-      results: rows,
-      total: rows.length,
-    });
+// F6 channel label: PORTAL = website, DEALER = walk-in logged by a rep.
+function channelLabel(entrySource?: 'PORTAL' | 'DEALER' | null): string {
+  if (entrySource === 'DEALER') return 'Walk-In';
+  return 'Online';
+}
+
+// F6 + F8: render the unioned lead rows as CSV. Seller (trade-in) rows have
+// no channel/employment data, so those cells are left blank.
+function toLeadsCsv(rows: ListRow[]): string {
+  const header = [
+    'Reference', 'Name', 'Phone', 'Email', 'Kind',
+    'Channel', 'Status', 'Employment Type', 'Dealer', 'Motorcycle', 'Created At',
+  ];
+  const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = rows.map((r) =>
+    [
+      r.id,
+      r.name,
+      r.phone,
+      r.email,
+      r.kind === 'buyer' ? 'Buyer' : 'Seller',
+      r.kind === 'buyer' ? channelLabel(r.entrySource) : '',
+      r.status,
+      r.kind === 'buyer' ? (r.employmentType ?? '') : '',
+      r.dealerName,
+      r.bikeModel,
+      r.createdAt,
+    ].map(esc).join(','),
+  );
+  return [header.map(esc).join(','), ...lines].join('\n');
+}
+
+adminLeadsRouter.get('/', validate(listQuery, 'query'), async (req, res, next) => {
+  try {
+    const rows = await collectRows(req.query as unknown as z.infer<typeof listQuery>);
+    res.json({ results: rows, total: rows.length });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// F6 + F8: CSV export of the enquiry list. Respects the same filters as the
+// JSON list (kind / status / dealer / channel / search).
+adminLeadsRouter.get('/export', validate(listQuery, 'query'), async (req, res, next) => {
+  try {
+    const rows = await collectRows(req.query as unknown as z.infer<typeof listQuery>);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="enquiries.csv"');
+    res.send(toLeadsCsv(rows));
   } catch (e) {
     next(e);
   }

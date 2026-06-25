@@ -162,7 +162,16 @@ dealerListingsRouter.delete('/:id', validate(idParam, 'params'), async (req, res
 
 // F3: Sold document management — POST adds a doc URL, DELETE removes by doc id.
 const soldDocBody = z.object({
-  url: z.string().url(),
+  // Accept either a full URL (legacy URL-paste flow) or a relative upload
+  // path from POST /uploads/document (e.g. /api/v1/uploads/documents/…),
+  // matching how listing images are stored relative.
+  url: z
+    .string()
+    .min(1)
+    .max(2000)
+    .refine((v) => /^https?:\/\//i.test(v) || v.startsWith('/api/v1/uploads/'), {
+      message: 'Must be an uploaded document path or a valid URL',
+    }),
   label: z.string().min(1).max(200),
 });
 const soldDocParams = z.object({ id: z.string().min(1), docId: z.string().min(1) });

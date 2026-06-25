@@ -60,6 +60,25 @@ async function fetchWithTimeout(input: string, init?: RequestInit, timeoutMs = F
   }
 }
 
+/** F6/F8: download an authenticated CSV export and trigger a browser save.
+ *  Sends the in-memory bearer token (a plain anchor/window.open can't). */
+export async function downloadCsv(path: string, filename: string): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok) throw new ApiError(res.status, 'EXPORT_FAILED', 'Export failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // Single in-flight refresh promise shared across concurrent 401s. Without this,
 // five parallel requests that all expire together would each fire their own
 // /auth/refresh, race, and overwrite each other's token.

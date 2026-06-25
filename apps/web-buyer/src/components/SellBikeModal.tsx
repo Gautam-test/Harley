@@ -3,7 +3,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
-import { api, ApiError } from '../lib/api';
+import { api, apiErrorMessage } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { HD_MODEL_CATALOG } from '../lib/models';
 import { INDIA_STATES, citiesForState } from '../lib/indiaGeo';
@@ -270,7 +270,7 @@ export function SellBikeModal() {
       });
       setSubmitted({ id: res.id });
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not submit');
+      setError(apiErrorMessage(e, 'Could not submit'));
     } finally {
       setSubmitting(false);
     }

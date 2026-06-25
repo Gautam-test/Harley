@@ -78,7 +78,85 @@ const imageUpload = multer({
   },
 });
 
+// ── F3/F4 sale & listing documents (Invoice, RC Transfer, Delivery Note,
+//    Customer Agreement, RSA, Warranty, HOG, CPO Certificate). Accept PDF +
+//    common image formats so a phone-photo of a receipt works too. Stored
+//    raw (no Sharp re-encode) under .uploads/documents and served back with
+//    the right content-type. ────────────────────────────────────────────
+const DOCUMENT_DIR = path.join(UPLOAD_ROOT, 'documents');
+fs.mkdirSync(DOCUMENT_DIR, { recursive: true });
+
+const ALLOWED_DOC_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
+const ALLOWED_DOC_MIME = new Set(['application/pdf', 'image/jpeg', 'image/png']);
+
+function detectDocKind(buf: Buffer): 'pdf' | 'jpeg' | 'png' | null {
+  if (buf.length >= 4 && buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) return 'pdf';
+  const img = detectImageKind(buf);
+  return img === 'webp' ? null : img; // webp not in the doc allow-list
+}
+
+const documentUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per document
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_DOC_MIME.has(file.mimetype) || !ALLOWED_DOC_EXT.has(ext)) {
+      return cb(new HttpError(415, 'BAD_FILE_TYPE', 'Document must be a PDF, JPG, or PNG') as Error);
+    }
+    cb(null, true);
+  },
+});
+
 export const uploadsRouter = Router();
+
+// Single document upload — the dealer Mark-Sold modal fires one of these per
+// attached file, then stores the returned URL in the listing's soldDocs.
+uploadsRouter.post(
+  '/document',
+  requireAuth(['DEALER']),
+  documentUpload.single('file'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) throw new HttpError(400, 'FILE_MISSING', 'Attach a document as form field "file"');
+      const kind = detectDocKind(req.file.buffer);
+      if (!kind) throw new HttpError(415, 'BAD_FILE_TYPE', 'File contents do not match a PDF, JPG, or PNG');
+      const ext = kind === 'pdf' ? 'pdf' : kind === 'png' ? 'png' : 'jpg';
+      const id = randomUUID();
+      const filePath = path.join(DOCUMENT_DIR, `${id}.${ext}`);
+      await fsp.writeFile(filePath, req.file.buffer);
+      const url = `/api/v1/uploads/documents/${id}.${ext}`;
+      logger.info({ id, originalName: req.file.originalname, bytes: req.file.size, kind }, 'document uploaded');
+      res.status(201).json({ url, filename: `${id}.${ext}`, originalName: req.file.originalname, size: req.file.size });
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
+// Serve a document. The unguessable UUID filename is the capability (same
+// posture as wizard-in-progress images); this also lets the server-side F5
+// email fetch pull the bytes over localhost without a bearer token.
+uploadsRouter.get('/documents/:filename', optionalAuth, async (req, res, next) => {
+  try {
+    const raw = req.params.filename;
+    const filename = typeof raw === 'string' ? raw : '';
+    if (!/^[a-zA-Z0-9-]+\.(pdf|jpg|jpeg|png)$/.test(filename)) {
+      throw new HttpError(400, 'BAD_FILENAME', 'Invalid filename');
+    }
+    const filePath = path.join(DOCUMENT_DIR, filename);
+    if (!fs.existsSync(filePath)) throw new HttpError(404, 'NOT_FOUND', 'File not found');
+    const ext = path.extname(filename).toLowerCase();
+    const contentType =
+      ext === '.pdf' ? 'application/pdf' :
+      ext === '.png' ? 'image/png' :
+      'image/jpeg';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
+  } catch (e) {
+    next(e);
+  }
+});
 
 // Single-file POST — wizard step 3 fires one of these per dropped file so it
 // can show per-file progress and per-file failures. Up to 8 images per listing.

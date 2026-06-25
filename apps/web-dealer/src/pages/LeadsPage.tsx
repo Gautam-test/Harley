@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Badge, Button, IconButton, Input, Select, checkPincodeMatch } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
-import { api, ApiError } from '../lib/api';
+import { api, ApiError, downloadCsv } from '../lib/api';
 import { formatLeadId, type LeadKind } from '../lib/leadId';
 import { validators, buildFieldErrors, normalisePhone, toApiPhone, sanitizeAlpha, sanitizeDigits } from '../lib/formRules';
 import { reverseGeocode } from '../lib/reverseGeocode';
@@ -198,9 +198,21 @@ export function LeadsPage() {
           </h1>
           <p className="text-gray-600 text-sm mt-2 max-w-2xl">{TAB_SUBTITLE[tab]}</p>
         </div>
-        <Button variant="primary" onClick={onAddClick}>
-          + Add Enquiry
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const params = new URLSearchParams({ kind: tab });
+              if (channelFilter) params.set('channel', channelFilter);
+              void downloadCsv(`/dealer/leads/export?${params.toString()}`, 'my-enquiries.csv');
+            }}
+          >
+            Export CSV
+          </Button>
+          <Button variant="primary" onClick={onAddClick}>
+            + Add Enquiry
+          </Button>
+        </div>
       </div>
 
       {/* Tab nav — All / Buyer / Seller. Each tab carries an inline

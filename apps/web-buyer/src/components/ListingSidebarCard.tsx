@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { api, ApiError } from '../lib/api';
+import { api, apiErrorMessage } from '../lib/api';
 import { InfoGateModal } from './InfoGateModal';
 import { formatLeadId } from '../lib/leadId';
 import { CopyRefButton } from './CopyRefButton';
@@ -137,7 +137,7 @@ export function ListingSidebarCard({
       // dealer will be in touch — you can submit a fresh enquiry once
       // they close this one out." — i.e. it tells the buyer the gate
       // is per-bike and clears once the dealer closes the lead.
-      setError(e instanceof ApiError ? e.message : 'Could not send enquiry');
+      setError(apiErrorMessage(e, 'Could not send enquiry'));
     } finally {
       setSubmitting(false);
     }

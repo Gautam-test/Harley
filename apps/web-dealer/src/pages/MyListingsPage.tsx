@@ -1,4 +1,4 @@
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, IconButton } from '@hd-cpo/ui';
@@ -91,6 +91,9 @@ export function MyListingsPage() {
   const [tab, setTab] = useState<TabId>('ALL');
   const [docsPanel, setDocsPanel] = useState<string | null>(null);
   const qc = useQueryClient();
+  // Close the docs panel whenever the user switches tabs so it can't ghost-
+  // open against a listing that is no longer visible in the filtered set.
+  useEffect(() => { setDocsPanel(null); }, [tab]);
   const navigate = useNavigate();
 
   // Always fetch the full set so we can compute per-tab counts; the table
@@ -116,10 +119,6 @@ export function MyListingsPage() {
     return wanted.length === 0 || wanted.includes(l.status);
   });
 
-  const markSold = useMutation({
-    mutationFn: (id: string) => api(`/dealer/listings/${id}/mark-sold`, { method: 'POST' }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
-  });
   const remove = useMutation({
     mutationFn: (id: string) => api(`/dealer/listings/${id}`, { method: 'DELETE' }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['dealer-listings'] }),
@@ -133,6 +132,9 @@ export function MyListingsPage() {
   // the power button and gets no feedback at all because the mutations
   // had no onError handler. The banner auto-dismisses on the next click.
   const [actionError, setActionError] = useState<string | null>(null);
+  // F3: the listing currently being marked sold via the document-collection
+  // modal (null = modal closed).
+  const [markSoldFor, setMarkSoldFor] = useState<DealerListingRow | null>(null);
   // Map server error codes to QA-spec exact strings. Anything we don't
   // recognise falls through to whatever the API put in `err.message`.
   function turnOnErrorMessage(err: unknown): string {
@@ -204,6 +206,17 @@ export function MyListingsPage() {
           <Button>+ Add Listing</Button>
         </Link>
       </div>
+
+      {markSoldFor && (
+        <MarkSoldModal
+          listing={markSoldFor}
+          onClose={() => setMarkSoldFor(null)}
+          onDone={() => {
+            setMarkSoldFor(null);
+            qc.invalidateQueries({ queryKey: ['dealer-listings'] });
+          }}
+        />
+      )}
 
       {/* QA: red error banner for the Turn-On / restore flows so a
           VIN-conflict on the API surfaces in the UI (it was silent
@@ -584,15 +597,7 @@ export function MyListingsPage() {
                             about to mutate. Same pattern as admin Publish. */}
                         <IconButton
                           label="Mark Sold"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Mark "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) as SOLD? This removes it from buyer search.`,
-                              )
-                            ) {
-                              markSold.mutate(l.id);
-                            }
-                          }}
+                          onClick={() => setMarkSoldFor(l)}
                         >
                           <SoldIcon />
                         </IconButton>
@@ -849,7 +854,10 @@ interface ListingDocsDetail {
 }
 
 const CPO_DOC_TYPES = ['RSA', 'Warranty', 'HOG', 'CPO Certificate'] as const;
-const RC_STATUS_OPTIONS = ['Pending', 'In Progress', 'Completed', 'Not Applicable'];
+// F3 spec: RC Transfer Status is a simple Yes / No flag.
+const RC_STATUS_OPTIONS = ['Yes', 'No'];
+// F3 spec: the document types a dealer attaches when a bike is sold.
+const SOLD_DOC_TYPES = ['Invoice', 'RC Transfer Document', 'Delivery Note', 'Customer Agreement', 'Other Supporting Document'] as const;
 
 function DocsPanel({
   listingId,
@@ -1098,6 +1106,175 @@ function DocsPanel({
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// F3: Mark-as-Sold modal — collects multiple sale documents (file upload) +
+// RC Transfer status BEFORE marking the bike sold, so the buyer's purchase
+// email (F5) goes out with those documents attached.
+interface SoldDocRow {
+  type: string;
+  file: File | null;
+}
+
+function MarkSoldModal({
+  listing,
+  onClose,
+  onDone,
+}: {
+  listing: DealerListingRow;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [rows, setRows] = useState<SoldDocRow[]>([{ type: SOLD_DOC_TYPES[0], file: null }]);
+  const [rcStatus, setRcStatus] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  const setRow = (i: number, patch: Partial<SoldDocRow>) =>
+    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  const addRow = () => setRows((rs) => [...rs, { type: SOLD_DOC_TYPES[0], file: null }]);
+  const removeRow = (i: number) =>
+    setRows((rs) => (rs.length === 1 ? rs : rs.filter((_, idx) => idx !== i)));
+
+  const confirm = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const withFiles = rows.filter((r) => r.file);
+      // 1. Upload each document + attach to the listing BEFORE mark-sold so
+      //    the F5 buyer email picks them up as attachments.
+      for (let i = 0; i < withFiles.length; i++) {
+        const r = withFiles[i]!;
+        setProgress(`Uploading document ${i + 1} of ${withFiles.length}…`);
+        const fd = new FormData();
+        fd.append('file', r.file as File);
+        const up = await api<{ url: string }>('/uploads/document', {
+          method: 'POST',
+          body: fd,
+          formData: true,
+        });
+        await api(`/dealer/listings/${listing.id}/sold-docs`, {
+          method: 'POST',
+          body: JSON.stringify({ url: up.url, label: r.type }),
+        });
+      }
+      // 2. RC transfer status (optional).
+      if (rcStatus) {
+        await api(`/dealer/listings/${listing.id}/rc-transfer-status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: rcStatus }),
+        });
+      }
+      // 3. Finally mark sold.
+      setProgress('Marking sold…');
+      await api(`/dealer/listings/${listing.id}/mark-sold`, { method: 'POST' });
+      onDone();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Could not complete — please try again.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-hd-white w-full max-w-lg border border-gray-200 shadow-xl my-8">
+        <div className="bg-hd-black px-6 py-4">
+          <h2 className="font-headline text-xl tracking-headline text-hd-white uppercase">Mark as Sold</h2>
+          <p className="text-[11px] text-gray-300 mt-1">
+            {listing.year} {listing.modelName} · VIN…{listing.vin.slice(-5)}
+          </p>
+        </div>
+        <div className="p-6 space-y-5">
+          <div>
+            <p className="font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-3">
+              Sale Documents
+            </p>
+            <div className="space-y-3">
+              {rows.map((r, i) => (
+                <div key={i} className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={r.type}
+                    onChange={(e) => setRow(i, { type: e.target.value })}
+                    disabled={busy}
+                    className="border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:border-hd-orange"
+                  >
+                    {SOLD_DOC_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                    onChange={(e) => setRow(i, { file: e.target.files?.[0] ?? null })}
+                    disabled={busy}
+                    className="text-xs flex-1 min-w-0"
+                  />
+                  {rows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeRow(i)}
+                      disabled={busy}
+                      className="text-danger text-[11px] font-subhead uppercase tracking-subhead hover:underline disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addRow}
+              disabled={busy}
+              className="mt-3 text-hd-orange text-[11px] font-subhead uppercase tracking-subhead hover:underline disabled:opacity-40"
+            >
+              + Add another document
+            </button>
+            <p className="text-[10px] text-gray-400 mt-2">
+              PDF, JPG or PNG · up to 10 MB each. Attached to the buyer&apos;s purchase email. Documents are optional — you can add more later from Manage Docs.
+            </p>
+          </div>
+          <div>
+            <label className="block font-subhead uppercase tracking-subhead text-[10px] text-gray-500 mb-1">
+              RC Transfer Status
+            </label>
+            <select
+              value={rcStatus}
+              onChange={(e) => setRcStatus(e.target.value)}
+              disabled={busy}
+              className="border border-gray-300 px-3 py-1.5 text-xs focus:outline-none focus:border-hd-orange"
+            >
+              <option value="">— Not set —</option>
+              {RC_STATUS_OPTIONS.map((o) => (
+                <option key={o} value={o}>{o}</option>
+              ))}
+            </select>
+          </div>
+          {err && <p className="text-[11px] text-danger">{err}</p>}
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+          {busy && <span className="text-[11px] text-gray-500 mr-auto">{progress}</span>}
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={busy}
+            className="px-4 py-2 border border-gray-300 font-subhead uppercase tracking-subhead text-[11px] disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={confirm}
+            disabled={busy}
+            className="px-5 py-2 bg-hd-orange text-hd-white font-subhead uppercase tracking-subhead text-[11px] hover:brightness-110 disabled:opacity-40"
+          >
+            {busy ? 'Working…' : 'Confirm Sale'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

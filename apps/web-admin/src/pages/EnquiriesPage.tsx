@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Input, Select } from '@hd-cpo/ui';
+import { Badge, Button, Input, Select } from '@hd-cpo/ui';
 import { LEAD_STAGE_LABELS } from '@hd-cpo/types';
-import { api } from '../lib/api';
+import { api, downloadCsv } from '../lib/api';
 
 // Cross-dealer enquiry oversight for admins. Shows every lead in the system
 // (buyer / trade-in), unmasked PII (admins need to step in on stuck leads),
@@ -91,6 +91,16 @@ export function EnquiriesPage() {
   const [channel, setChannel] = useState<'' | 'PORTAL' | 'DEALER'>('');
   const [q, setQ] = useState('');
 
+  // F6 + F8: export the current (filtered) enquiry list as CSV.
+  const handleExport = () => {
+    const params = new URLSearchParams({ kind });
+    if (status) params.set('status', status);
+    if (channel) params.set('channel', channel);
+    if (dealerId) params.set('dealerId', dealerId);
+    if (q) params.set('q', q);
+    void downloadCsv(`/admin/leads/export?${params.toString()}`, 'enquiries.csv');
+  };
+
   // Pull dealers list once to populate the filter dropdown.
   const dealers = useQuery({
     queryKey: ['admin-dealers-options'],
@@ -125,6 +135,7 @@ export function EnquiriesPage() {
             you can step in without bouncing back to the dealer.
           </p>
         </div>
+        <Button onClick={handleExport}>Export CSV</Button>
       </div>
 
       {/* Tab nav — replaces the Kind dropdown. Three options drive the

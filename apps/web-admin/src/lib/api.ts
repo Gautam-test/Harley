@@ -39,6 +39,25 @@ async function fetchWithTimeout(input: string, init?: RequestInit): Promise<Resp
   }
 }
 
+/** F6/F8: download an authenticated CSV export and trigger a browser save.
+ *  Sends the in-memory bearer token (a plain anchor/window.open can't). */
+export async function downloadCsv(path: string, filename: string): Promise<void> {
+  const token = useAuthStore.getState().accessToken;
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok) throw new ApiError(res.status, 'EXPORT_FAILED', 'Export failed');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // One in-flight refresh promise across concurrent 401s — see web-dealer/api.ts
 // for the rationale.
 let refreshInFlight: Promise<string | null> | null = null;
