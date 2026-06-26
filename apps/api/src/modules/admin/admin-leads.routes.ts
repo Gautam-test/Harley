@@ -183,8 +183,8 @@ async function collectRows(q: z.infer<typeof listQuery>): Promise<ListRow[]> {
 
 // F6 channel label: PORTAL = website, DEALER = walk-in logged by a rep.
 function channelLabel(entrySource?: 'PORTAL' | 'DEALER' | null): string {
-  if (entrySource === 'DEALER') return 'Walk-In';
-  return 'Online';
+  if (entrySource === 'DEALER') return 'Dealer Submitted';
+  return 'Pre-Owned Platform';
 }
 
 // F6 + F8: render the unioned lead rows as CSV. Seller (trade-in) rows have

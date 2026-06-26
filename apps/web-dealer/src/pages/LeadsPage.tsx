@@ -274,7 +274,7 @@ export function LeadsPage() {
                   : 'border-gray-300 text-gray-600 hover:border-hd-black hover:text-hd-black'
               }`}
             >
-              {v === '' ? 'All' : v === 'PORTAL' ? 'Online' : 'Walk-in'}
+              {v === '' ? 'All' : v === 'PORTAL' ? 'Pre-Owned Platform' : 'Dealer Submitted'}
             </button>
           ))}
         </div>
@@ -405,11 +405,11 @@ export function LeadsPage() {
                       }`}
                       title={
                         (l.entrySource ?? 'PORTAL') === 'PORTAL'
-                          ? 'Customer submitted via buyer portal'
-                          : 'Dealer logged manually (phone / walk-in)'
+                          ? 'Customer submitted via Pre-Owned Platform'
+                          : 'Dealer submitted manually (phone / walk-in)'
                       }
                     >
-                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Pre-Owned Platform' : 'Dealer Submitted'}
                     </span>
                   </Td>
                 )}

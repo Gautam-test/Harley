@@ -186,8 +186,8 @@ export function EnquiriesPage() {
         </Select>
         <Select value={channel} onChange={(e) => setChannel(e.target.value as '' | 'PORTAL' | 'DEALER')}>
           <option value="">All Channels</option>
-          <option value="PORTAL">Online (Portal)</option>
-          <option value="DEALER">Walk-In (Dealer)</option>
+          <option value="PORTAL">Pre-Owned Platform</option>
+          <option value="DEALER">Dealer Submitted</option>
         </Select>
         <Select value={dealerId} onChange={(e) => setDealerId(e.target.value)}>
           <option value="">All Dealers</option>
@@ -305,7 +305,7 @@ export function EnquiriesPage() {
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}
                     >
-                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Online' : 'Walk-in'}
+                      {(l.entrySource ?? 'PORTAL') === 'PORTAL' ? 'Pre-Owned Platform' : 'Dealer Submitted'}
                     </span>
                   ) : (
                     <span className="text-[11px] text-gray-400">—</span>

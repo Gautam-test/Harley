@@ -237,7 +237,7 @@ dealerLeadsRouter.get('/export', validate(exportQuery, 'query'), async (req, res
         view.phone,
         view.email,
         kind === 'buyer' ? 'Buyer' : 'Seller',
-        kind === 'buyer' ? ((view.entrySource ?? 'PORTAL') === 'DEALER' ? 'Walk-In' : 'Online') : '',
+        kind === 'buyer' ? ((view.entrySource ?? 'PORTAL') === 'DEALER' ? 'Dealer Submitted' : 'Pre-Owned Platform') : '',
         view.status,
         kind === 'buyer' ? (view.employmentType ?? '') : '',
         view.bikeModel ?? '',
