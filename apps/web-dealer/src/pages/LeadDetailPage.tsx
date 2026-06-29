@@ -233,7 +233,7 @@ export function LeadDetailPage() {
   // them as numbered steps.
   const basePipeline =
     kind === 'buyer' ? BUYER_LEAD_PIPELINE : SELLER_LEAD_PIPELINE;
-  const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST' || lead.status === 'DROPPED';
+  const isTerminal = lead.status === 'DEAD' || lead.status === 'LOST' || (lead.status as string) === 'DROPPED';
   // QA: when the lead is in a terminal state (Not Interested), freeze
   // the pipeline display at the last stage reached BEFORE the terminal
   // transition — `frozenStatus` is captured by updateLeadStatus into
@@ -253,7 +253,7 @@ export function LeadDetailPage() {
   const dropdownStatuses: LeadStatus[] = [
     lead.status,
     ...basePipeline.filter((s) => s !== lead.status),
-    ...(lead.status !== 'DROPPED' ? ['DROPPED' as LeadStatus] : []),
+    ...((lead.status as string) !== 'DROPPED' ? ['DROPPED' as LeadStatus] : []),
   ];
 
   return (
@@ -605,7 +605,7 @@ export function LeadDetailPage() {
                   // reason so managers always have an audit trail; an
                   // empty / cancelled prompt aborts the whole transition
                   // (previously the status flipped anyway).
-                  if (next === 'CLOSED' || next === 'DROPPED') {
+                  if (next === 'CLOSED' || (next as string) === 'DROPPED') {
                     const why = window.prompt(
                       `Mark this lead as ${LEAD_STAGE_LABELS[next]}? This is a terminal status — write a short reason for the audit log.`,
                       '',
@@ -942,7 +942,7 @@ function StatusBadge({ status }: { status: LeadStatus }) {
       ? 'info'
       : status === 'CONVERTED' || status === 'SUCCESS'
       ? 'success'
-      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD' || status === 'DROPPED'
+      : status === 'LOST' || status === 'CLOSED' || status === 'DEAD' || (status as string) === 'DROPPED'
       ? 'danger'
       : 'warning';
   return (
