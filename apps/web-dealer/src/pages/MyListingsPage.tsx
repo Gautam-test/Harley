@@ -548,43 +548,41 @@ export function MyListingsPage() {
                     </div>
                   </div>
                 </Td>
-                {/* ── Active / Inactive column ── */}
+                {/* ── Active / Inactive toggle column ── */}
                 <Td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
-                  {l.status === 'ACTIVE' && (
-                    <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-orange-50 text-hd-orange border border-orange-200 hover:bg-orange-100 transition-colors disabled:opacity-50"
-                      title="Deactivate — buyers will stop seeing this listing"
-                      disabled={turnOff.isPending}
-                      onClick={() => {
-                        if (window.confirm(`Deactivate "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? Buyers will stop seeing it until you reactivate.`)) {
-                          turnOff.mutate(l.id);
-                        }
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-hd-orange inline-block" />
-                      Deactivate
-                    </button>
-                  )}
-                  {l.status === 'DEACTIVATED' && (
-                    <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50"
-                      title="Activate — listing will go live on the marketplace"
-                      disabled={turnOn.isPending}
-                      onClick={() => {
-                        const msg = l.publishedAt
-                          ? `Activate "${l.year} ${l.modelName}"? It will go live on the marketplace.`
-                          : `Re-submit "${l.year} ${l.modelName}" for admin approval?`;
-                        if (window.confirm(msg)) turnOn.mutate(l.id);
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" />
-                      Activate
-                    </button>
+                  {(l.status === 'ACTIVE' || l.status === 'DEACTIVATED') && (
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        role="switch"
+                        aria-checked={l.status === 'ACTIVE'}
+                        title={l.status === 'ACTIVE' ? 'Click to deactivate' : 'Click to activate'}
+                        disabled={turnOn.isPending || turnOff.isPending}
+                        className="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40"
+                        style={{ backgroundColor: l.status === 'ACTIVE' ? '#22c55e' : '#d1d5db' }}
+                        onClick={() => {
+                          if (l.status === 'ACTIVE') {
+                            if (window.confirm(`Deactivate "${l.year} ${l.modelName}"? Buyers will stop seeing it.`)) turnOff.mutate(l.id);
+                          } else {
+                            const msg = l.publishedAt
+                              ? `Activate "${l.year} ${l.modelName}"? It will go live on the marketplace.`
+                              : `Re-submit "${l.year} ${l.modelName}" for admin approval?`;
+                            if (window.confirm(msg)) turnOn.mutate(l.id);
+                          }
+                        }}
+                      >
+                        <span
+                          className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                          style={{ transform: l.status === 'ACTIVE' ? 'translateX(16px)' : 'translateX(0px)' }}
+                        />
+                      </button>
+                      <span className="text-[10px] text-gray-400 leading-none">
+                        {l.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   )}
                   {l.status === 'REMOVED' && (
                     <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
-                      title="Restore — re-submit for admin approval"
+                      className="text-[11px] text-blue-600 underline underline-offset-2 hover:text-blue-800 disabled:opacity-50"
                       disabled={restoreFromRemoved.isPending}
                       onClick={() => {
                         if (window.confirm(`Restore "${l.year} ${l.modelName}" and re-submit for admin approval?`)) {
@@ -604,11 +602,11 @@ export function MyListingsPage() {
                 <Td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
                   {l.status === 'ACTIVE' ? (
                     <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-gray-900 text-white hover:bg-black transition-colors"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 transition-colors"
                       title="Mark this bike as sold"
                       onClick={() => setMarkSoldFor(l)}
                     >
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M2 8l4 4 8-8"/></svg>
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 flex-shrink-0"><path d="M2 8l4 4 8-8"/></svg>
                       Mark Sold
                     </button>
                   ) : (

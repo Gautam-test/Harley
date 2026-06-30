@@ -376,34 +376,32 @@ export function ListingsPage() {
                       </button>
                     </div>
                   )}
-                  {l.status === 'ACTIVE' && (
-                    <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors whitespace-nowrap"
-                      title="Deactivate — remove from buyer site"
-                      onClick={() => {
-                        if (window.confirm(`Take "${l.year} ${l.modelName}" (${l.dealerName}) offline?`)) {
-                          deactivate.mutate(l.id);
-                        }
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
-                      Deactivate
-                    </button>
-                  )}
-                  {l.status === 'DEACTIVATED' && (
-                    <button
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 whitespace-nowrap"
-                      title="Reactivate — return to buyer site"
-                      disabled={reactivate.isPending}
-                      onClick={() => {
-                        if (window.confirm(`Reactivate "${l.year} ${l.modelName}" (${l.dealerName})? It will return to the buyer site immediately.`)) {
-                          reactivate.mutate(l.id);
-                        }
-                      }}
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" />
-                      Reactivate
-                    </button>
+                  {(l.status === 'ACTIVE' || l.status === 'DEACTIVATED') && (
+                    <div className="flex flex-col items-center gap-1">
+                      <button
+                        role="switch"
+                        aria-checked={l.status === 'ACTIVE'}
+                        title={l.status === 'ACTIVE' ? 'Click to deactivate' : 'Click to reactivate'}
+                        disabled={reactivate.isPending || deactivate.isPending}
+                        className="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40"
+                        style={{ backgroundColor: l.status === 'ACTIVE' ? '#22c55e' : '#d1d5db' }}
+                        onClick={() => {
+                          if (l.status === 'ACTIVE') {
+                            if (window.confirm(`Take "${l.year} ${l.modelName}" (${l.dealerName}) offline?`)) deactivate.mutate(l.id);
+                          } else {
+                            if (window.confirm(`Reactivate "${l.year} ${l.modelName}" (${l.dealerName})? It will return to the buyer site immediately.`)) reactivate.mutate(l.id);
+                          }
+                        }}
+                      >
+                        <span
+                          className="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                          style={{ transform: l.status === 'ACTIVE' ? 'translateX(16px)' : 'translateX(0px)' }}
+                        />
+                      </button>
+                      <span className="text-[10px] text-gray-400 leading-none">
+                        {l.status === 'ACTIVE' ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
                   )}
                   {l.status === 'REMOVED' && (
                     <button
