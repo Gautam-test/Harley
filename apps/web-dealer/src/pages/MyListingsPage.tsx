@@ -592,7 +592,7 @@ export function MyListingsPage() {
                       Restore
                     </button>
                   )}
-                  {(l.status === 'DRAFT' || l.status === 'SOLD' || l.status === 'PENDING') && (
+                  {(l.status === 'DRAFT' || l.status === 'SOLD') && (
                     <span className="text-gray-300 text-sm select-none">—</span>
                   )}
                 </Td>
