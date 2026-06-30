@@ -421,8 +421,7 @@ export function MyListingsPage() {
               <Th>Listing</Th>
               <Th>Price</Th>
               <Th>Status</Th>
-              <Th className="text-center">Active / Inactive</Th>
-              <Th className="text-center">Mark Sold</Th>
+              <Th className="text-center">Active</Th>
               <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
@@ -598,23 +597,7 @@ export function MyListingsPage() {
                   )}
                 </Td>
 
-                {/* ── Mark Sold column ── */}
-                <Td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
-                  {l.status === 'ACTIVE' ? (
-                    <button
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium text-gray-500 border border-gray-200 hover:border-gray-400 hover:text-gray-700 transition-colors"
-                      title="Mark this bike as sold"
-                      onClick={() => setMarkSoldFor(l)}
-                    >
-                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 flex-shrink-0"><path d="M2 8l4 4 8-8"/></svg>
-                      Mark Sold
-                    </button>
-                  ) : (
-                    <span className="text-gray-300 text-sm select-none">—</span>
-                  )}
-                </Td>
-
-                {/* ── Actions column (view / edit / docs / remove) ── */}
+                {/* ── Actions column ── */}
                 <Td className="text-right pr-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex items-center justify-end gap-1.5">
                     {l.status === 'ACTIVE' && (
@@ -635,6 +618,11 @@ export function MyListingsPage() {
                     {l.status === 'DRAFT' && l.adminFeedback && (
                       <IconButton to={`/listings/${l.id}/edit`} label="Re-submit with corrections" tone="danger">
                         <RefreshIcon />
+                      </IconButton>
+                    )}
+                    {l.status === 'ACTIVE' && (
+                      <IconButton label="Mark as Sold" onClick={() => setMarkSoldFor(l)}>
+                        <SoldIcon />
                       </IconButton>
                     )}
                     <IconButton
@@ -666,7 +654,7 @@ export function MyListingsPage() {
               </tr>
               {docsPanel === l.id && (
                 <tr>
-                  <td colSpan={6} className="bg-gray-50/70 border-b border-gray-200 px-0 py-0">
+                  <td colSpan={5} className="bg-gray-50/70 border-b border-gray-200 px-0 py-0">
                     <DocsPanel
                       listingId={l.id}
                       isSold={l.status === 'SOLD'}
