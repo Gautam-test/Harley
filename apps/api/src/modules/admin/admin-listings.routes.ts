@@ -117,6 +117,7 @@ adminListingsRouter.get('/', validate(listQuery, 'query'), async (req, res, next
         // dealers without opening the preview drawer for each listing.
         dealerCity: l.dealer.city,
         dealerPincode: l.dealer.pincode,
+        adminFeedback: l.adminFeedback ?? null,
       })),
     );
   } catch (e) {

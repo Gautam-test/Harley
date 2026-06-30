@@ -352,7 +352,18 @@ export function ListingsPage() {
                 </Td>
                 {/* ── Publish / Active column ── */}
                 <Td className="text-center" onClick={(e) => e.stopPropagation()}>
-                  {l.status === 'DRAFT' && (
+                  {l.status === 'DRAFT' && l.adminFeedback && (
+                    <div className="flex flex-col items-center gap-1" title={`Feedback sent: "${l.adminFeedback}"`}>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3 flex-shrink-0"><circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h.01"/></svg>
+                        Awaiting Dealer Fix
+                      </span>
+                      <span className="text-[10px] text-gray-400 max-w-[120px] truncate" title={l.adminFeedback}>
+                        {l.adminFeedback}
+                      </span>
+                    </div>
+                  )}
+                  {l.status === 'DRAFT' && !l.adminFeedback && (
                     <div className="flex flex-col items-center gap-1.5">
                       <button
                         className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 whitespace-nowrap"
