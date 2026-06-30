@@ -29,6 +29,7 @@ interface AdminListingRow {
   publishedAt: Date | null;
   createdAt: Date;
   images: string[];
+  adminFeedback: string | null;
   dealer: { id: string; name: string; city: string; pincode: string };
 }
 
