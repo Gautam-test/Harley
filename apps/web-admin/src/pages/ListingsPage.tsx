@@ -258,6 +258,7 @@ export function ListingsPage() {
               <Th>Price</Th>
               <Th>Dealer</Th>
               <Th>Status</Th>
+              <Th className="text-center">Publish / Active</Th>
               <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
@@ -349,121 +350,91 @@ export function ListingsPage() {
                     })}
                   </div>
                 </Td>
-                <Td className="text-right pr-4" onClick={(e) => e.stopPropagation()}>
-                  {/* Icon-only actions — labels surface on hover via the
-                      tooltip span. Clicking the row (anywhere outside this
-                      cell) opens the preview drawer. */}
-                  <div className="inline-flex items-center justify-end gap-1">
-                    {l.status === 'DRAFT' && (
-                      <>
-                        {/* Publish flips the listing to ACTIVE and pushes
-                            it to Torque + buyer search. The icon-only UI
-                            previously fired this on a single mis-click; we
-                            now confirm so the admin acknowledges the bike
-                            is going live. */}
-                        <IconButton
-                          label="Publish"
-                          tone="primary"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Publish "${l.year} ${l.modelName}" (${l.dealerName})? It will appear on the buyer site and sync to Torque.`,
-                              )
-                            ) {
-                              publish.mutate(l.id);
-                            }
-                          }}
-                          disabled={publish.isPending}
-                        >
-                          <PublishIcon />
-                        </IconButton>
-                        <IconButton
-                          label="Return to Dealer"
-                          onClick={() => setReturning(l)}
-                        >
-                          <ReturnIcon />
-                        </IconButton>
-                      </>
-                    )}
-                    {/* QA BUG-010: Deactivate is only valid for ACTIVE
-                        rows. DRAFTs are unpublished — they go through
-                        Publish or Return-to-Dealer, not Deactivate. The
-                        old guard (`ACTIVE || DRAFT`) exposed a no-op
-                        button on every Pending row. Remove stays
-                        available for both so the admin can purge bad
-                        DRAFTs without first publishing them. */}
-                    {l.status === 'ACTIVE' && (
-                      <IconButton
-                        label="Deactivate"
+                {/* ── Publish / Active column ── */}
+                <Td className="text-center" onClick={(e) => e.stopPropagation()}>
+                  {l.status === 'DRAFT' && (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                        title="Publish — listing goes live on buyer site"
+                        disabled={publish.isPending}
                         onClick={() => {
-                          if (
-                            window.confirm(
-                              `Take "${l.year} ${l.modelName}" (${l.dealerName}) offline? Buyers will no longer see it on search.`,
-                            )
-                          ) {
-                            deactivate.mutate(l.id);
+                          if (window.confirm(`Publish "${l.year} ${l.modelName}" (${l.dealerName})? It will appear on the buyer site.`)) {
+                            publish.mutate(l.id);
                           }
                         }}
                       >
-                        <PowerIcon />
-                      </IconButton>
-                    )}
-                    {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
-                      <IconButton
-                        label="Remove"
-                        tone="danger"
-                        onClick={() => setRemoving(l)}
+                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M8 2v9M4 7l4-5 4 5"/><path d="M2 14h12"/></svg>
+                        Publish
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100 transition-colors whitespace-nowrap"
+                        title="Return to dealer for corrections"
+                        onClick={() => setReturning(l)}
                       >
-                        <TrashIcon />
-                      </IconButton>
-                    )}
-                    {/* Off-market rows still surface an action so the column
-                        isn't empty (QA blocker — admins thought the page was
-                        broken). SOLD is read-only since the bike is gone, so
-                        the View icon just opens the same preview drawer the
-                        row click would. DEACTIVATED → reactivate flips back
-                        to ACTIVE in one click. REMOVED → restore sends the
-                        listing back through the DRAFT review queue (the
-                        dealer is told to re-upload missing assets). */}
+                        Return to Dealer
+                      </button>
+                    </div>
+                  )}
+                  {l.status === 'ACTIVE' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200 hover:bg-orange-100 transition-colors whitespace-nowrap"
+                      title="Deactivate — remove from buyer site"
+                      onClick={() => {
+                        if (window.confirm(`Take "${l.year} ${l.modelName}" (${l.dealerName}) offline?`)) {
+                          deactivate.mutate(l.id);
+                        }
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block" />
+                      Deactivate
+                    </button>
+                  )}
+                  {l.status === 'DEACTIVATED' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      title="Reactivate — return to buyer site"
+                      disabled={reactivate.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Reactivate "${l.year} ${l.modelName}" (${l.dealerName})? It will return to the buyer site immediately.`)) {
+                          reactivate.mutate(l.id);
+                        }
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" />
+                      Reactivate
+                    </button>
+                  )}
+                  {l.status === 'REMOVED' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      title="Restore — send back through DRAFT review"
+                      disabled={restore.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Restore "${l.year} ${l.modelName}" (${l.dealerName})? Returns to DRAFT for dealer to re-upload assets.`)) {
+                          restore.mutate(l.id);
+                        }
+                      }}
+                    >
+                      Restore
+                    </button>
+                  )}
+                  {l.status === 'SOLD' && (
+                    <span className="text-gray-300 text-sm select-none">—</span>
+                  )}
+                </Td>
+
+                {/* ── Actions column (view / remove) ── */}
+                <Td className="text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                  <div className="inline-flex items-center justify-end gap-1">
                     {l.status === 'SOLD' && (
-                      <IconButton label="View" onClick={() => setPreviewId(l.id)}>
+                      <IconButton label="View listing" onClick={() => setPreviewId(l.id)}>
                         <EyeIcon />
                       </IconButton>
                     )}
-                    {l.status === 'DEACTIVATED' && (
-                      <IconButton
-                        label="Reactivate"
-                        tone="primary"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Reactivate "${l.year} ${l.modelName}" (${l.dealerName})? It will return to the buyer site immediately.`,
-                            )
-                          ) {
-                            reactivate.mutate(l.id);
-                          }
-                        }}
-                        disabled={reactivate.isPending}
-                      >
-                        <PowerIcon />
-                      </IconButton>
-                    )}
-                    {l.status === 'REMOVED' && (
-                      <IconButton
-                        label="Restore"
-                        tone="primary"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Restore "${l.year} ${l.modelName}" (${l.dealerName})? The listing returns to DRAFT and the dealer will be asked to re-upload any missing assets.`,
-                            )
-                          ) {
-                            restore.mutate(l.id);
-                          }
-                        }}
-                        disabled={restore.isPending}
-                      >
-                        <RestoreIcon />
+                    {(l.status === 'ACTIVE' || l.status === 'DRAFT') && (
+                      <IconButton label="Remove listing" tone="danger" onClick={() => setRemoving(l)}>
+                        <TrashIcon />
                       </IconButton>
                     )}
                   </div>

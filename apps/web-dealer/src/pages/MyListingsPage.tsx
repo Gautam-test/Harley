@@ -421,6 +421,8 @@ export function MyListingsPage() {
               <Th>Listing</Th>
               <Th>Price</Th>
               <Th>Status</Th>
+              <Th className="text-center">Active / Inactive</Th>
+              <Th className="text-center">Mark Sold</Th>
               <Th className="text-right pr-4">Actions</Th>
             </tr>
           </thead>
@@ -546,146 +548,97 @@ export function MyListingsPage() {
                     </div>
                   </div>
                 </Td>
-                <Td
-                  className="text-right pr-4 py-2.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Vertical action stack — status hint on top (when
-                      applicable), action icons/links in a row below.
-                      Prevents the cramped horizontal layout where
-                      "AWAITING REVIEW EDIT [trash]" all ran together. */}
-                  <div className="flex flex-col items-end gap-2">
+                {/* ── Active / Inactive column ── */}
+                <Td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
+                  {l.status === 'ACTIVE' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-orange-50 text-hd-orange border border-orange-200 hover:bg-orange-100 transition-colors disabled:opacity-50"
+                      title="Deactivate — buyers will stop seeing this listing"
+                      disabled={turnOff.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Deactivate "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? Buyers will stop seeing it until you reactivate.`)) {
+                          turnOff.mutate(l.id);
+                        }
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-hd-orange inline-block" />
+                      Deactivate
+                    </button>
+                  )}
+                  {l.status === 'DEACTIVATED' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50"
+                      title="Activate — listing will go live on the marketplace"
+                      disabled={turnOn.isPending}
+                      onClick={() => {
+                        const msg = l.publishedAt
+                          ? `Activate "${l.year} ${l.modelName}"? It will go live on the marketplace.`
+                          : `Re-submit "${l.year} ${l.modelName}" for admin approval?`;
+                        if (window.confirm(msg)) turnOn.mutate(l.id);
+                      }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 inline-block" />
+                      Activate
+                    </button>
+                  )}
+                  {l.status === 'REMOVED' && (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      title="Restore — re-submit for admin approval"
+                      disabled={restoreFromRemoved.isPending}
+                      onClick={() => {
+                        if (window.confirm(`Restore "${l.year} ${l.modelName}" and re-submit for admin approval?`)) {
+                          restoreFromRemoved.mutate(l.id);
+                        }
+                      }}
+                    >
+                      Restore
+                    </button>
+                  )}
+                  {(l.status === 'DRAFT' || l.status === 'SOLD' || l.status === 'PENDING') && (
+                    <span className="text-gray-300 text-sm select-none">—</span>
+                  )}
+                </Td>
+
+                {/* ── Mark Sold column ── */}
+                <Td className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
+                  {l.status === 'ACTIVE' ? (
+                    <button
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded text-xs font-semibold bg-gray-900 text-white hover:bg-black transition-colors"
+                      title="Mark this bike as sold"
+                      onClick={() => setMarkSoldFor(l)}
+                    >
+                      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3"><path d="M2 8l4 4 8-8"/></svg>
+                      Mark Sold
+                    </button>
+                  ) : (
+                    <span className="text-gray-300 text-sm select-none">—</span>
+                  )}
+                </Td>
+
+                {/* ── Actions column (view / edit / docs / remove) ── */}
+                <Td className="text-right pr-4 py-2.5" onClick={(e) => e.stopPropagation()}>
                   <div className="inline-flex items-center justify-end gap-1.5">
-                    {l.status === 'DRAFT' && !l.adminFeedback && (
-                      <IconButton
-                        to={`/listings/${l.id}/edit`}
-                        label="Edit"
-                        tone="primary"
-                      >
-                        <PencilIcon />
-                      </IconButton>
-                    )}
-                    {l.status === 'DRAFT' && l.adminFeedback && (
-                      <IconButton
-                        to={`/listings/${l.id}/edit`}
-                        label="Re-submit"
-                        tone="danger"
-                      >
-                        <RefreshIcon />
-                      </IconButton>
-                    )}
-                    {/* Preview opens the buyer-facing detail page, which only
-                        renders ACTIVE listings. DEACTIVATED ("Off") rows are
-                        hidden from buyers, so previewing them just lands on
-                        a 404 — hiding the icon avoids that dead-end (QA #11). */}
                     {l.status === 'ACTIVE' && (
-                      <IconButton
-                        as="a"
-                        label="Preview"
-                        href={buyerListingHref(l.slug)}
-                      >
+                      <IconButton as="a" label="Preview on buyer site" href={buyerListingHref(l.slug)}>
                         <EyeIcon />
                       </IconButton>
                     )}
-                    {l.status === 'ACTIVE' && (
-                      <>
-                        {/* Mark Sold + Turn Off both move stock out of the
-                            active state — a clumsy thumb on a 32px icon
-                            shouldn't be able to delist a live bike. The
-                            confirms include the model + last-5 of VIN so
-                            the dealer knows *exactly* which row they're
-                            about to mutate. Same pattern as admin Publish. */}
-                        <IconButton
-                          label="Mark Sold"
-                          onClick={() => setMarkSoldFor(l)}
-                        >
-                          <SoldIcon />
-                        </IconButton>
-                        <IconButton
-                          label="Turn Off"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `Turn off "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)})? Buyers will stop seeing it until you turn it back on.`,
-                              )
-                            ) {
-                              turnOff.mutate(l.id);
-                            }
-                          }}
-                          disabled={turnOff.isPending}
-                        >
-                          <PowerIcon />
-                        </IconButton>
-                      </>
-                    )}
-                    {/* QA latest: icon-only power button — the "Turn On"
-                        text label is dropped per spec. Accessible via
-                        aria-label + native title tooltip. */}
-                    {l.status === 'DEACTIVATED' && (
-                      <IconButton
-                        label="Turn On"
-                        tone="primary"
-                        onClick={() => {
-                          const msg = l.publishedAt
-                            ? `Turn on "${l.year} ${l.modelName}"? It will go live on the marketplace.`
-                            : `Re-submit "${l.year} ${l.modelName}" for admin approval? It will move to Pending Approval.`;
-                          if (window.confirm(msg)) turnOn.mutate(l.id);
-                        }}
-                        disabled={turnOn.isPending}
-                      >
-                        <PowerIcon />
-                      </IconButton>
-                    )}
-                    {/* QA: Inactive tab REMOVED rows now show the same
-                        Turn-On power button DEACTIVATED rows have, so the
-                        dealer has one consistent affordance to bring an
-                        inactive listing back. */}
-                    {l.status === 'REMOVED' && (
-                      <IconButton
-                        label="Turn On"
-                        tone="primary"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Restore "${l.year} ${l.modelName}" and re-submit it for admin approval? It will move from Inactive back into Pending.`,
-                            )
-                          ) {
-                            restoreFromRemoved.mutate(l.id);
-                          }
-                        }}
-                        disabled={restoreFromRemoved.isPending}
-                      >
-                        <PowerIcon />
-                      </IconButton>
-                    )}
-                    {l.status !== 'REMOVED' && l.status !== 'SOLD' && l.status !== 'DEACTIVATED' && (
-                      <IconButton
-                        label="Mark Inactive"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              l.status === 'DRAFT'
-                                ? `Withdraw "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) from review? It will move to Inactive.`
-                                : `Mark "${l.year} ${l.modelName}" (VIN…${l.vin.slice(-5)}) as Inactive?`,
-                            )
-                          ) {
-                            turnOff.mutate(l.id);
-                          }
-                        }}
-                        tone="danger"
-                      >
-                        <TrashIcon />
-                      </IconButton>
-                    )}
-                    {/* SOLD rows keep the View affordance for record-
-                        keeping (photos, price, VIN, admin feedback). */}
                     {l.status === 'SOLD' && (
                       <IconButton to={`/listings/${l.id}/edit`} label="View Details">
                         <EyeIcon />
                       </IconButton>
                     )}
-                    {/* Docs panel toggle — available on all listings.
-                        Opens inline CPO docs / sold docs / RC transfer section. */}
+                    {l.status === 'DRAFT' && !l.adminFeedback && (
+                      <IconButton to={`/listings/${l.id}/edit`} label="Edit listing" tone="primary">
+                        <PencilIcon />
+                      </IconButton>
+                    )}
+                    {l.status === 'DRAFT' && l.adminFeedback && (
+                      <IconButton to={`/listings/${l.id}/edit`} label="Re-submit with corrections" tone="danger">
+                        <RefreshIcon />
+                      </IconButton>
+                    )}
                     <IconButton
                       label={docsPanel === l.id ? 'Close Docs' : 'Manage Docs'}
                       tone={docsPanel === l.id ? 'primary' : undefined}
@@ -693,13 +646,29 @@ export function MyListingsPage() {
                     >
                       <DocsIcon />
                     </IconButton>
-                  </div>
+                    {l.status !== 'REMOVED' && l.status !== 'SOLD' && l.status !== 'DEACTIVATED' && (
+                      <IconButton
+                        label={l.status === 'DRAFT' ? 'Withdraw listing' : 'Mark Inactive'}
+                        tone="danger"
+                        onClick={() => {
+                          if (window.confirm(
+                            l.status === 'DRAFT'
+                              ? `Withdraw "${l.year} ${l.modelName}" from review? It will move to Inactive.`
+                              : `Mark "${l.year} ${l.modelName}" as Inactive?`,
+                          )) {
+                            turnOff.mutate(l.id);
+                          }
+                        }}
+                      >
+                        <TrashIcon />
+                      </IconButton>
+                    )}
                   </div>
                 </Td>
               </tr>
               {docsPanel === l.id && (
                 <tr>
-                  <td colSpan={4} className="bg-gray-50/70 border-b border-gray-200 px-0 py-0">
+                  <td colSpan={6} className="bg-gray-50/70 border-b border-gray-200 px-0 py-0">
                     <DocsPanel
                       listingId={l.id}
                       isSold={l.status === 'SOLD'}
@@ -1173,7 +1142,17 @@ function MarkSoldModal({
       await api(`/dealer/listings/${listing.id}/mark-sold`, { method: 'POST' });
       onDone();
     } catch (e) {
-      setErr(e instanceof ApiError ? e.message : 'Could not complete — please try again.');
+      if (e instanceof ApiError) {
+        // 404 from the uploads/document endpoint means the server build is stale
+        // and the document upload route isn't registered yet. Give a clear message.
+        const msg =
+          e.status === 404 && e.code === 'NOT_FOUND'
+            ? 'Upload service unavailable — please refresh the page and try again, or mark as sold without attaching documents.'
+            : e.message;
+        setErr(msg);
+      } else {
+        setErr('Could not complete — please try again.');
+      }
       setBusy(false);
     }
   };
