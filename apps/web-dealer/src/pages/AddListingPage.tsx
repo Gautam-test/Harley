@@ -452,7 +452,9 @@ export function AddListingPage() {
   // and even file inputs all freeze together. Cancel/Back link is
   // an <a> tag outside the fieldset, so the dealer can still leave.
   const isSoldReadOnly = isEditMode && existing.data?.status === 'SOLD';
-  const isPendingReadOnly = isEditMode && existing.data?.status === 'DRAFT';
+  // DRAFT with adminFeedback = returned for corrections → dealer must be able to edit.
+  // DRAFT without adminFeedback = awaiting first admin review → lock to prevent mid-review edits.
+  const isPendingReadOnly = isEditMode && existing.data?.status === 'DRAFT' && !existing.data?.adminFeedback;
   const isLiveReadOnly = isEditMode && existing.data?.status === 'ACTIVE';
   const isReadOnly = isSoldReadOnly || isPendingReadOnly || isLiveReadOnly;
 
